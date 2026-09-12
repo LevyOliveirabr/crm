@@ -1,0 +1,18 @@
+Modelos de importação — CRM Comercial F-Led
+
+Cada arquivo tem a linha de cabeçalho (obrigatória, não alterar os nomes) e UMA linha de exemplo que você deve apagar antes de importar.
+
+Separador: ponto e vírgula (;). Codificação: UTF-8 (no Excel: "Salvar como" -> "CSV UTF-8").
+Datas: dd/mm/aaaa. Valores: use vírgula decimal (890,00) ou ponto (890.00); os dois são aceitos.
+WhatsApp: só dígitos com DDI, ex.: 5531999990000.
+
+Ordem de importação no sistema (Configurações -> Importar CSV):
+  1. empresas.csv
+  2. contatos.csv
+  3. negociacoes.csv
+  4. produtos.csv (opcional na entrega 1)
+
+Colunas obrigatórias: empresas.nome · contatos.empresa_nome e nome · negociacoes.empresa_nome · produtos.nome
+Todas as outras podem ficar vazias.
+
+Se o nome do funil ou da etapa não existir, a negociação entra no primeiro funil / primeira etapa e a linha aparece no relatório de importação para você corrigir.

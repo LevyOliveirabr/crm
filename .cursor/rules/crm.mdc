@@ -1,0 +1,35 @@
+---
+description: Regras do projeto CRM Comercial F-Led
+alwaysApply: true
+---
+
+# Fonte de verdade
+- A especificação completa está em `SPEC.md` na raiz do projeto. Antes de implementar qualquer tela, tabela, regra ou tool, leia a seção correspondente da SPEC.
+- Nunca invente campos, tabelas, telas ou regras que não estejam na SPEC. Se algo faltar ou estiver ambíguo, PARE e pergunte antes de implementar.
+- Os arquivos de apoio (migrations SQL, modelos CSV, prompts por etapa) vieram da pasta `Planejamento Cursor` e já estão copiados neste repositório. Use-os; não os reescreva.
+
+# Banco de dados
+- Supabase / Postgres. O schema está em `supabase/migrations/0001_schema.sql` e o seed em `0002_seed.sql`. Esses arquivos foram validados; não altere tabelas, colunas ou views sem pedir. Novas mudanças vão em novas migrations numeradas (`0003_...sql`).
+- Nomes de tabelas e colunas em português, snake_case, exatamente como na SPEC seção 3: `empresas`, `contatos`, `negociacoes`, `interacoes`, `acoes`, `orcamentos`, `orcamento_itens`, `produtos`, `funis`, `etapas`, `listas`, `config`, `emitente`, `usuarios`, `api_keys`, `mcp_log`.
+- RLS está habilitado em todas as tabelas. NUNCA use a service role key em código de tela ou Server Action comum. Ela só é permitida em: convite de usuários (Configurações) e resolução de API key no MCP.
+- Listas leem das views (`v_negociacoes`, `v_resultado_mensal`, `v_previsao`, `v_funil`, `v_motivos_perda`) quando existir uma. O relatório da presidência vem da função SQL `relatorio_presidencia(mes)`.
+
+# Código
+- Next.js 15 App Router, TypeScript estrito (sem `any`), Tailwind, shadcn/ui.
+- Toda mutação é uma Server Action em `lib/actions/*.ts`, validada com `zod` (schemas em `lib/schemas/`).
+- Clientes Supabase: `lib/supabase/server.ts` (Server Components/Actions), `lib/supabase/client.ts` (browser), `lib/supabase/admin.ts` (service role; uso restrito conforme acima).
+- Formatação centralizada em `lib/format.ts`: moeda `R$ 1.234.567,89`, datas `dd/mm/aaaa`, timezone `America/Sao_Paulo`, valores resumidos `R$ 891 mil` / `R$ 1,14 mi`.
+- Interface 100% em português do Brasil. Mobile-first: tudo precisa funcionar em 390px de largura, sem scroll horizontal.
+
+# Regras de produto (não negociáveis)
+- Pedir o mínimo de quem vende. Campos obrigatórios só os marcados com * na SPEC.
+- Ao concluir uma ação ou mover de etapa, se a negociação ficar sem ação pendente, abrir o mini-form "Próxima ação?" (pode pular). Essa lógica é de UI, não do banco.
+- Marcar venda exige valor final; marcar perda exige motivo. Únicos pontos em que o sistema insiste.
+- Relatório da presidência (entrega 1) é HTML imprimível com `@media print`. Não usar biblioteca de PDF nele.
+- MCP usa o pacote `mcp-handler`. Não escrever transporte à mão.
+
+# Forma de trabalhar
+- Implemente somente a etapa pedida no prompt atual. Não avance para telas de etapas seguintes.
+- Ao terminar, liste: (1) arquivos criados/alterados, (2) quais critérios de aceite da SPEC (seções 5, 6A, 6B, 9) a etapa cobre, (3) como testar manualmente em 3 a 5 passos.
+- Se um erro de RLS aparecer, a correção é ajustar a policy ou a consulta, nunca trocar para service role.
+- Commits pequenos, mensagens em português no formato `etapa 03: tela Hoje`.
