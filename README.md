@@ -1,74 +1,36 @@
-# Nimbus CRM
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A lightweight CRM for managing contacts and a sales pipeline, built with
-**Next.js 16** (App Router), **TypeScript**, **Tailwind CSS v4**, and
-**Prisma 7** on **SQLite**.
+## Getting Started
 
-## Features
-
-- **Dashboard** – key metrics (contacts, active contacts, open pipeline, closed
-  won) plus a pipeline-by-stage breakdown and recent activity.
-- **Contacts** – searchable table with create / edit / delete, status tracking
-  (Lead / Active / Inactive), and per-contact deal counts.
-- **Deals** – a Kanban-style pipeline board across five stages
-  (Lead → Qualified → Proposal → Won / Lost) with quick stage moves, values, and
-  contact assignment.
-- **JSON API** – route handlers under `/api/contacts` and `/api/deals` with
-  request validation.
-
-## Tech stack
-
-| Layer    | Choice                                        |
-| -------- | --------------------------------------------- |
-| Framework| Next.js 16 (App Router, Turbopack)            |
-| Language | TypeScript                                    |
-| Styling  | Tailwind CSS v4                               |
-| Data     | Prisma 7 + SQLite (better-sqlite3 adapter)    |
-
-## Getting started
-
-Requirements: Node.js 20+ and npm.
+First, run the development server:
 
 ```bash
-# 1. Install dependencies (also generates the Prisma client)
-npm install
-
-# 2. Create your local env file
-cp .env.example .env
-
-# 3. Apply migrations and seed sample data
-npm run db:migrate
-npm run db:seed
-
-# 4. Start the dev server
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-The app runs at [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Scripts
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-| Script             | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| `npm run dev`      | Start the Next.js dev server.                     |
-| `npm run build`    | Production build (type-checks and lints).         |
-| `npm run start`    | Serve the production build.                       |
-| `npm run lint`     | Run ESLint.                                       |
-| `npm run db:migrate` | Apply Prisma migrations (`prisma migrate deploy`). |
-| `npm run db:seed`  | Seed sample contacts and deals (idempotent).      |
-| `npm run db:setup` | Migrate, generate client, and seed in one step.   |
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Data model
+## Learn More
 
-- **Contact** – `name`, `email` (unique), `phone`, `company`, `title`,
-  `status`, `notes`, and related deals.
-- **Deal** – `title`, `value`, `stage`, and an optional `contact` relation.
+To learn more about Next.js, take a look at the following resources:
 
-The SQLite database file (`dev.db`) and the generated Prisma client
-(`src/generated/prisma`) are git-ignored and recreated locally.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Cloud Agent environment
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-`.cursor/environment.json` configures the Cursor Cloud Agent environment: it
-installs dependencies, applies migrations, seeds the database, and runs the dev
-server on port 3000.
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

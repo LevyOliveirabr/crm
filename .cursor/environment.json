@@ -1,11 +1,11 @@
 {
-  "name": "Nimbus CRM",
-  "install": "cp -n .env.example .env && npm ci && npm run db:migrate && npm run db:seed",
+  "name": "crm-fled",
+  "install": "npm install",
   "terminals": [
     {
       "name": "next-dev",
       "command": "npm run dev",
-      "description": "Next.js development server (http://localhost:3000)"
+      "description": "Servidor de desenvolvimento Next.js (http://localhost:3000)"
     }
   ],
   "ports": [
