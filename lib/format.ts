@@ -105,3 +105,41 @@ export function mesPorExtenso(
   if (Number.isNaN(d.getTime())) return "";
   return mesExtensoFmt.format(d);
 }
+
+/** Data de hoje em America/Sao_Paulo no formato yyyy-mm-dd. */
+export function hojeISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Soma dias a uma data yyyy-mm-dd (calendário, sem fuso). */
+export function adicionarDiasISO(dataISO: string, dias: number): string {
+  const [y, m, d] = dataISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + dias));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Início do mês corrente (yyyy-mm-01) em America/Sao_Paulo. */
+export function inicioMesAtualISO(): string {
+  return `${hojeISO().slice(0, 7)}-01`;
+}
+
+/** Início do próximo mês (yyyy-mm-01) a partir de uma data yyyy-mm-dd. */
+export function inicioProximoMesISO(dataISO: string = hojeISO()): string {
+  const [y, m] = dataISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m, 1)); // m já é 1-based → próximo mês
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Próxima segunda-feira (se hoje for segunda, a seguinte). */
+export function proximaSegundaISO(dataISO: string = hojeISO()): string {
+  const [y, m, d] = dataISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const diaSemana = dt.getUTCDay(); // 0=dom … 6=sáb
+  const add = diaSemana === 0 ? 1 : 8 - diaSemana;
+  return adicionarDiasISO(dataISO, add);
+}
