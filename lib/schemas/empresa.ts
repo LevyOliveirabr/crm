@@ -22,7 +22,7 @@ export const empresaSchema = z.object({
   responsavel_id: z.preprocess(
     (v) => (v === "" || v === undefined ? null : v),
     z.uuid().nullable(),
-  ),
+  ).optional(),
   observacoes: z.preprocess(
     (v) => (v === "" || v === undefined ? null : v),
     z.string().trim().nullable(),
