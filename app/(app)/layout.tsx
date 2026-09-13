@@ -1,6 +1,20 @@
-// etapa: layout base — sidebar/barra inferior (SPEC 5.1)
-import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+import { AppShell } from "@/components/crm/app-shell";
+import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) {
+    redirect("/login");
+  }
+  if (!usuario.ativo) {
+    redirect("/login?erro=inativo");
+  }
+
+  return <AppShell usuario={usuario}>{children}</AppShell>;
 }

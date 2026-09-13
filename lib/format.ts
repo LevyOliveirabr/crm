@@ -105,3 +105,77 @@ export function mesPorExtenso(
   if (Number.isNaN(d.getTime())) return "";
   return mesExtensoFmt.format(d);
 }
+
+/** Data de hoje em America/Sao_Paulo no formato yyyy-mm-dd. */
+export function hojeISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Soma dias a uma data yyyy-mm-dd (calendário, sem fuso). */
+export function adicionarDiasISO(dataISO: string, dias: number): string {
+  const [y, m, d] = dataISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + dias));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Início do mês corrente (yyyy-mm-01) em America/Sao_Paulo. */
+export function inicioMesAtualISO(): string {
+  return `${hojeISO().slice(0, 7)}-01`;
+}
+
+/** Início do próximo mês (yyyy-mm-01) a partir de uma data yyyy-mm-dd. */
+export function inicioProximoMesISO(dataISO: string = hojeISO()): string {
+  const [y, m] = dataISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m, 1)); // m já é 1-based → próximo mês
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Próxima segunda-feira (se hoje for segunda, a seguinte). */
+export function proximaSegundaISO(dataISO: string = hojeISO()): string {
+  const [y, m, d] = dataISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const diaSemana = dt.getUTCDay(); // 0=dom … 6=sáb
+  const add = diaSemana === 0 ? 1 : 8 - diaSemana;
+  return adicionarDiasISO(dataISO, add);
+}
+
+/** Normaliza nome para comparação sem acento/maiúsculas (R11). */
+export function normalizarNome(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Interpreta texto de moeda BR (`1.234,56`, `R$ 50`, `50`) como número.
+ * Retorna `null` se não for possível interpretar.
+ */
+export function parseMoedaBR(valor: string | number | null | undefined): number | null {
+  if (typeof valor === "number") {
+    return Number.isFinite(valor) ? valor : null;
+  }
+  if (valor == null) return null;
+  const limpo = String(valor)
+    .trim()
+    .replace(/[R$\s]/gi, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  if (!limpo) return 0;
+  const n = Number(limpo);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Início do mês (yyyy-mm-01) a partir de yyyy-mm ou yyyy-mm-dd. */
+export function inicioMesISO(valor: string): string {
+  const m = valor.match(/^(\d{4})-(\d{2})/);
+  if (!m) return inicioMesAtualISO();
+  return `${m[1]}-${m[2]}-01`;
+}

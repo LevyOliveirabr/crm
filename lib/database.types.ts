@@ -684,6 +684,38 @@ export type Database = {
         Relationships: []
       }
     }
+          linha: string | null;
+          motivo_perda: string | null;
+          qtd: number | null;
+          valor: number | null;
+        };
+        Relationships: [];
+      };
+      v_empresas: {
+        Row: {
+          id: string | null;
+          nome: string | null;
+          cidade: string | null;
+          uf: string | null;
+          segmento: string | null;
+          cnpj: string | null;
+          responsavel_id: string | null;
+          responsavel_nome: string | null;
+          observacoes: string | null;
+          criado_em: string | null;
+          atualizado_em: string | null;
+          aberto: number | null;
+          vendido: number | null;
+          perdido: number | null;
+          qtd_negociacoes: number | null;
+          qtd_abertas: number | null;
+          ticket_medio: number | null;
+          ciclo_medio_dias: number | null;
+          ultimo_contato: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       relatorio_presidencia: { Args: { p_mes?: string }; Returns: Json }
       eh_diretor: { Args: Record<string, never>; Returns: boolean }
