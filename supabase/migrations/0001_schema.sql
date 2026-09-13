@@ -89,7 +89,8 @@ create table empresas (
   atualizado_em timestamptz not null default now()
 );
 -- unaccent não é IMMUTABLE; usar wrapper para poder indexar
-create or replace function f_unaccent(text) returns text language sql immutable parallel safe as $$ select unaccent($1) $$;
+-- public.unaccent: no índice o search_path fica só pg_catalog; sem schema qualificado falha no Supabase Cloud
+create or replace function f_unaccent(text) returns text language sql immutable parallel safe as $$ select public.unaccent($1) $$;
 create unique index empresas_nome_unico on empresas (lower(f_unaccent(nome))) where arquivado_em is null;
 create index empresas_nome_trgm on empresas using gin (nome gin_trgm_ops);
 
