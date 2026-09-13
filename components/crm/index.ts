@@ -10,3 +10,6 @@ export { FunilLista } from "./funil-lista";
 export { NovaNegociacaoForm } from "./nova-negociacao-form";
 export { NegociacaoFicha } from "./negociacao-ficha";
 export { BotaoFlutuanteNovaNegociacao } from "./botao-flutuante-nova-negociacao";
+export { EmpresasLista } from "./empresas-lista";
+export { EmpresaFicha } from "./empresa-ficha";
+export { ContatosLista } from "./contatos-lista";
