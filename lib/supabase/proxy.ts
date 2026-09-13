@@ -8,6 +8,8 @@ const ROTAS_PUBLICAS = new Set(["/login", "/auth/definir-senha", "/auth/callback
 function ehRotaApp(pathname: string) {
   if (ROTAS_PUBLICAS.has(pathname)) return false;
   if (pathname.startsWith("/auth/")) return false;
+  // MCP autentica via Bearer API key (não cookie de sessão)
+  if (pathname.startsWith("/api/mcp")) return false;
   if (pathname === "/") return false;
   return true;
 }

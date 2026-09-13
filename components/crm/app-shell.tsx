@@ -8,6 +8,7 @@ import {
   Building2,
   CircleUserRound,
   Funnel,
+  KeyRound,
   LayoutDashboard,
   MoreHorizontal,
   Settings,
@@ -40,6 +41,12 @@ const NAV_PRINCIPAL: NavItem[] = [
   { href: "/contatos", label: "Contatos", icon: Users },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   {
+    href: "/configuracoes/api-keys",
+    label: "API keys",
+    icon: KeyRound,
+  },
+  {
+    href: "/configuracoes/usuarios",
     href: "/configuracoes",
     label: "Configurações",
     icon: Settings,
