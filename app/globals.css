@@ -153,5 +153,34 @@
   @page {
     size: A4;
     margin: 14mm;
+/* Relatório da presidência — impressão A4 (SPEC 5.8) */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .relatorio-print {
+    max-width: none !important;
+    font-size: 11pt;
+    line-height: 1.35;
+  }
+
+  .relatorio-print table {
+    break-inside: avoid;
+  }
+
+  .relatorio-print section {
+    break-inside: avoid;
   }
 }

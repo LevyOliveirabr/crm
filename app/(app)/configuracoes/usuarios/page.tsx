@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
 import { ConvidarUsuarioForm } from "@/components/crm/convidar-usuario-form";
 import { UsuarioAtivoToggle } from "@/components/crm/usuario-ativo-toggle";
 import { listarUsuarios } from "@/lib/actions/usuarios";
@@ -18,6 +21,17 @@ export default async function UsuariosPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
+        <div className="mb-2 flex flex-wrap gap-3 text-sm">
+          <span className="font-medium text-foreground">Usuários</span>
+          <Link
+            href="/configuracoes/api-keys"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            API keys
+          </Link>
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
         <h2 className="text-lg font-medium">Usuários</h2>
         <p className="text-sm text-muted-foreground">
           Convide vendedores e diretores. Sem cadastro público.
