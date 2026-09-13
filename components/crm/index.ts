@@ -20,3 +20,5 @@ export { ImportarClient } from "./importar-client";
 export { EmpresasLista } from "./empresas-lista";
 export { EmpresaFicha } from "./empresa-ficha";
 export { ContatosLista } from "./contatos-lista";
+export { RelatoriosClient } from "./relatorios-client";
+export { FiltroMes } from "./filtro-mes";
