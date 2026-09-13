@@ -1,0 +1,9 @@
+# Exemplo de MCP do CRM F-Led para o Grok.
+# Copie para ~/.grok/config.toml (ou .grok/config.toml no projeto do bot).
+# NÃO coloque a API key neste arquivo — use a variável de ambiente.
+
+[mcp_servers.crm-fled]
+url = "https://crm-fled.vercel.app/api/mcp/mcp"
+headers = { Authorization = "Bearer ${CRM_FLED_API_KEY}" }
+startup_timeout_sec = 30
+tool_timeout_sec = 120

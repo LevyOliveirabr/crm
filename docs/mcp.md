@@ -67,4 +67,28 @@ Se o Claude Desktop aceitar URL remota diretamente:
 5. Revogue a key e confirme que novas chamadas retornam **401**.
 6. Em SQL / tabela `mcp_log`, confira tool, args, ok e ms de cada chamada.
 
+## Grok (CLI / bot / agenda)
+
+Com a key exportada (`CRM_FLED_API_KEY`):
+
+```bash
+grok mcp add --transport http crm-fled \
+  https://crm-fled.vercel.app/api/mcp/mcp \
+  --header "Authorization: Bearer ${CRM_FLED_API_KEY}"
+
+grok mcp doctor crm-fled
+```
+
+`~/.grok/config.toml`:
+
+```toml
+[mcp_servers.crm-fled]
+url = "https://crm-fled.vercel.app/api/mcp/mcp"
+headers = { Authorization = "Bearer ${CRM_FLED_API_KEY}" }
+```
+
+API xAI (tool remota): `type: "mcp"`, `server_url` = endpoint acima, `authorization` = api key.
+
+Guia completo (prompts de agenda, fluxo do bot): **`docs/manual-utilizacao.md`** seção 6.
+
 Variável obrigatória no servidor: `SUPABASE_JWT_SECRET` (Settings → API → JWT Secret do projeto Supabase).
