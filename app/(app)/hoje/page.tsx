@@ -12,6 +12,7 @@ import {
   adicionarDiasISO,
 } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { BotaoExportar } from "@/components/crm/botao-exportar";
 import { BotaoFlutuanteNovaNegociacao } from "@/components/crm/botao-flutuante-nova-negociacao";
 import {
   HojeInterativo,
@@ -285,7 +286,13 @@ export default async function HojePage({
   return (
     <div className="relative mx-auto w-full max-w-2xl pb-20">
       <header className="mb-4 flex flex-col gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Hoje</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold tracking-tight">Hoje</h1>
+          <BotaoExportar
+            tela="acoes"
+            filtros={{ vendedor: filtrarVendedor }}
+          />
+        </div>
         {usuario.perfil === "diretor" ? (
           <Suspense fallback={null}>
             <SeletorVendedor
