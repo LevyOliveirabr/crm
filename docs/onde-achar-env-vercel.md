@@ -5,14 +5,16 @@ Se a tela não parecer com o que o agente descreveu, use o **link direto** (loga
 **➡️ Abrir variáveis do projeto:**  
 https://vercel.com/levyoliveirabrs-projects/crm-fled/settings/environment-variables
 
-(Se pedir login, entre com a mesma conta do GitHub/`levyoliveirabr`.)
+(Se pedir login, entre com a mesma conta do GitHub/`LevyOliveirabr`.)
+
+Atalho do projeto: https://vercel.com/levyoliveirabrs-projects/crm-fled
 
 ---
 
 ## Caminho pelos cliques (desktop)
 
 1. Abra https://vercel.com/dashboard  
-2. No **canto superior esquerdo**, confira o time: deve estar **`levyoliveirabrs-projects`** (não “Hobby” / conta pessoal, se o projeto estiver no time).  
+2. No **canto superior esquerdo**, confira o time: deve estar **`levyoliveirabrs-projects`**.  
 3. Clique no projeto **`crm-fled`**.  
 4. No menu **da esquerda** (dentro do projeto), clique em **Settings** (Configurações).  
 5. Ainda na coluna da esquerda, clique em **Environment Variables**  
