@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ConvidarUsuarioForm } from "@/components/crm/convidar-usuario-form";
 import { UsuarioAtivoToggle } from "@/components/crm/usuario-ativo-toggle";
+import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { listarUsuarios } from "@/lib/actions/usuarios";
 import {
   Table,
@@ -14,12 +15,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-/** Guard de diretor fica no layout de /configuracoes. */
 export default async function UsuariosPage() {
+  const atual = await getUsuarioAtual();
+  if (!atual || atual.perfil !== "diretor") {
+    redirect("/hoje");
+  }
+
   const usuarios = await listarUsuarios();
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
       <div>
         <div className="mb-2 flex flex-wrap gap-3 text-sm">
           <span className="font-medium text-foreground">Usuários</span>
@@ -32,19 +37,17 @@ export default async function UsuariosPage() {
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-        <h2 className="text-lg font-medium">Usuários</h2>
-        <p className="text-sm text-muted-foreground">
           Convide vendedores e diretores. Sem cadastro público.
         </p>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h3 className="text-base font-medium">Convidar</h3>
+        <h2 className="text-base font-medium">Convidar</h2>
         <ConvidarUsuarioForm />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="text-base font-medium">Lista</h3>
+        <h2 className="text-base font-medium">Lista</h2>
         <Table>
           <TableHeader>
             <TableRow>

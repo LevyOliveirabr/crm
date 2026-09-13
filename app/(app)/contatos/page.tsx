@@ -1,37 +1,4 @@
-import { Suspense } from "react";
-
 import { BotaoExportar } from "@/components/crm/botao-exportar";
-import { ContatosFiltroBusca } from "@/components/crm/contatos-filtro-busca";
-
-type SearchParams = Promise<{ q?: string | string[] }>;
-
-function paramUnico(valor: string | string[] | undefined): string | undefined {
-  if (Array.isArray(valor)) return valor[0];
-  return valor;
-}
-
-/** Shell mínimo com exportação (CRUD completo fica na etapa de Contatos). */
-export default async function ContatosPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  const sp = await searchParams;
-  const q = paramUnico(sp.q) ?? "";
-
-  return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Contatos</h1>
-        <BotaoExportar tela="contatos" filtros={{ q: q || null }} />
-      </header>
-      <Suspense fallback={null}>
-        <ContatosFiltroBusca valorInicial={q} />
-      </Suspense>
-      <p className="mt-4 text-sm text-muted-foreground">
-        Use Exportar Excel para baixar todos os contatos com a busca atual. A
-        listagem completa chega na etapa de Contatos.
-      </p>
 import { ContatosLista } from "@/components/crm/contatos-lista";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
@@ -95,11 +62,14 @@ export default async function ContatosPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 pb-24 lg:p-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Contatos</h1>
-        <p className="text-sm text-muted-foreground">
-          Pessoas nas empresas da carteira.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Contatos</h1>
+          <p className="text-sm text-muted-foreground">
+            Pessoas nas empresas da carteira.
+          </p>
+        </div>
+        <BotaoExportar tela="contatos" />
       </div>
       <ContatosLista
         contatos={contatos}
