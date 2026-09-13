@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { BotaoExportar } from "@/components/crm/botao-exportar";
-import { ContatosFiltroBusca } from "@/components/crm/contatos-filtro-busca";
+import { ProdutosFiltroBusca } from "@/components/crm/produtos-filtro-busca";
 
 type SearchParams = Promise<{ q?: string | string[] }>;
 
@@ -10,8 +10,8 @@ function paramUnico(valor: string | string[] | undefined): string | undefined {
   return valor;
 }
 
-/** Shell mínimo com exportação (CRUD completo fica na etapa de Contatos). */
-export default async function ContatosPage({
+/** Shell mínimo com exportação (CRUD completo na etapa de orçamento/produtos). */
+export default async function ProdutosPage({
   searchParams,
 }: {
   searchParams: SearchParams;
@@ -22,15 +22,15 @@ export default async function ContatosPage({
   return (
     <div className="mx-auto w-full max-w-3xl">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Contatos</h1>
-        <BotaoExportar tela="contatos" filtros={{ q: q || null }} />
+        <h1 className="text-xl font-semibold tracking-tight">Produtos</h1>
+        <BotaoExportar tela="produtos" filtros={{ q: q || null }} />
       </header>
       <Suspense fallback={null}>
-        <ContatosFiltroBusca valorInicial={q} />
+        <ProdutosFiltroBusca valorInicial={q} />
       </Suspense>
       <p className="mt-4 text-sm text-muted-foreground">
-        Use Exportar Excel para baixar todos os contatos com a busca atual. A
-        listagem completa chega na etapa de Contatos.
+        Use Exportar Excel para baixar o catálogo filtrado. O CRUD completo
+        chega na etapa de orçamento.
       </p>
     </div>
   );

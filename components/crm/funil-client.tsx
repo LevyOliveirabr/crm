@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LayoutGrid, List } from "lucide-react";
 
 import type { CartaoNegociacaoData } from "@/components/crm/cartao-negociacao";
+import { BotaoExportar } from "@/components/crm/botao-exportar";
 import {
   FunilKanban,
   type EtapaColuna,
@@ -75,27 +76,41 @@ export function FunilClient({
         <header className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h1 className="text-xl font-semibold tracking-tight">Funil</h1>
-            <div className="inline-flex rounded-lg border border-border p-0.5">
-              <Button
-                type="button"
-                size="sm"
-                variant={filtros.vista === "kanban" ? "secondary" : "ghost"}
-                onClick={() => setParam("vista", "kanban")}
-                aria-pressed={filtros.vista === "kanban"}
-              >
-                <LayoutGrid className="size-4" />
-                Kanban
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={filtros.vista === "lista" ? "secondary" : "ghost"}
-                onClick={() => setParam("vista", "lista")}
-                aria-pressed={filtros.vista === "lista"}
-              >
-                <List className="size-4" />
-                Lista
-              </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {filtros.vista === "lista" ? (
+                <BotaoExportar
+                  tela="funil-lista"
+                  filtros={{
+                    funil: funilId,
+                    vendedor: filtros.vendedor,
+                    linha: filtros.linha,
+                    temperatura: filtros.temperatura,
+                    q: filtros.q || null,
+                  }}
+                />
+              ) : null}
+              <div className="inline-flex rounded-lg border border-border p-0.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={filtros.vista === "kanban" ? "secondary" : "ghost"}
+                  onClick={() => setParam("vista", "kanban")}
+                  aria-pressed={filtros.vista === "kanban"}
+                >
+                  <LayoutGrid className="size-4" />
+                  Kanban
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={filtros.vista === "lista" ? "secondary" : "ghost"}
+                  onClick={() => setParam("vista", "lista")}
+                  aria-pressed={filtros.vista === "lista"}
+                >
+                  <List className="size-4" />
+                  Lista
+                </Button>
+              </div>
             </div>
           </div>
 
