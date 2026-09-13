@@ -17,3 +17,6 @@ export { ParametrosForm } from "./parametros-form";
 export { EmitenteForm } from "./emitente-form";
 export { ProdutosConfigClient } from "./produtos-config-client";
 export { ImportarClient } from "./importar-client";
+export { EmpresasLista } from "./empresas-lista";
+export { EmpresaFicha } from "./empresa-ficha";
+export { ContatosLista } from "./contatos-lista";
