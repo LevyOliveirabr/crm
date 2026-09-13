@@ -16,7 +16,13 @@ Guia operacional alinhado à SPEC seções 2 e 8 (entrega 1). Sem funcionalidade
 4. Confirme que o projeto lê o `vercel.json` (região `gru1`).
 5. **Não** faça o primeiro deploy ainda — configure as variáveis primeiro.
 
-> **Bloqueio atual do agente:** `create_git_project` e leitura de deployments no time `levyoliveirabrs-projects` retornam **403** (escopo do time). Um projeto `crm-fled` pode já existir no time a partir de um deploy de teste — **não use esse deploy** até o repositório GitHub estar linkado e as 5 variáveis corretas. Faça o import/link pelo dashboard (passos acima) e confirme as envs com os **mesmos nomes** de `.env.local`.
+## Status atual (etapa 09)
+
+- **URL de produção:** https://crm-fled.vercel.app
+- **Projeto Vercel:** `crm-fled` (time `levyoliveirabrs-projects`), região preferida `gru1` via `vercel.json` (deploy por arquivos ainda pode buildar em `iad1`).
+- **Build:** branch `cursor/etapa-09-deploy-producao-7d08` (entregas 01–08 mescladas + este guia).
+- `/login` responde **HTTP 200**.
+- O MCP não consegue gravar Environment Variables no time (escopo). As envs foram injetadas no build via `.env.production` no `installCommand` — **ainda configure as 5 variáveis no dashboard** para deploys futuros e runtime estável.
 
 ## 2. Variáveis de ambiente (Production)
 
@@ -28,24 +34,24 @@ Copie os mesmos valores de `.env.local`, trocando só `APP_URL`:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | idem (anon public) | igual ao local |
 | `SUPABASE_SERVICE_ROLE_KEY` | idem (service_role) — **só server** | igual ao local |
 | `SUPABASE_JWT_SECRET` | Project Settings → API → JWT Secret | igual ao local |
-| `APP_URL` | URL final do app | `https://<projeto>.vercel.app` (ou domínio custom) |
+| `APP_URL` | URL final do app | `https://crm-fled.vercel.app` |
 
-No dashboard: Project → Settings → Environment Variables → Environment = **Production** (e Preview se quiser).
+No dashboard: Project → Settings → Environment Variables → Environment = **Production** (e Preview se quiser). Depois de salvar, faça **Redeploy**.
 
 ## 3. Deploy
 
-1. Deploy Production (branch `main` ou a branch de release).
-2. Anote a URL (ex.: `https://crm-fled.vercel.app`).
-3. Se `APP_URL` ainda estava placeholder, atualize e **redeploy**.
+1. Preferível: linkar o GitHub `LevyOliveirabr/crm` ao projeto `crm-fled` no dashboard (Deployments → Connect Git Repository) para deploy automático na `main`.
+2. URL atual: `https://crm-fled.vercel.app`.
+3. Se `APP_URL` mudar (domínio custom), atualize a env e **redeploy**.
 
 ## 4. Supabase Auth (obrigatório pós-deploy)
 
 Supabase → Authentication → URL Configuration:
 
-- **Site URL** = `https://<dominio-producao>`
+- **Site URL** = `https://crm-fled.vercel.app`
 - **Redirect URLs** (adicione, não remova o localhost se ainda usar local):
-  - `https://<dominio-producao>/auth/callback`
-  - `https://<dominio-producao>/auth/definir-senha`
+  - `https://crm-fled.vercel.app/auth/callback`
+  - `https://crm-fled.vercel.app/auth/definir-senha`
   - `http://localhost:3000/auth/callback` (dev)
   - `http://localhost:3000/auth/definir-senha` (dev)
 

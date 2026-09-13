@@ -10,13 +10,15 @@ Variáveis de ambiente usadas no deploy (as mesmas de `.env.local`, com `APP_URL
 - `SUPABASE_JWT_SECRET`
 - `APP_URL`
 
+**URL de produção:** https://crm-fled.vercel.app
+
 Pré-requisitos antes dos testes:
 
-1. Projeto importado na Vercel (região `gru1` via `vercel.json`).
-2. Variáveis acima configuradas em Production (e Preview se quiser).
+1. Projeto `crm-fled` na Vercel no ar (`vercel.json` com região `gru1`).
+2. Variáveis acima configuradas em Production (e Preview se quiser) **no dashboard** — não só no workaround do build.
 3. Supabase → Authentication → URL Configuration:
-   - **Site URL** = URL de produção (ex.: `https://crm-fled.vercel.app`)
-   - **Redirect URLs** inclui `https://<dominio>/auth/callback` e `https://<dominio>/auth/definir-senha`
+   - **Site URL** = `https://crm-fled.vercel.app`
+   - **Redirect URLs** inclui `https://crm-fled.vercel.app/auth/callback` e `https://crm-fled.vercel.app/auth/definir-senha`
 4. Diretor e Levy com usuário ativo (convite / senha definida).
 
 ---
