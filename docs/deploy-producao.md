@@ -16,7 +16,7 @@ Guia operacional alinhado à SPEC seções 2 e 8 (entrega 1). Sem funcionalidade
 4. Confirme que o projeto lê o `vercel.json` (região `gru1`).
 5. **Não** faça o primeiro deploy ainda — configure as variáveis primeiro.
 
-> **Importante:** o MCP/API da Vercel neste ambiente lista projetos do time `levyoliveirabrs-projects`, mas retorna **403** ao criar projeto ou fazer deploy nesse escopo. Faça o import pelo dashboard (passos acima). Depois de existir o projeto `crm-fled`, o agente consegue acompanhar deploys/logs se o escopo for reautorizado.
+> **Bloqueio atual do agente:** `create_git_project` e leitura de deployments no time `levyoliveirabrs-projects` retornam **403** (escopo do time). Um projeto `crm-fled` pode já existir no time a partir de um deploy de teste — **não use esse deploy** até o repositório GitHub estar linkado e as 5 variáveis corretas. Faça o import/link pelo dashboard (passos acima) e confirme as envs com os **mesmos nomes** de `.env.local`.
 
 ## 2. Variáveis de ambiente (Production)
 
