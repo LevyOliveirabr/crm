@@ -556,12 +556,28 @@ export async function alternarProdutoAtivo(
   return { ok: true };
 }
 
+// ---------- Relatórios / Presidência ----------
+
 export type ConfigActionState = {
   error?: string;
   ok?: boolean;
 };
 
 const comentarioSchema = z.object({
+  mes: z.string().regex(/^\d{4}-\d{2}/, "Mês inválido."),
+  texto: z.string().max(4000),
+});
+
+export async function salvarComentarioPresidencia(
+  mes: string,
+  texto: string,
+): Promise<ConfigActionState> {
+  const diretor = await exigirDiretor();
+  if (!diretor) {
+    return { error: "Apenas o diretor pode salvar o comentário." };
+  }
+
+  const parsed = comentarioSchema.safeParse({ mes, texto });
   mes: z
     .string()
     .regex(/^\d{4}-\d{2}$/, "Mês inválido."),
@@ -586,6 +602,12 @@ export async function salvarComentarioDiretor(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
+  const chave = `comentario_${parsed.data.mes.slice(0, 7)}`;
+  const supabase = await createClient();
+  const { error } = await supabase.from("config").upsert({
+    chave,
+    valor: parsed.data.texto,
+  });
   const chave = `comentario_${parsed.data.mes}`;
   const supabase = await createClient();
   const { error } = await supabase.from("config").upsert(

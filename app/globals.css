@@ -129,6 +129,30 @@
   }
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .relatorio-print,
+  .relatorio-print * {
+    visibility: visible;
+  }
+  .relatorio-print {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 14mm;
 /* Relatório da presidência — impressão A4 (SPEC 5.8) */
 @media print {
   @page {
