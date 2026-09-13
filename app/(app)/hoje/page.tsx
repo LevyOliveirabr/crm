@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import {
   formatarMoeda,
   formatarData,
@@ -12,6 +12,7 @@ import {
   adicionarDiasISO,
 } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { BotaoFlutuanteNovaNegociacao } from "@/components/crm/botao-flutuante-nova-negociacao";
 import {
   HojeInterativo,
   type AcaoHojeItem,
@@ -48,20 +49,22 @@ export default async function HojePage({
   const inicioMes = inicioMesAtualISO();
   const fimMes = inicioProximoMesISO(hoje);
 
-  const [{ data: configRow }, { data: vendedores }] = await Promise.all([
-    supabase
-      .from("config")
-      .select("valor")
-      .eq("chave", "alerta_validade_orcamento_dias")
-      .maybeSingle(),
-    usuario.perfil === "diretor"
-      ? supabase
-          .from("usuarios")
-          .select("id, nome")
-          .eq("ativo", true)
-          .order("nome")
-      : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
-  ]);
+  const [{ data: configRow }, { data: vendedores }, dadosNova] =
+    await Promise.all([
+      supabase
+        .from("config")
+        .select("valor")
+        .eq("chave", "alerta_validade_orcamento_dias")
+        .maybeSingle(),
+      usuario.perfil === "diretor"
+        ? supabase
+            .from("usuarios")
+            .select("id, nome")
+            .eq("ativo", true)
+            .order("nome")
+        : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
+      carregarDadosFormNegociacao(),
+    ]);
 
   const alertaDias = Math.max(
     1,
@@ -346,14 +349,9 @@ export default async function HojePage({
         )}
       </section>
 
-      <Link
-        href="/negociacoes/nova"
-        className="fixed right-4 bottom-20 z-30 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 lg:right-8 lg:bottom-8"
-        aria-label="Nova negociação"
-      >
-        <Plus className="size-6" />
-        <span className="sr-only">+ Negociação</span>
-      </Link>
+      {dadosNova.ok ? (
+        <BotaoFlutuanteNovaNegociacao dados={dadosNova.dados} />
+      ) : null}
     </div>
   );
 }

@@ -143,3 +143,39 @@ export function proximaSegundaISO(dataISO: string = hojeISO()): string {
   const add = diaSemana === 0 ? 1 : 8 - diaSemana;
   return adicionarDiasISO(dataISO, add);
 }
+
+/** Normaliza nome para comparação sem acento/maiúsculas (R11). */
+export function normalizarNome(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Interpreta texto de moeda BR (`1.234,56`, `R$ 50`, `50`) como número.
+ * Retorna `null` se não for possível interpretar.
+ */
+export function parseMoedaBR(valor: string | number | null | undefined): number | null {
+  if (typeof valor === "number") {
+    return Number.isFinite(valor) ? valor : null;
+  }
+  if (valor == null) return null;
+  const limpo = String(valor)
+    .trim()
+    .replace(/[R$\s]/gi, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  if (!limpo) return 0;
+  const n = Number(limpo);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Início do mês (yyyy-mm-01) a partir de yyyy-mm ou yyyy-mm-dd. */
+export function inicioMesISO(valor: string): string {
+  const m = valor.match(/^(\d{4})-(\d{2})/);
+  if (!m) return inicioMesAtualISO();
+  return `${m[1]}-${m[2]}-01`;
+}

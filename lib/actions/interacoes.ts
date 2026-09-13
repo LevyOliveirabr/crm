@@ -11,18 +11,24 @@ export type InteracaoActionResult =
   | { ok: true }
   | { ok: false; error: string };
 
-const TIPOS_UM_TOQUE = ["ligacao", "whatsapp", "visita", "reuniao"] as const;
+const TIPOS_RAPIDOS = [
+  "ligacao",
+  "whatsapp",
+  "visita",
+  "reuniao",
+  "anotacao",
+] as const;
 
 const registrarSchema = z.object({
   negociacaoId: z.uuid("Negociação inválida"),
   tipo: tipoInteracaoSchema.refine(
-    (t) => (TIPOS_UM_TOQUE as readonly string[]).includes(t),
+    (t) => (TIPOS_RAPIDOS as readonly string[]).includes(t),
     "Tipo de interação inválido para registro rápido.",
   ),
   texto: z.string().trim().optional().nullable(),
 });
 
-/** Registra interação de um toque (R5): Liguei / WhatsApp / Visitei / Reunião. */
+/** Registra interação rápida (R5 + Anotação na ficha). */
 export async function registrarInteracao(
   negociacaoId: string,
   tipo: z.infer<typeof tipoInteracaoSchema>,

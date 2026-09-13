@@ -7,3 +7,6 @@ export { CartaoNegociacao } from "./cartao-negociacao";
 export { FunilClient } from "./funil-client";
 export { FunilKanban } from "./funil-kanban";
 export { FunilLista } from "./funil-lista";
+export { NovaNegociacaoForm } from "./nova-negociacao-form";
+export { NegociacaoFicha } from "./negociacao-ficha";
+export { BotaoFlutuanteNovaNegociacao } from "./botao-flutuante-nova-negociacao";

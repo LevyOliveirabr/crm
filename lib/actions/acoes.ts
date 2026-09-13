@@ -177,3 +177,64 @@ export async function criarAcao(
 
   return { ok: true };
 }
+
+const atualizarSchema = z.object({
+  id: z.uuid("Ação inválida"),
+  descricao: z.string().trim().min(1, "Descrição é obrigatória"),
+  tipo: tipoAcaoSchema.optional(),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+});
+
+/** Edita ação pendente (ficha). */
+export async function atualizarAcao(
+  input: z.input<typeof atualizarSchema>,
+): Promise<AcaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+
+  const parsed = atualizarSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: acao, error: erroBusca } = await supabase
+    .from("acoes")
+    .select("id, negociacao_id, concluida_em")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+
+  if (erroBusca || !acao) {
+    return { ok: false, error: "Ação não encontrada." };
+  }
+  if (acao.concluida_em) {
+    return { ok: false, error: "Ação já concluída." };
+  }
+
+  const patch: {
+    descricao: string;
+    data: string;
+    tipo?: z.infer<typeof tipoAcaoSchema>;
+  } = {
+    descricao: parsed.data.descricao,
+    data: parsed.data.data,
+  };
+  if (parsed.data.tipo) patch.tipo = parsed.data.tipo;
+
+  const { error: erroUpdate } = await supabase
+    .from("acoes")
+    .update(patch)
+    .eq("id", acao.id);
+
+  if (erroUpdate) {
+    return { ok: false, error: erroUpdate.message };
+  }
+
+  await revalidarTelasAcao();
+  revalidatePath(`/negociacoes/${acao.negociacao_id}`);
+
+  return { ok: true, negociacaoId: acao.negociacao_id };
+}
