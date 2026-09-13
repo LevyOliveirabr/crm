@@ -46,7 +46,6 @@ const NAV_PRINCIPAL: NavItem[] = [
     icon: KeyRound,
   },
   {
-    href: "/configuracoes/usuarios",
     href: "/configuracoes",
     label: "Configurações",
     icon: Settings,
@@ -103,7 +102,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-full bg-background">
-      <aside className="no-print sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
         <div className="mb-6 px-3">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             F-Led
@@ -144,7 +143,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print flex items-center justify-between border-b border-border px-4 py-3 lg:hidden">
+        <header className="flex items-center justify-between border-b border-border px-4 py-3 lg:hidden">
           <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               F-Led
@@ -156,11 +155,11 @@ export function AppShell({
           </p>
         </header>
 
-        <main className="flex-1 overflow-x-hidden px-4 py-4 pb-24 lg:px-6 lg:pb-6 print:overflow-visible print:p-0 print:pb-0">
+        <main className="flex-1 overflow-x-hidden px-4 py-4 pb-24 lg:px-6 lg:pb-6">
           {children}
         </main>
 
-        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden">
           <ul className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-2">
             {mobileFixa.map((item) => {
               const Icon = item.icon;

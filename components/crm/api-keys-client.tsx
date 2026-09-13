@@ -66,7 +66,8 @@ export function ApiKeysClient({ keysIniciais }: { keysIniciais: ApiKeyResumo[] }
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-medium">Gerar nova key</h2>
         <p className="text-sm text-muted-foreground">
-          A key completa só aparece uma vez. Guarde-a no Cursor ou Claude Desktop.
+          A key completa só aparece uma vez. Use no Cursor, Claude Desktop ou Grok
+          (variável de ambiente <code>CRM_FLED_API_KEY</code>).
         </p>
         <form onSubmit={onGerar} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex flex-1 flex-col gap-1.5">
@@ -77,7 +78,7 @@ export function ApiKeysClient({ keysIniciais }: { keysIniciais: ApiKeyResumo[] }
               id="nome-key"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex.: Cursor, Claude Desktop"
+              placeholder="Ex.: Grok bot, Cursor, Claude"
               required
               maxLength={80}
             />
