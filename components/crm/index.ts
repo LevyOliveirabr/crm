@@ -10,3 +10,5 @@ export { FunilLista } from "./funil-lista";
 export { NovaNegociacaoForm } from "./nova-negociacao-form";
 export { NegociacaoFicha } from "./negociacao-ficha";
 export { BotaoFlutuanteNovaNegociacao } from "./botao-flutuante-nova-negociacao";
+export { RelatoriosClient } from "./relatorios-client";
+export { FiltroMes } from "./filtro-mes";
