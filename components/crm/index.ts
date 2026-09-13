@@ -3,3 +3,7 @@ export { HojeInterativo } from "./hoje-interativo";
 export { SeletorVendedor } from "./seletor-vendedor";
 export { AppShell } from "./app-shell";
 export { LoginForm } from "./login-form";
+export { CartaoNegociacao } from "./cartao-negociacao";
+export { FunilClient } from "./funil-client";
+export { FunilKanban } from "./funil-kanban";
+export { FunilLista } from "./funil-lista";
