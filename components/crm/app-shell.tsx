@@ -40,7 +40,7 @@ const NAV_PRINCIPAL: NavItem[] = [
   { href: "/contatos", label: "Contatos", icon: Users },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   {
-    href: "/configuracoes/usuarios",
+    href: "/configuracoes",
     label: "Configurações",
     icon: Settings,
     diretorOnly: true,
