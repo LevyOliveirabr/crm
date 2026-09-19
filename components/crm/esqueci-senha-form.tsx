@@ -20,8 +20,10 @@ export function EsqueciSenhaForm() {
       <div className="flex flex-col gap-4">
         <p className="text-sm text-foreground" role="status">
           Se existir uma conta com esse e-mail, enviamos um link para redefinir
-          a senha. O link abre o site online (crm-fled.vercel.app) — confira a
-          caixa de entrada e o spam.
+          a senha no site online (crm-fled.vercel.app). Confira a caixa de
+          entrada e o <strong>spam</strong>. O e-mail gratuito do Supabase
+          demora e tem limite (poucos por hora) — se não chegar, espere ~1 hora
+          ou peça ao diretor para redefinir no painel.
         </p>
         <Link
           href="/login"
