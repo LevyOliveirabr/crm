@@ -81,9 +81,24 @@ export async function esqueciSenhaAction(
     redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/definir-senha")}`,
   });
 
-  // Não revelar se o e-mail existe ou não.
   if (error) {
     console.error("[esqueci-senha]", error.message);
+    const msg = error.message.toLowerCase();
+    if (
+      msg.includes("rate") ||
+      msg.includes("limit") ||
+      msg.includes("seconds") ||
+      msg.includes("too many")
+    ) {
+      return {
+        error:
+          "Muitos e-mails enviados. Espere cerca de 1 hora (limite do Supabase) e tente de novo. Confira também o spam.",
+      };
+    }
+    return {
+      error:
+        "Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos ou peça ao diretor para redefinir no painel do Supabase.",
+    };
   }
 
   return {
