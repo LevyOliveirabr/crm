@@ -1,56 +1,56 @@
-# Status Vercel / GitHub — atualizado (13/09/2026)
+# Status Vercel / GitHub — atualizado (19/09/2026)
 
 ## Resumo rápido
 
 | Item | Estado |
 |---|---|
-| GitHub ↔ projeto **`crm-fled`** | **Conectado** (confirmado pelo usuário) |
-| Código em `main` (antes deste PR) | Tinha **arquivos corrompidos por merge** (build quebrava) |
-| Este PR | **Corrige o build** + manual + diagnóstico |
-| `https://crm-fled.vercel.app` | Ainda **HTTP 500** até cadastrar as **5 env vars** e Redeploy |
-| Deploy temporário válido (~1h) | https://temporary-snappy-antimony-iztfiki.vercel.app → `/login` **200** |
-| Claim do temporário | https://vercel.com/claim-deployment?code=c9a463cc-1527-46b6-8c67-4ac16ffc6108 |
+| Repositório GitHub | `https://github.com/LevyOliveirabr/crm` |
+| Branch publicada | `main` |
+| Commit em produção | `1d63d82` |
+| Projeto Vercel | `crm-fled` (`levyoliveirabrs-projects`) |
+| URL de produção | `https://crm-fled.vercel.app` |
+| Status do deploy | `Ready` |
 
-## O que já foi feito neste agente
+## Publicação realizada
 
-1. Diagnóstico: não havia conflito de PR; o X no GitHub vinha do projeto `temporary-*` e/ou build quebrado.
-2. **Build corrigido**: páginas e libs mescladas/duplicadas restauradas (`empresas`, `contatos`, `relatorios`, `config`, `globals.css`, etc.). `npm run build` passa.
-3. Deploy temporário anônimo com as env vars injetadas — app sobe.
-4. MCP OAuth do agente **ainda sem escopo** no time `levyoliveirabrs-projects` → **não consegue** gravar env vars no `crm-fled` pela API.
+Em 19/09/2026, o projeto `crm-fled` foi publicado em produção sem alteração de código da aplicação.
 
-## O que falta no dashboard (você — ~3 min)
+O erro HTTP 500 em produção era causado por variáveis de ambiente incompletas no Vercel. O build já passava, mas o runtime falhava ao criar o client do Supabase.
 
-### 1) Env vars no `crm-fled`
+Variáveis confirmadas no ambiente **Production** do Vercel:
 
-Vercel → projeto **crm-fled** → **Settings → Environment Variables** (Production + Preview):
-
-| Variável | Onde pegar |
+| Variável | Tipo no Vercel |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | API → `anon` `public` |
-| `SUPABASE_SERVICE_ROLE_KEY` | API → `service_role` (**secret**) |
-| `SUPABASE_JWT_SECRET` | API → JWT Secret |
-| `APP_URL` | `https://crm-fled.vercel.app` |
+| `APP_URL` | Config |
+| `NEXT_PUBLIC_SUPABASE_URL` | Config |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Config |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret |
+| `SUPABASE_JWT_SECRET` | Secret |
 
-Depois: **Deployments → Redeploy** (ou merge deste PR na `main` para disparar deploy automático via Git).
+Depois da configuração, foi feito redeploy de produção:
 
-### 2) Desligar o projeto temporário antigo (se ainda aparecer X no GitHub)
+- Deployment: `dpl_B49hYqaSgk1dESuW6Bt7doWfn52P`
+- URL do deployment: `https://crm-fled-83t72wwp5-levyoliveirabrs-projects.vercel.app`
+- Alias de produção: `https://crm-fled.vercel.app`
 
-Em qualquer `temporary-prompt-oxygen-*` (ou similar) ligado ao repo: **Settings → Git → Disconnect**, ou delete o projeto. Só o **`crm-fled`** deve estar conectado a `LevyOliveirabr/crm`.
+## Validação realizada
 
-### 3) Supabase Auth URLs
+Testes de fumaça após o redeploy:
 
-- Site URL: `https://crm-fled.vercel.app`
-- Redirects:  
-  `https://crm-fled.vercel.app/auth/callback`  
-  `https://crm-fled.vercel.app/auth/definir-senha`
+| Rota | Resultado |
+|---|---|
+| `/` | HTTP 307 para login |
+| `/login` | HTTP 200 |
+| `/api/mcp/mcp` | HTTP 401 sem token, esperado para endpoint protegido |
 
-## Validação
+Logs recentes do Vercel após os testes:
 
-```bash
-curl -sI https://crm-fled.vercel.app/login   # esperado: HTTP 200
-```
+- Sem erros recentes reportados por `vercel logs https://crm-fled.vercel.app --since 3m`.
 
-Enquanto isso, use o temporário acima (ou faça o claim).
+## Observações operacionais
+
+As chaves reais do Supabase não foram gravadas no repositório. Elas ficam somente nas variáveis de ambiente do Vercel.
+
+Para novas publicações, mantenha o deploy ligado à branch `main` e confirme que as cinco variáveis acima continuam presentes no ambiente **Production**.
 
 Manual do sistema + MCP/Grok: `docs/manual-utilizacao.md`.
