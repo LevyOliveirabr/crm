@@ -22,7 +22,7 @@ export default async function DefinirSenhaPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {user
               ? "Escolha uma senha para acessar o CRM."
-              : "Abra o link do convite no e-mail para continuar."}
+              : "Abra o link do e-mail (convite ou redefinição de senha) para continuar."}
           </p>
         </div>
         <div className="rounded-2xl border border-border/80 bg-background/90 p-6 shadow-sm backdrop-blur">
@@ -30,8 +30,10 @@ export default async function DefinirSenhaPage() {
             <DefinirSenhaForm />
           ) : (
             <p className="text-sm text-muted-foreground">
-              Sessão do convite não encontrada. Peça um novo convite ao diretor
-              ou confira se a URL de redirecionamento no Supabase inclui{" "}
+              Sessão não encontrada. Peça um novo convite ao diretor, use
+              “Esqueci minha senha” no login, ou confira se a URL de
+              redirecionamento no Supabase inclui{" "}
+              <code className="text-xs">/auth/callback</code> e{" "}
               <code className="text-xs">/auth/definir-senha</code>.
             </p>
           )}

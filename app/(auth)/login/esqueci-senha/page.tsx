@@ -1,18 +1,6 @@
-import { LoginForm } from "@/components/crm/login-form";
+import { EsqueciSenhaForm } from "@/components/crm/esqueci-senha-form";
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ erro?: string }>;
-}) {
-  const params = await searchParams;
-  const erroInicial =
-    params.erro === "inativo"
-      ? "Usuário desativado. Fale com o diretor."
-      : params.erro === "convite"
-        ? "Link inválido ou expirado. Tente “Esqueci minha senha” ou peça um novo convite."
-        : undefined;
-
+export default function EsqueciSenhaPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-100 via-background to-zinc-200 px-4 py-10">
       <div className="w-full max-w-sm">
@@ -21,14 +9,15 @@ export default async function LoginPage({
             F-Led
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
-            CRM Comercial
+            Esqueci minha senha
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Entre com o e-mail e a senha do convite.
+            Informe o e-mail da sua conta. Enviaremos um link para criar uma
+            nova senha.
           </p>
         </div>
         <div className="rounded-2xl border border-border/80 bg-background/90 p-6 shadow-sm backdrop-blur">
-          <LoginForm erroInicial={erroInicial} />
+          <EsqueciSenhaForm />
         </div>
       </div>
     </div>

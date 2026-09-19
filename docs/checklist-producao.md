@@ -19,6 +19,7 @@ Pré-requisitos antes dos testes:
 3. Supabase → Authentication → URL Configuration:
    - **Site URL** = `https://crm-fled.vercel.app`
    - **Redirect URLs** inclui `https://crm-fled.vercel.app/auth/callback` e `https://crm-fled.vercel.app/auth/definir-senha`
+  (obrigatório também para “Esqueci minha senha”)
 4. Diretor e Levy com usuário ativo (convite / senha definida).
 
 ---
@@ -28,6 +29,7 @@ Pré-requisitos antes dos testes:
 | # | Teste | Como validar | Desktop | Mobile | OK |
 |---|---|---|---|---|---|
 | 1 | Login diretor | Entrar com e-mail/senha do perfil diretor; cai em `/hoje` com menu completo (inclui Configurações / Relatórios). | [ ] | [ ] | [ ] |
+| 1b | Esqueci senha | Em `/login` → “Esqueci minha senha” → informar e-mail → abrir link do e-mail → definir nova senha em `/auth/definir-senha` → entrar em `/hoje`. Redirects no Supabase devem incluir `/auth/callback`. | [ ] | [ ] | [ ] |
 | 2 | Login vendedor | Entrar com perfil vendedor; vê só a própria carteira; sem Configurações de admin. | [ ] | [ ] | [ ] |
 | 3 | Criar empresa | `/empresas` → nova empresa com campos mínimos; aparece na lista e abre a ficha. | [ ] | [ ] | [ ] |
 | 4 | Criar negociação | `/negociacoes/nova` (ou fluxo equivalente); empresa + etapa inicial; aparece no funil e na ficha. | [ ] | [ ] | [ ] |
