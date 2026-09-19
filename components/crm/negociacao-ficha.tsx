@@ -128,6 +128,7 @@ export type OrcamentoFicha = {
   origem: string;
   criadoEm: string;
   arquivoPath: string | null;
+  aceitoEm: string | null;
 };
 
 export type VendedorOption = { id: string; nome: string };
@@ -1011,15 +1012,23 @@ export function NegociacaoFicha({
             <ul className="space-y-2">
               {orcamentos.map((o) => (
                 <li key={o.id} className="text-sm">
-                  <p className="font-medium">
-                    {o.numero ? `ORC ${o.numero}` : "Orçamento"} ·{" "}
+                  <Link
+                    href={`/orcamentos/${o.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {o.numero ? `Orçamento ${o.numero}` : "Orçamento"} ·{" "}
                     {formatarMoeda(o.valor)}
-                  </p>
+                  </Link>
                   <p className="text-xs text-muted-foreground">
                     {formatarData(o.enviadoEm)} · {o.situacao}
                     {o.validade
                       ? ` · val. ${formatarData(o.validade)}`
                       : ""}
+                    {o.aceitoEm ? (
+                      <span className="ml-1 font-semibold text-success">
+                        · aceito pelo cliente
+                      </span>
+                    ) : null}
                   </p>
                 </li>
               ))}

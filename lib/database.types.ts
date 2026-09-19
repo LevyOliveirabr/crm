@@ -474,12 +474,16 @@ export type Database = {
           subtotal: number | null;
           arquivo_pdf_path: string | null;
           arquivo_xlsx_path: string | null;
+          aceito_em: string | null;
+          aceito_por: string | null;
         };
         Insert: {
           id?: string;
           negociacao_id: string;
           numero?: string | null;
           valor: number;
+          aceito_em?: string | null;
+          aceito_por?: string | null;
           enviado_em?: string;
           validade?: string | null;
           arquivo_path?: string | null;
@@ -516,6 +520,8 @@ export type Database = {
           subtotal?: number | null;
           arquivo_pdf_path?: string | null;
           arquivo_xlsx_path?: string | null;
+          aceito_em?: string | null;
+          aceito_por?: string | null;
         };
         Relationships: [
           {

@@ -100,7 +100,7 @@ export default async function NegociacaoPage({
     supabase
       .from("orcamentos")
       .select(
-        "id, numero, valor, enviado_em, validade, situacao, origem, criado_em, arquivo_path",
+        "id, numero, valor, enviado_em, validade, situacao, origem, criado_em, arquivo_path, aceito_em",
       )
       .eq("negociacao_id", neg.id)
       .order("criado_em", { ascending: false }),
@@ -159,6 +159,7 @@ export default async function NegociacaoPage({
     origem: o.origem,
     criadoEm: o.criado_em,
     arquivoPath: o.arquivo_path,
+    aceitoEm: o.aceito_em ?? null,
   }));
 
   const contatos: ContatoFicha[] = (contatosRaw ?? []).map((c) => ({

@@ -54,6 +54,11 @@ drop trigger if exists trg_neg_previsao on negociacoes;
 create trigger trg_neg_previsao before insert or update of previsao_data on negociacoes
   for each row execute function sync_previsao_mes();
 
+-- ---------- 4b. Aceite de orçamento por link ----------
+alter table orcamentos
+  add column if not exists aceito_em timestamptz,
+  add column if not exists aceito_por text;
+
 -- ---------- 5. Histórico de etapas ----------
 create table if not exists etapa_historico (
   id bigint generated always as identity primary key,
