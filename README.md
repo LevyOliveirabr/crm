@@ -9,6 +9,7 @@ CRM comercial (Next.js + Supabase) para a F-Led: Hoje, Funil, Empresas, Contatos
 - **Manual de uso + MCP/Grok:** [`docs/manual-utilizacao.md`](docs/manual-utilizacao.md)
 - **Status Vercel / GitHub:** [`docs/status-vercel.md`](docs/status-vercel.md)
 - **MCP (Cursor/Claude/Grok):** [`docs/mcp.md`](docs/mcp.md)
+- **Criar um agente que conversa com o CRM:** [`docs/manual-agente-mcp.md`](docs/manual-agente-mcp.md)
 - **Deploy:** [`docs/deploy-producao.md`](docs/deploy-producao.md)
 - **Especificação:** [`SPEC.md`](SPEC.md)
 
