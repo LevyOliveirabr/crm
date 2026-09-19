@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Quando o convite redireciona com tokens no hash (fluxo implícito),
+ * Quando o convite/recovery redireciona com tokens no hash (fluxo implícito),
  * o browser client persiste a sessão e recarregamos a página.
  */
 export function AuthHashBridge() {
@@ -16,7 +16,12 @@ export function AuthHashBridge() {
   useEffect(() => {
     if (tentou.current) return;
     if (typeof window === "undefined") return;
-    if (!window.location.hash.includes("access_token")) {
+    const hash = window.location.hash;
+    if (
+      !hash.includes("access_token") &&
+      !hash.includes("type=recovery") &&
+      !hash.includes("type=invite")
+    ) {
       tentou.current = true;
       return;
     }

@@ -58,6 +58,39 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+const emailSchema = z.object({
+  email: z.email("Informe um e-mail válido."),
+});
+
+export async function esqueciSenhaAction(
+  _prev: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const parsed = emailSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/definir-senha")}`,
+  });
+
+  // Não revelar se o e-mail existe ou não.
+  if (error) {
+    console.error("[esqueci-senha]", error.message);
+  }
+
+  return {
+    ok: true,
+    error: undefined,
+  };
+}
+
 const senhaSchema = z
   .object({
     password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
@@ -88,7 +121,8 @@ export async function definirSenhaAction(
 
   if (!user) {
     return {
-      error: "Link inválido ou expirado. Peça um novo convite ao diretor.",
+      error:
+        "Link inválido ou expirado. Use “Esqueci minha senha” no login ou peça um novo convite ao diretor.",
     };
   }
 
