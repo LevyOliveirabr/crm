@@ -32,6 +32,23 @@ Alternativa: no usuário, use **Reset password** / editar e gravar uma senha tem
 - [ ] Site URL = `https://crm-fled.vercel.app` (já ajustado)  
 - [ ] Pedir **um** novo e-mail só depois da espera  
 
+## Solução imediata sem e-mail (rate limit)
+
+Com a chave `SUPABASE_SERVICE_ROLE_KEY` (Vercel → Environment Variables):
+
+```bash
+git clone https://github.com/LevyOliveirabr/crm.git
+cd crm
+
+NEXT_PUBLIC_SUPABASE_URL=https://owgbgrksfwdiftdfapdm.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY='cole_a_service_role_aqui' \
+EMAIL='seu@email.com' \
+NOVA_SENHA='SuaSenhaForte123!' \
+node scripts/set-password.mjs
+```
+
+Depois entre em https://crm-fled.vercel.app/login
+
 ## Solução definitiva (recomendado)
 
 Authentication → SMTP Settings → configurar provedor próprio (Resend, SendGrid, Amazon SES, etc.).  
