@@ -38,6 +38,14 @@ const COLUNAS_ABERTAS = `
   sem_acao, acao_atrasada, dias_sem_interacao, proxima_acao_data
 `;
 
+/** Sem as colunas da migration 0006 (empresa_uf, empresa_tipo_segmento, data_faturamento). */
+const COLUNAS_ABERTAS_LEGADO = `
+  id, titulo, linha, origem, empresa_id, empresa_nome,
+  responsavel_id, responsavel_nome, funil_id, funil_nome, etapa_id, etapa_nome, etapa_ordem,
+  valor_estimado, temperatura, previsao_mes, criado_em,
+  sem_acao, acao_atrasada, dias_sem_interacao, proxima_acao_data
+`;
+
 type LinhaAberta = {
   id: string | null;
   titulo: string | null;
@@ -211,8 +219,37 @@ export async function carregarDadosDashboard(
   );
   const deAnterior = adicionarDiasISO(filtros.de, -diasPeriodo);
 
+  // Primeiro tenta com as colunas da migration 0006; se o banco ainda não
+  // tiver a migration, cai para as colunas antigas (sem filtro de UF/segmento).
+  let abertasRaw: unknown[] | null = null;
+  let filtrosEfetivos = filtros;
+  {
+    const res = await aplicarFiltros(
+      supabase
+        .from("v_negociacoes")
+        .select(COLUNAS_ABERTAS)
+        .eq("status", "aberta")
+        .order("valor_estimado", { ascending: false }),
+      filtros,
+    );
+    if (res.error) {
+      filtrosEfetivos = { ...filtros, uf: null, segmento: null };
+      const legado = await aplicarFiltros(
+        supabase
+          .from("v_negociacoes")
+          .select(COLUNAS_ABERTAS_LEGADO)
+          .eq("status", "aberta")
+          .order("valor_estimado", { ascending: false }),
+        filtrosEfetivos,
+      );
+      abertasRaw = legado.data;
+    } else {
+      abertasRaw = res.data;
+    }
+  }
+  const filtros_ = filtrosEfetivos;
+
   const [
-    { data: abertasRaw },
     { data: fechadasRaw },
     { data: fechadasAntRaw },
     { data: vendidasAnoRaw },
@@ -222,19 +259,11 @@ export async function carregarDadosDashboard(
     aplicarFiltros(
       supabase
         .from("v_negociacoes")
-        .select(COLUNAS_ABERTAS)
-        .eq("status", "aberta")
-        .order("valor_estimado", { ascending: false }),
-      filtros,
-    ),
-    aplicarFiltros(
-      supabase
-        .from("v_negociacoes")
         .select("status, valor_final, valor_estimado, fechado_em")
         .in("status", ["vendida", "perdida"])
         .gte("fechado_em", `${filtros.de}T00:00:00-03:00`)
         .lt("fechado_em", `${ateExclusivo}T00:00:00-03:00`),
-      filtros,
+      filtros_,
     ),
     aplicarFiltros(
       supabase
@@ -243,7 +272,7 @@ export async function carregarDadosDashboard(
         .in("status", ["vendida", "perdida"])
         .gte("fechado_em", `${deAnterior}T00:00:00-03:00`)
         .lt("fechado_em", `${filtros.de}T00:00:00-03:00`),
-      filtros,
+      filtros_,
     ),
     filtros.visao === "fechamento"
       ? aplicarFiltros(
@@ -253,7 +282,7 @@ export async function carregarDadosDashboard(
             .eq("status", "vendida")
             .gte("fechado_em", `${anoAtual}-01-01T00:00:00-03:00`)
             .lt("fechado_em", `${anoAtual + 2}-01-01T00:00:00-03:00`),
-          filtros,
+          filtros_,
         )
       : Promise.resolve({ data: [] as LinhaFechada[] }),
     supabase
@@ -278,9 +307,16 @@ export async function carregarDadosDashboard(
     }
   }
 
-  const abertas = ((abertasRaw ?? []) as unknown as LinhaAberta[]).filter(
-    (r) => r.id,
-  );
+  const abertas = ((abertasRaw ?? []) as unknown as Partial<LinhaAberta>[])
+    .filter((r) => r.id)
+    .map(
+      (r): LinhaAberta => ({
+        ...(r as LinhaAberta),
+        empresa_uf: r.empresa_uf ?? null,
+        empresa_tipo_segmento: r.empresa_tipo_segmento ?? null,
+        data_faturamento: r.data_faturamento ?? null,
+      }),
+    );
   const fechadas = (fechadasRaw ?? []) as LinhaFechada[];
   const fechadasAnt = (fechadasAntRaw ?? []) as LinhaFechada[];
   const vendidasAno = (vendidasAnoRaw ?? []) as LinhaFechada[];

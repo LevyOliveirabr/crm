@@ -36,7 +36,6 @@ export default async function NegociacaoPage({
       linha,
       origem,
       previsao_mes,
-      data_faturamento,
       status,
       valor_final,
       motivo_perda,
@@ -64,6 +63,14 @@ export default async function NegociacaoPage({
   const responsavel = Array.isArray(neg.usuarios)
     ? neg.usuarios[0]
     : neg.usuarios;
+
+  // Coluna criada na migration 0006; lida separadamente para a ficha
+  // continuar abrindo em bancos onde a migration ainda não foi aplicada.
+  const { data: faturamentoRow } = await supabase
+    .from("negociacoes")
+    .select("data_faturamento")
+    .eq("id", id)
+    .maybeSingle();
 
   const [
     { data: etapas },
@@ -185,7 +192,7 @@ export default async function NegociacaoPage({
         linha: neg.linha,
         origem: neg.origem,
         previsaoMes: neg.previsao_mes,
-        dataFaturamento: neg.data_faturamento,
+        dataFaturamento: faturamentoRow?.data_faturamento ?? null,
         status: neg.status,
         valorFinal: neg.valor_final != null ? Number(neg.valor_final) : null,
         motivoPerda: neg.motivo_perda,

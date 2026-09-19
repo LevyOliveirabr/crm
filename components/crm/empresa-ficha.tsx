@@ -227,7 +227,9 @@ export function EmpresaFicha({
         cidade: next.cidade,
         uf: next.uf,
         segmento: next.segmento,
-        tipo_segmento: next.tipoSegmento,
+        ...("tipoSegmento" in patch
+          ? { tipo_segmento: next.tipoSegmento }
+          : {}),
         cnpj: next.cnpj,
         responsavel_id: next.responsavelId,
         observacoes: next.observacoes,
