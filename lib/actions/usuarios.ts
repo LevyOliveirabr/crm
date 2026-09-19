@@ -18,7 +18,7 @@ export type UsuarioActionState = {
 const convidarSchema = z.object({
   nome: z.string().trim().min(2, "Informe o nome."),
   email: z.email("Informe um e-mail válido."),
-  perfil: z.enum(["diretor", "vendedor"]),
+  perfil: z.enum(["diretor", "gerente", "vendedor"]),
 });
 
 async function exigirDiretor() {
@@ -89,6 +89,40 @@ export async function alternarUsuarioAtivoAction(
   if (error) {
     return { error: error.message };
   }
+
+  revalidatePath("/configuracoes/usuarios");
+  return { ok: true };
+}
+
+/** Define (ou remove) o gerente de um vendedor. */
+export async function definirGerenteAction(
+  usuarioId: string,
+  gerenteId: string | null,
+): Promise<UsuarioActionState> {
+  const diretor = await exigirDiretor();
+  if (!diretor) return { error: "Apenas o diretor pode alterar usuários." };
+  if (!z.uuid().safeParse(usuarioId).success) return { error: "Usuário inválido." };
+  if (gerenteId != null && !z.uuid().safeParse(gerenteId).success) {
+    return { error: "Gerente inválido." };
+  }
+  if (gerenteId === usuarioId) return { error: "Um usuário não pode ser gerente de si mesmo." };
+
+  const supabase = await createClient();
+  if (gerenteId) {
+    const { data: g } = await supabase
+      .from("usuarios")
+      .select("id, perfil, ativo")
+      .eq("id", gerenteId)
+      .maybeSingle();
+    if (!g || !g.ativo || g.perfil !== "gerente") {
+      return { error: "Escolha um usuário ativo com perfil gerente." };
+    }
+  }
+  const { error } = await supabase
+    .from("usuarios")
+    .update({ gerente_id: gerenteId })
+    .eq("id", usuarioId);
+  if (error) return { error: error.message };
 
   revalidatePath("/configuracoes/usuarios");
   return { ok: true };

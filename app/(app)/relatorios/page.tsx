@@ -5,6 +5,11 @@ import {
   type AbaRelatorio,
 } from "@/components/crm/relatorios-client";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import {
+  listarVendedoresVisiveis,
+  podeVerEquipe,
+  resolverFiltroVendedor,
+} from "@/lib/auth/equipe";
 import { carregarDadosRelatorios } from "@/lib/relatorios/dados";
 import { resolverPeriodo, type TipoPeriodo } from "@/lib/relatorios/periodo";
 import { createClient } from "@/lib/supabase/server";
@@ -55,7 +60,7 @@ export default async function RelatoriosPage({
   const origemParam = paramUnico(sp.origem);
   const abaParam = paramUnico(sp.aba);
 
-  const isDiretor = usuario.perfil === "diretor";
+  const isDiretor = podeVerEquipe(usuario);
   let abaInicial = (ABAS.includes(abaParam as AbaRelatorio)
     ? abaParam
     : "presidencia") as AbaRelatorio;
@@ -70,12 +75,12 @@ export default async function RelatoriosPage({
     ate: ateParam,
   });
 
-  const filtrarVendedor =
-    isDiretor && vendedorParam ? vendedorParam : null;
-
   const supabase = await createClient();
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
+  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam);
+  const equipeIds = usuario.perfil === "gerente" ? vendedores.map((v) => v.id) : null;
 
-  const [{ data: linhasRaw }, { data: origensRaw }, { data: vendedores }, dados] =
+  const [{ data: linhasRaw }, { data: origensRaw }, dados] =
     await Promise.all([
       supabase
         .from("listas")
@@ -89,19 +94,13 @@ export default async function RelatoriosPage({
         .eq("tipo", "origem")
         .eq("ativo", true)
         .order("ordem", { ascending: true }),
-      isDiretor
-        ? supabase
-            .from("usuarios")
-            .select("id, nome")
-            .eq("ativo", true)
-            .order("nome")
-        : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
       carregarDadosRelatorios(supabase, {
         periodo,
         vendedorId: filtrarVendedor,
         linha: linhaParam ?? null,
         origem: origemParam ?? null,
         isDiretor,
+        equipeIds,
       }),
     ]);
 
@@ -114,7 +113,7 @@ export default async function RelatoriosPage({
       <RelatoriosClient
         dados={dados}
         isDiretor={isDiretor}
-        vendedores={vendedores ?? []}
+        vendedores={vendedores}
         linhasOpcoes={(linhasRaw ?? []).map((l) => l.valor)}
         origensOpcoes={(origensRaw ?? []).map((o) => o.valor)}
         abaInicial={abaInicial}

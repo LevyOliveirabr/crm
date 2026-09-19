@@ -11,6 +11,10 @@ function ehRotaApp(pathname: string) {
   if (pathname.startsWith("/auth/")) return false;
   // MCP autentica via Bearer API key (não cookie de sessão)
   if (pathname.startsWith("/api/mcp")) return false;
+  // cron da Vercel autentica por CRON_SECRET
+  if (pathname.startsWith("/api/cron")) return false;
+  // aceite de orçamento pelo cliente (link assinado, sem login)
+  if (pathname.startsWith("/aceite/")) return false;
   if (pathname === "/") return false;
   return true;
 }
@@ -70,7 +74,7 @@ export async function atualizarSessao(request: NextRequest) {
 
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/hoje";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
@@ -92,7 +96,7 @@ export async function atualizarSessao(request: NextRequest) {
 
   if (pathname === "/") {
     const url = request.nextUrl.clone();
-    url.pathname = user ? "/hoje" : "/login";
+    url.pathname = user ? "/dashboard" : "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }

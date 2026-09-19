@@ -97,9 +97,20 @@ export function DashboardCabecalho({
             </dd>
             <dt className="font-semibold">Pipeline ponderado</dt>
             <dd className="text-muted-foreground">
-              Valor estimado × peso da temperatura (fria {pct(pesos.fria)},
-              morna {pct(pesos.morna)}, quente {pct(pesos.quente)}). Os pesos
-              são editáveis em Configurações › Parâmetros.
+              Valor estimado × probabilidade da etapa (Configurações › Funis).
+              Etapa sem probabilidade usa o peso da temperatura (fria{" "}
+              {pct(pesos.fria)}, morna {pct(pesos.morna)}, quente{" "}
+              {pct(pesos.quente)}), editável em Configurações › Parâmetros.
+            </dd>
+            <dt className="font-semibold">Meta do mês</dt>
+            <dd className="text-muted-foreground">
+              Vendido no mês (valor final das vendas fechadas) ÷ soma das metas
+              do mês (Configurações › Metas) dos vendedores dentro do filtro.
+            </dd>
+            <dt className="font-semibold">Categorias de forecast</dt>
+            <dd className="text-muted-foreground">
+              Soma do valor estimado das abertas por categoria definida na
+              ficha: compromisso (vai fechar), provável, possível.
             </dd>
             <dt className="font-semibold">Win rate</dt>
             <dd className="text-muted-foreground">
@@ -122,8 +133,9 @@ export function DashboardCabecalho({
             </dd>
             <dt className="font-semibold">Alta probabilidade</dt>
             <dd className="text-muted-foreground">
-              Temperatura quente com previsão de fechamento nos próximos 30
-              dias.
+              Temperatura quente ou categoria &quot;compromisso&quot;, com data
+              de fechamento prevista nos próximos 30 dias (ou o mês previsto,
+              quando não há data).
             </dd>
             <dt className="font-semibold">Em risco</dt>
             <dd className="text-muted-foreground">

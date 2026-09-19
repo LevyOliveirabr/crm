@@ -47,6 +47,12 @@ function listarMeses(inicio: string, fimExclusivo: string): string[] {
   return meses;
 }
 
+function mesAnteriorISO(mesISO: string): string {
+  const [y, m] = mesISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y!, m! - 2, 1));
+  return dt.toISOString().slice(0, 10);
+}
+
 function inicioTrimestreISO(dataISO: string = hojeISO()): string {
   const [y, m] = dataISO.split("-").map(Number);
   const mesTri = Math.floor((m! - 1) / 3) * 3 + 1;
@@ -107,9 +113,18 @@ export function resolverPeriodo(opts: {
 
   const fimInclusivo = adicionarDiasISO(fimExclusivo, -1);
   const meses = listarMeses(inicio, fimExclusivo);
-  const duracao = diasEntre(inicio, fimExclusivo);
   const antFimExclusivo = inicio;
-  const antInicio = adicionarDiasISO(antFimExclusivo, -duracao);
+  // Mês e trimestre comparam com o período anterior em meses inteiros
+  // (agosto inteiro vs. setembro), não em número de dias.
+  let antInicio: string;
+  if (tipo === "mes") {
+    antInicio = mesAnteriorISO(inicio);
+  } else if (tipo === "trimestre") {
+    antInicio = mesAnteriorISO(mesAnteriorISO(mesAnteriorISO(inicio)));
+  } else {
+    const duracao = diasEntre(inicio, fimExclusivo);
+    antInicio = adicionarDiasISO(antFimExclusivo, -duracao);
+  }
 
   let rotulo: string;
   if (tipo === "mes") {

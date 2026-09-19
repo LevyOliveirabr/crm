@@ -6,6 +6,8 @@ export type FiltrosRelatorio = {
   linha: string | null;
   origem: string | null;
   isDiretor: boolean;
+  /** Gerente: ids da equipe (limita o ranking). null = todos. */
+  equipeIds?: string[] | null;
 };
 
 export type PresidenciaTop = {
@@ -55,6 +57,12 @@ export type LinhaFunil = {
   ordem: number;
   qtd: number;
   valor: number;
+  /** Negociações (criadas no período) que passaram por esta etapa. */
+  passaram: number;
+  /** % das que passaram por aqui e chegaram à etapa seguinte. */
+  conversao_pct: number | null;
+  /** Dias médios de permanência na etapa. */
+  dias_medios: number | null;
 };
 
 export type LinhaPrevisao = {
@@ -76,6 +84,8 @@ export type LinhaRanking = {
   interacoes: number;
   pct_com_acao: number | null;
   acoes_atrasadas: number;
+  meta: number;
+  atingimento_pct: number | null;
   // período anterior para Δ
   vendido_ant: number;
   qtd_ant: number;

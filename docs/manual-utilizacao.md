@@ -44,6 +44,19 @@ Visão consolidada da carteira (negociações abertas), no padrão do PPT "Dashb
 
 Campos novos que alimentam o dashboard: **Tipo de cliente** na ficha da empresa (público / privado / PPP) e **Faturamento** (data) na ficha da negociação.
 
+Outros recursos ligados ao dashboard e à gestão:
+
+- **Meta do mês**: cadastrada em Configurações › Metas (por vendedor e mês); o dashboard mostra o atingimento e o ranking ganha a coluna Meta.
+- **Probabilidade por etapa**: em Configurações › Funis, cada etapa pode ter uma probabilidade (%) usada no pipeline ponderado no lugar da temperatura.
+- **Categoria de forecast** (compromisso / provável / possível) e **data de fechamento prevista** na ficha da negociação.
+- **Busca global**: `Ctrl+K` (ou o campo Buscar no menu) acha empresa, contato ou negociação de qualquer tela.
+- **CNPJ**: na ficha ou no cadastro da empresa, o botão "Buscar na Receita" preenche razão social, cidade e UF.
+- **WhatsApp**: o botão na ficha da negociação abre a conversa e já registra a interação.
+- **Orçamento**: a ficha do orçamento (`/orcamentos/[id]`) imprime/salva PDF e gera um **link de aceite** para o cliente; o aceite grava na timeline.
+- **Lembrete diário**: e-mail às 7h (dias úteis) com ações atrasadas e de hoje para cada vendedor, e um resumo da equipe para o diretor. Precisa de `RESEND_API_KEY` e `CRON_SECRET` na Vercel.
+- **Perfil gerente**: vê e edita as negociações da equipe (Configurações › Usuários define quem é o gerente de cada vendedor).
+- **Instalar no celular**: no navegador, "Adicionar à tela inicial"; o CRM abre como app.
+
 ### Meu dia (`/hoje`)
 
 Centro do dia a dia.
@@ -84,6 +97,8 @@ Na ficha você:
 Botão flutuante **+** (quando visível) abre nova negocição.
 
 ### Relatórios (`/relatorios`)
+
+Na aba Funil, cada etapa mostra quantas negociações (criadas no período) passaram por ela, a conversão para a etapa seguinte e os dias médios de permanência.
 
 - Aba **Presidência**: vendido no mês vs anterior, previsão, maiores abertas, perdas. Imprimir / copiar texto.
 - Aba **Funil** e demais análises (conforme liberado).

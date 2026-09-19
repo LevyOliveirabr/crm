@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { logoutAction } from "@/lib/actions/auth";
+import { BuscaGlobal } from "@/components/crm/busca-global";
 import type { UsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { Button } from "@/components/ui/button";
 import {
@@ -158,8 +159,11 @@ export function AppShell({
     <div className="flex min-h-full bg-background">
       <aside className="hidden w-60 shrink-0 self-stretch bg-sidebar text-sidebar-foreground lg:block">
         <div className="sticky top-0 flex h-dvh flex-col px-3 py-5">
-          <div className="mb-4 px-2">
+          <div className="mb-3 px-2">
             <Marca />
+          </div>
+          <div className="mb-2 px-1">
+            <BuscaGlobal />
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
             {NAV_GRUPOS.map((grupo) => {
@@ -212,9 +216,12 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
           <Marca compacta />
-          <p className="max-w-[40%] truncate text-sm text-sidebar-foreground/70">
-            {usuario.nome}
-          </p>
+          <div className="flex items-center gap-2">
+            <BuscaGlobal compacta />
+            <p className="max-w-[9rem] truncate text-sm text-sidebar-foreground/70">
+              {usuario.nome}
+            </p>
+          </div>
         </header>
 
         <main className="flex-1 overflow-x-hidden px-4 py-4 pb-24 lg:px-7 lg:py-6 lg:pb-8">

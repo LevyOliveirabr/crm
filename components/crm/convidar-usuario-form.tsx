@@ -56,6 +56,7 @@ export function ConvidarUsuarioForm() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="vendedor">Vendedor</SelectItem>
+            <SelectItem value="gerente">Gerente (vê a equipe)</SelectItem>
             <SelectItem value="diretor">Diretor</SelectItem>
           </SelectContent>
         </Select>

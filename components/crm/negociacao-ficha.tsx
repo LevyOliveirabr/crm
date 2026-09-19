@@ -75,7 +75,9 @@ export type NegociacaoFichaData = {
   linha: string | null;
   origem: string | null;
   previsaoMes: string | null;
+  previsaoData: string | null;
   dataFaturamento: string | null;
+  categoriaForecast: "compromisso" | "provavel" | "possivel" | null;
   status: StatusNeg;
   valorFinal: number | null;
   motivoPerda: string | null;
@@ -126,6 +128,7 @@ export type OrcamentoFicha = {
   origem: string;
   criadoEm: string;
   arquivoPath: string | null;
+  aceitoEm: string | null;
 };
 
 export type VendedorOption = { id: string; nome: string };
@@ -499,24 +502,53 @@ export function NegociacaoFicha({
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Previsão</span>
+              <span className="text-xs text-muted-foreground">
+                Fechamento previsto
+                {!n.previsaoData && n.previsaoMes ? (
+                  <span className="ml-1 opacity-70">
+                    ({mesPorExtenso(n.previsaoMes)})
+                  </span>
+                ) : null}
+              </span>
               <Input
-                type="month"
-                value={n.previsaoMes?.slice(0, 7) ?? ""}
+                type="date"
+                value={n.previsaoData ?? ""}
                 disabled={pending || !aberta}
                 onChange={(e) => {
-                  const v = e.target.value;
-                  salvarCampo(
-                    "previsao_mes",
-                    v ? `${v}-01` : null,
-                    (p) => ({
-                      ...p,
-                      previsaoMes: v ? `${v}-01` : null,
-                    }),
-                  );
+                  const v = e.target.value || null;
+                  salvarCampo("previsao_data", v, (p) => ({
+                    ...p,
+                    previsaoData: v,
+                    previsaoMes: v ? `${v.slice(0, 7)}-01` : p.previsaoMes,
+                  }));
                 }}
                 className="h-8 w-40"
               />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Forecast</span>
+              <select
+                value={n.categoriaForecast ?? ""}
+                disabled={pending || !aberta}
+                onChange={(e) => {
+                  const v = (e.target.value || null) as
+                    | "compromisso"
+                    | "provavel"
+                    | "possivel"
+                    | null;
+                  salvarCampo("categoria_forecast", v, (p) => ({
+                    ...p,
+                    categoriaForecast: v,
+                  }));
+                }}
+                className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+              >
+                <option value="">—</option>
+                <option value="compromisso">Compromisso</option>
+                <option value="provavel">Provável</option>
+                <option value="possivel">Possível</option>
+              </select>
             </div>
 
             <div className="flex flex-col gap-1">
@@ -901,15 +933,29 @@ export function NegociacaoFicha({
                 <p className="text-xs text-muted-foreground">{contato.cargo}</p>
               ) : null}
               {contato.whatsapp ? (
-                <a
-                  href={`https://wa.me/${contato.whatsapp}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
+                <button
+                  type="button"
+                  disabled={pending}
+                  title="Abre a conversa e registra a interação na timeline"
+                  onClick={() => {
+                    const url = `https://wa.me/${contato.whatsapp}`;
+                    const janela = window.open(url, "_blank", "noopener,noreferrer");
+                    if (!janela) window.location.href = url;
+                    if (!aberta) return;
+                    run(async () => {
+                      const res = await registrarInteracao(
+                        n.id,
+                        "whatsapp",
+                        `Conversa pelo WhatsApp com ${contato.nome}`,
+                      );
+                      if (!res.ok) setErro(res.error);
+                    });
+                  }}
+                  className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
                 >
                   <MessageCircle className="size-3.5" />
                   WhatsApp
-                </a>
+                </button>
               ) : null}
             </div>
           ) : (
@@ -966,15 +1012,23 @@ export function NegociacaoFicha({
             <ul className="space-y-2">
               {orcamentos.map((o) => (
                 <li key={o.id} className="text-sm">
-                  <p className="font-medium">
-                    {o.numero ? `ORC ${o.numero}` : "Orçamento"} ·{" "}
+                  <Link
+                    href={`/orcamentos/${o.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {o.numero ? `Orçamento ${o.numero}` : "Orçamento"} ·{" "}
                     {formatarMoeda(o.valor)}
-                  </p>
+                  </Link>
                   <p className="text-xs text-muted-foreground">
                     {formatarData(o.enviadoEm)} · {o.situacao}
                     {o.validade
                       ? ` · val. ${formatarData(o.validade)}`
                       : ""}
+                    {o.aceitoEm ? (
+                      <span className="ml-1 font-semibold text-success">
+                        · aceito pelo cliente
+                      </span>
+                    ) : null}
                   </p>
                 </li>
               ))}

@@ -8,7 +8,7 @@ import type {
   NegociacaoResumo,
   VisaoData,
 } from "@/lib/dashboard/tipos";
-import { formatarMoedaCurta, mesPorExtenso } from "@/lib/format";
+import { formatarData, formatarMoedaCurta, mesPorExtenso } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------- */
@@ -154,6 +154,73 @@ export function KpisDashboard({ kpis }: { kpis: Kpis }) {
         }
         tom={deltaTri == null ? undefined : deltaTri >= 0 ? "ok" : "ruim"}
       />
+      <MetaDoMes kpis={kpis} />
+      <CategoriasForecast kpis={kpis} />
+    </div>
+  );
+}
+
+function MetaDoMes({ kpis }: { kpis: Kpis }) {
+  const pct = kpis.metaMes > 0 ? Math.round((kpis.vendidoMes / kpis.metaMes) * 100) : null;
+  const largura = pct == null ? 0 : Math.min(100, pct);
+  return (
+    <div role="listitem" className="card-surface flex flex-col justify-center px-4 py-3.5">
+      <p className="eyebrow">Meta do mês</p>
+      <p className="mt-1 font-heading text-2xl font-semibold tracking-tight tabular-nums">
+        {pct == null ? formatarMoedaCurta(kpis.vendidoMes) : `${pct}%`}
+      </p>
+      {pct == null ? (
+        <p className="mt-0.5 text-xs text-muted-foreground">vendido · sem meta cadastrada</p>
+      ) : (
+        <>
+          <div
+            className="mt-2 h-2 w-full rounded-full bg-muted"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={largura}
+            aria-label="Atingimento da meta do mês"
+          >
+            <div
+              className={cn("h-2 rounded-full", pct >= 100 ? "bg-success" : "bg-brand")}
+              style={{ width: `${largura}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
+            {formatarMoedaCurta(kpis.vendidoMes)} de {formatarMoedaCurta(kpis.metaMes)}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CategoriasForecast({ kpis }: { kpis: Kpis }) {
+  const linhas: { label: string; valor: number; tom: string }[] = [
+    { label: "Compromisso", valor: kpis.forecastCompromisso, tom: "bg-chart-2" },
+    { label: "Provável", valor: kpis.forecastProvavel, tom: "bg-chart-3" },
+    { label: "Possível", valor: kpis.forecastPossivel, tom: "bg-chart-4" },
+  ];
+  const total = linhas.reduce((s, l) => s + l.valor, 0) + kpis.forecastSemCategoria;
+  return (
+    <div role="listitem" className="card-surface flex flex-col justify-center px-4 py-3.5">
+      <p className="eyebrow">Categorias de forecast</p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {linhas.map((l) => (
+          <li key={l.label} className="flex items-center justify-between gap-2 text-xs">
+            <span className="inline-flex items-center gap-1.5">
+              <i className={cn("size-2 rounded-full", l.tom)} />
+              {l.label}
+            </span>
+            <span className="font-semibold tabular-nums">{formatarMoedaCurta(l.valor)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">
+        {total > 0 && kpis.forecastSemCategoria > 0
+          ? `${formatarMoedaCurta(kpis.forecastSemCategoria)} sem categoria`
+          : "defina na ficha da negociação"}
+      </p>
     </div>
   );
 }
@@ -542,7 +609,7 @@ export function ListaNegociacoes({
                 {formatarMoedaCurta(n.valor)}
                 <span className="block text-[11px] font-medium text-muted-foreground">
                   {tom === "ok"
-                    ? `previsto ${mesAbrev(n.previsaoMes)}`
+                    ? `previsto ${n.previsaoData ? formatarData(n.previsaoData) : mesAbrev(n.previsaoMes)}`
                     : n.diasSemInteracao != null
                       ? `parada há ${n.diasSemInteracao} ${n.diasSemInteracao === 1 ? "dia" : "dias"}`
                       : mesAbrev(n.previsaoMes)}

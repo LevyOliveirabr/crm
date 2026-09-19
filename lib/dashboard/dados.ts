@@ -34,7 +34,8 @@ function num(v: unknown): number {
 const COLUNAS_ABERTAS = `
   id, titulo, linha, origem, empresa_id, empresa_nome, empresa_uf, empresa_tipo_segmento,
   responsavel_id, responsavel_nome, funil_id, funil_nome, etapa_id, etapa_nome, etapa_ordem,
-  valor_estimado, temperatura, previsao_mes, data_faturamento, criado_em,
+  valor_estimado, temperatura, previsao_mes, previsao_data, data_faturamento, criado_em,
+  categoria_forecast, etapa_probabilidade,
   sem_acao, acao_atrasada, dias_sem_interacao, proxima_acao_data
 `;
 
@@ -65,7 +66,10 @@ type LinhaAberta = {
   valor_estimado: number | null;
   temperatura: number | null;
   previsao_mes: string | null;
+  previsao_data: string | null;
   data_faturamento: string | null;
+  categoria_forecast: "compromisso" | "provavel" | "possivel" | null;
+  etapa_probabilidade: number | null;
   criado_em: string | null;
   sem_acao: boolean | null;
   acao_atrasada: boolean | null;
@@ -103,6 +107,20 @@ function pesoTemperatura(
   return pesos.morna;
 }
 
+/**
+ * Peso da negociação no pipeline ponderado: probabilidade da etapa quando
+ * cadastrada (0–100), senão o peso da temperatura.
+ */
+export function pesoNegociacao(
+  row: { temperatura: number | null; etapa_probabilidade: number | null },
+  pesos: { fria: number; morna: number; quente: number },
+): number {
+  if (row.etapa_probabilidade != null && Number.isFinite(Number(row.etapa_probabilidade))) {
+    return Math.min(1, Math.max(0, Number(row.etapa_probabilidade) / 100));
+  }
+  return pesoTemperatura(row.temperatura, pesos);
+}
+
 /** Mês de previsão efetivo: sem previsão conta como o próximo mês (mesma regra de v_previsao). */
 function mesPrevisao(row: LinhaAberta, hoje: string): string {
   return row.previsao_mes
@@ -132,17 +150,10 @@ function winRate(rows: LinhaFechada[]): {
 
 export async function carregarOpcoesDashboard(
   supabase: Client,
-  isDiretor: boolean,
+  vendedores: { id: string; nome: string }[],
 ): Promise<OpcoesDashboard> {
-  const [{ data: vendedores }, { data: etapas }, { data: ufsRaw }, { data: origens }] =
+  const [{ data: etapas }, { data: ufsRaw }, { data: origens }] =
     await Promise.all([
-      isDiretor
-        ? supabase
-            .from("usuarios")
-            .select("id, nome")
-            .eq("ativo", true)
-            .order("nome")
-        : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
       supabase
         .from("etapas")
         .select("id, nome, ordem, funis!inner(nome, ordem, ativo)")
@@ -192,7 +203,7 @@ export async function carregarOpcoesDashboard(
   ].sort();
 
   return {
-    vendedores: vendedores ?? [],
+    vendedores,
     etapas: etapasLista,
     ufs,
     origens: (origens ?? []).map((o) => o.valor),
@@ -255,6 +266,8 @@ export async function carregarDadosDashboard(
     { data: vendidasAnoRaw },
     { data: configRows },
     { data: etapasRaw },
+    { data: vendidasMesRaw },
+    { data: metasRaw },
   ] = await Promise.all([
     aplicarFiltros(
       supabase
@@ -294,6 +307,21 @@ export async function carregarDadosDashboard(
       .select("id, nome, ordem, funil_id, funis!inner(id, nome, ordem, ativo)")
       .eq("ativo", true)
       .eq("funis.ativo", true),
+    aplicarFiltros(
+      supabase
+        .from("v_negociacoes")
+        .select("status, valor_final, valor_estimado, fechado_em")
+        .eq("status", "vendida")
+        .gte("fechado_em", `${mesAtual}T00:00:00-03:00`)
+        .lt("fechado_em", `${mesSeguinte}T00:00:00-03:00`),
+      filtros_,
+    ),
+    (() => {
+      let q = supabase.from("metas").select("responsavel_id, valor").eq("mes", mesAtual);
+      if (filtros.vendedorId) q = q.eq("responsavel_id", filtros.vendedorId);
+      else if (filtros.equipeIds && filtros.equipeIds.length > 0) q = q.in("responsavel_id", filtros.equipeIds);
+      return q;
+    })(),
   ]);
 
   const pesos = { fria: 0.2, morna: 0.5, quente: 0.8 };
@@ -315,8 +343,14 @@ export async function carregarDadosDashboard(
         empresa_uf: r.empresa_uf ?? null,
         empresa_tipo_segmento: r.empresa_tipo_segmento ?? null,
         data_faturamento: r.data_faturamento ?? null,
+        previsao_data: r.previsao_data ?? null,
+        categoria_forecast: r.categoria_forecast ?? null,
+        etapa_probabilidade: r.etapa_probabilidade ?? null,
       }),
     );
+  const vendidasMes = (vendidasMesRaw ?? []) as LinhaFechada[];
+  const vendidoMes = vendidasMes.reduce((s, r) => s + num(r.valor_final), 0);
+  const metaMes = (metasRaw ?? []).reduce((s, m) => s + num(m.valor), 0);
   const fechadas = (fechadasRaw ?? []) as LinhaFechada[];
   const fechadasAnt = (fechadasAntRaw ?? []) as LinhaFechada[];
   const vendidasAno = (vendidasAnoRaw ?? []) as LinhaFechada[];
@@ -324,10 +358,11 @@ export async function carregarDadosDashboard(
   // ---------- KPIs ----------
   const pipelineTotal = abertas.reduce((s, r) => s + num(r.valor_estimado), 0);
   const ponderadoDe = (rows: LinhaAberta[]) =>
-    rows.reduce(
-      (s, r) => s + num(r.valor_estimado) * pesoTemperatura(r.temperatura, pesos),
-      0,
-    );
+    rows.reduce((s, r) => s + num(r.valor_estimado) * pesoNegociacao(r, pesos), 0);
+  const somaCategoria = (cat: LinhaAberta["categoria_forecast"]) =>
+    abertas
+      .filter((r) => r.categoria_forecast === cat)
+      .reduce((s, r) => s + num(r.valor_estimado), 0);
   const pipelinePonderado = ponderadoDe(abertas);
 
   const wr = winRate(fechadas);
@@ -368,6 +403,12 @@ export async function carregarDadosDashboard(
     forecastTrimestreAnterior: ponderadoDe(doTrimestreAnterior),
     mesAtual,
     mesSeguinte,
+    vendidoMes,
+    metaMes,
+    forecastCompromisso: somaCategoria("compromisso"),
+    forecastProvavel: somaCategoria("provavel"),
+    forecastPossivel: somaCategoria("possivel"),
+    forecastSemCategoria: somaCategoria(null),
   };
 
   // ---------- Barras por trimestre (ano atual + próximo) ----------
@@ -463,16 +504,21 @@ export async function carregarDadosDashboard(
 
   // ---------- Próximos fechamentos (quente, previsão nos próximos 30 dias) ----------
   const limite30 = adicionarDiasISO(hoje, 30);
+  const dataRef = (r: LinhaAberta) => r.previsao_data ?? mesPrevisao(r, hoje);
   const proximosFechamentos: NegociacaoResumo[] = abertas
     .filter((r) => {
-      if (Number(r.temperatura) !== 3) return false;
+      const quente = Number(r.temperatura) === 3 || r.categoria_forecast === "compromisso";
+      if (!quente) return false;
+      if (r.previsao_data) {
+        return r.previsao_data >= hoje && r.previsao_data <= limite30;
+      }
       const mes = mesPrevisao(r, hoje);
       const fimMes = adicionarDiasISO(inicioProximoMesISO(mes), -1);
       return mes <= limite30 && fimMes >= hoje;
     })
     .sort(
       (a, b) =>
-        mesPrevisao(a, hoje).localeCompare(mesPrevisao(b, hoje)) ||
+        dataRef(a).localeCompare(dataRef(b)) ||
         num(b.valor_estimado) - num(a.valor_estimado),
     )
     .slice(0, 6)
@@ -524,8 +570,10 @@ export async function carregarDadosDashboard(
     segmento: r.empresa_tipo_segmento,
     valor: num(r.valor_estimado),
     previsaoMes: r.previsao_mes,
+    previsaoData: r.previsao_data,
     dataFaturamento: r.data_faturamento,
     temperatura: Number(r.temperatura ?? 2),
+    categoriaForecast: r.categoria_forecast,
   }));
 
   return {
@@ -550,5 +598,6 @@ function resumo(r: LinhaAberta, hoje: string): NegociacaoResumo {
     etapaNome: r.etapa_nome ?? "—",
     valor: num(r.valor_estimado),
     previsaoMes: r.previsao_mes ? mesPrevisao(r, hoje) : null,
+    previsaoData: r.previsao_data,
   };
 }

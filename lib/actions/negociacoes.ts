@@ -43,6 +43,11 @@ const criarNegociacaoSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .nullable(),
+  previsao_data: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
   contato_id: z.uuid().optional().nullable(),
   proxima_acao: z
     .object({
@@ -64,7 +69,9 @@ const CAMPOS_EDITAVEIS = [
   "linha",
   "origem",
   "previsao_mes",
+  "previsao_data",
   "data_faturamento",
+  "categoria_forecast",
   "contato_id",
 ] as const;
 
@@ -227,9 +234,12 @@ export async function criarNegociacao(
     ? `[${linha}] ${empresa.nome}`
     : empresa.nome;
   const titulo = data.titulo?.trim() || tituloSugerido;
-  const previsao = data.previsao_mes
-    ? `${data.previsao_mes.slice(0, 7)}-01`
-    : inicioProximoMesISO();
+  const previsaoData = data.previsao_data ?? null;
+  const previsao = previsaoData
+    ? `${previsaoData.slice(0, 7)}-01`
+    : data.previsao_mes
+      ? `${data.previsao_mes.slice(0, 7)}-01`
+      : inicioProximoMesISO();
 
   const { data: criada, error: erroInsert } = await supabase
     .from("negociacoes")
@@ -244,6 +254,7 @@ export async function criarNegociacao(
       valor_estimado: data.valor_estimado,
       temperatura: data.temperatura ?? 2,
       previsao_mes: previsao,
+      previsao_data: previsaoData,
       responsavel_id: usuario.id,
       status: "aberta",
     })
@@ -361,6 +372,30 @@ export async function atualizarCampo(
         const m = s.match(/^(\d{4})-(\d{2})/);
         if (!m) return { ok: false, error: "Mês inválido." };
         patch.previsao_mes = `${m[1]}-${m[2]}-01`;
+      }
+      break;
+    }
+    case "previsao_data": {
+      const s = String(parsed.data.valor ?? "").trim();
+      if (!s) {
+        patch.previsao_data = null;
+      } else {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(`${s}T12:00:00Z`))) {
+          return { ok: false, error: "Data de fechamento inválida." };
+        }
+        patch.previsao_data = s;
+        patch.previsao_mes = `${s.slice(0, 7)}-01`;
+      }
+      break;
+    }
+    case "categoria_forecast": {
+      const s = String(parsed.data.valor ?? "").trim();
+      if (!s) {
+        patch.categoria_forecast = null;
+      } else if (s === "compromisso" || s === "provavel" || s === "possivel") {
+        patch.categoria_forecast = s;
+      } else {
+        return { ok: false, error: "Categoria de forecast inválida." };
       }
       break;
     }

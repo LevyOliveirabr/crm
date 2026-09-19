@@ -74,8 +74,8 @@ export function NovaNegociacaoForm({
   const [tituloManual, setTituloManual] = useState(false);
   const [origem, setOrigem] = useState("");
   const [temperatura, setTemperatura] = useState(2);
-  const [previsaoMes, setPrevisaoMes] = useState(() =>
-    inicioProximoMesISO().slice(0, 7),
+  const [previsaoData, setPrevisaoData] = useState(() =>
+    inicioProximoMesISO(),
   );
   const [contatoId, setContatoId] = useState<string>("");
   const [contatos, setContatos] = useState<ContatoResumo[]>([]);
@@ -174,7 +174,8 @@ export function NovaNegociacaoForm({
           titulo: tituloExibido.trim() || null,
         origem: origem || null,
         temperatura,
-          previsao_mes: `${previsaoMes}-01`,
+          previsao_mes: previsaoData ? `${previsaoData.slice(0, 7)}-01` : null,
+          previsao_data: previsaoData || null,
           contato_id: contatoId || null,
           proxima_acao:
           !pularAcao && acaoDesc.trim()
@@ -529,13 +530,13 @@ export function NovaNegociacaoForm({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium" htmlFor="neg-previsao">
-                Previsão
+                Fechamento previsto
               </label>
               <Input
                 id="neg-previsao"
-                type="month"
-                value={previsaoMes}
-                onChange={(e) => setPrevisaoMes(e.target.value)}
+                type="date"
+                value={previsaoData}
+                onChange={(e) => setPrevisaoData(e.target.value)}
                 disabled={pending}
               />
             </div>

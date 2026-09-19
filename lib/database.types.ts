@@ -17,6 +17,7 @@ export type Database = {
           perfil: Database["public"]["Enums"]["perfil_usuario"];
           ativo: boolean;
           criado_em: string;
+          gerente_id: string | null;
         };
         Insert: {
           id: string;
@@ -25,6 +26,7 @@ export type Database = {
           perfil?: Database["public"]["Enums"]["perfil_usuario"];
           ativo?: boolean;
           criado_em?: string;
+          gerente_id?: string | null;
         };
         Update: {
           id?: string;
@@ -33,6 +35,7 @@ export type Database = {
           perfil?: Database["public"]["Enums"]["perfil_usuario"];
           ativo?: boolean;
           criado_em?: string;
+          gerente_id?: string | null;
         };
         Relationships: [];
       };
@@ -69,6 +72,7 @@ export type Database = {
           dica: string | null;
           conta_como_proposta: boolean;
           ativo: boolean;
+          probabilidade: number | null;
         };
         Insert: {
           id?: string;
@@ -78,6 +82,7 @@ export type Database = {
           dica?: string | null;
           conta_como_proposta?: boolean;
           ativo?: boolean;
+          probabilidade?: number | null;
         };
         Update: {
           id?: string;
@@ -87,6 +92,7 @@ export type Database = {
           dica?: string | null;
           conta_como_proposta?: boolean;
           ativo?: boolean;
+          probabilidade?: number | null;
         };
         Relationships: [
           {
@@ -248,6 +254,8 @@ export type Database = {
           temperatura: number;
           previsao_mes: string | null;
           data_faturamento: string | null;
+          categoria_forecast: Database["public"]["Enums"]["categoria_forecast"] | null;
+          previsao_data: string | null;
           responsavel_id: string;
           status: Database["public"]["Enums"]["status_negociacao"];
           valor_final: number | null;
@@ -272,6 +280,8 @@ export type Database = {
           temperatura?: number;
           previsao_mes?: string | null;
           data_faturamento?: string | null;
+          categoria_forecast?: Database["public"]["Enums"]["categoria_forecast"] | null;
+          previsao_data?: string | null;
           responsavel_id: string;
           status?: Database["public"]["Enums"]["status_negociacao"];
           valor_final?: number | null;
@@ -296,6 +306,8 @@ export type Database = {
           temperatura?: number;
           previsao_mes?: string | null;
           data_faturamento?: string | null;
+          categoria_forecast?: Database["public"]["Enums"]["categoria_forecast"] | null;
+          previsao_data?: string | null;
           responsavel_id?: string;
           status?: Database["public"]["Enums"]["status_negociacao"];
           valor_final?: number | null;
@@ -462,12 +474,16 @@ export type Database = {
           subtotal: number | null;
           arquivo_pdf_path: string | null;
           arquivo_xlsx_path: string | null;
+          aceito_em: string | null;
+          aceito_por: string | null;
         };
         Insert: {
           id?: string;
           negociacao_id: string;
           numero?: string | null;
           valor: number;
+          aceito_em?: string | null;
+          aceito_por?: string | null;
           enviado_em?: string;
           validade?: string | null;
           arquivo_path?: string | null;
@@ -504,6 +520,8 @@ export type Database = {
           subtotal?: number | null;
           arquivo_pdf_path?: string | null;
           arquivo_xlsx_path?: string | null;
+          aceito_em?: string | null;
+          aceito_por?: string | null;
         };
         Relationships: [
           {
@@ -653,6 +671,80 @@ export type Database = {
         };
         Relationships: [];
       };
+      metas: {
+        Row: {
+          id: string;
+          responsavel_id: string;
+          mes: string;
+          valor: number;
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id?: string;
+          responsavel_id: string;
+          mes: string;
+          valor?: number;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id?: string;
+          responsavel_id?: string;
+          mes?: string;
+          valor?: number;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "metas_responsavel_id_fkey";
+            columns: ["responsavel_id"];
+            isOneToOne: false;
+            referencedRelation: "usuarios";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      etapa_historico: {
+        Row: {
+          id: number;
+          negociacao_id: string;
+          etapa_id: string;
+          entrou_em: string;
+          saiu_em: string | null;
+        };
+        Insert: {
+          id?: never;
+          negociacao_id: string;
+          etapa_id: string;
+          entrou_em?: string;
+          saiu_em?: string | null;
+        };
+        Update: {
+          id?: never;
+          negociacao_id?: string;
+          etapa_id?: string;
+          entrou_em?: string;
+          saiu_em?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "etapa_historico_negociacao_id_fkey";
+            columns: ["negociacao_id"];
+            isOneToOne: false;
+            referencedRelation: "negociacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "etapa_historico_etapa_id_fkey";
+            columns: ["etapa_id"];
+            isOneToOne: false;
+            referencedRelation: "etapas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mcp_log: {
         Row: {
           id: number;
@@ -737,6 +829,8 @@ export type Database = {
           temperatura: number | null;
           previsao_mes: string | null;
           data_faturamento: string | null;
+          categoria_forecast: Database["public"]["Enums"]["categoria_forecast"] | null;
+          previsao_data: string | null;
           responsavel_id: string | null;
           status: Database["public"]["Enums"]["status_negociacao"] | null;
           valor_final: number | null;
@@ -763,6 +857,7 @@ export type Database = {
           sem_acao: boolean | null;
           empresa_uf: string | null;
           empresa_tipo_segmento: Database["public"]["Enums"]["tipo_segmento"] | null;
+          etapa_probabilidade: number | null;
         };
         Relationships: [];
       };
@@ -848,13 +943,19 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      eh_gerente_de: {
+        Args: { p_usuario: string };
+        Returns: boolean;
+      };
       f_unaccent: {
         Args: { "": string };
         Returns: string;
       };
     };
     Enums: {
-      perfil_usuario: "diretor" | "vendedor";
+      perfil_usuario: "diretor" | "gerente" | "vendedor";
+      /** Não é enum no Postgres (check constraint em negociacoes.categoria_forecast). */
+      categoria_forecast: "compromisso" | "provavel" | "possivel";
       tipo_lista: "segmento" | "linha" | "origem" | "motivo_perda";
       status_negociacao: "aberta" | "vendida" | "perdida";
       /** Não é enum no Postgres (check constraint em empresas.tipo_segmento). */

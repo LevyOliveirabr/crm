@@ -649,6 +649,9 @@ export function RelatoriosClient({
                   { chave: "etapa", titulo: "Etapa" },
                   { chave: "qtd", titulo: "Qtd" },
                   { chave: "valor", titulo: "Valor" },
+                  { chave: "passaram", titulo: "Passaram (período)" },
+                  { chave: "conversao_pct", titulo: "Conversão p/ próxima %" },
+                  { chave: "dias_medios", titulo: "Dias médios" },
                 ]}
                 linhas={dados.funil}
               />
@@ -670,6 +673,17 @@ export function RelatoriosClient({
                           </span>
                         </div>
                         <Barra valor={et.valor} max={maxFunil} />
+                        <p className="text-xs text-muted-foreground">
+                          {et.passaram} passaram no período
+                          <span className="mx-1 opacity-50">·</span>
+                          {et.conversao_pct != null
+                            ? `${et.conversao_pct}% avançam`
+                            : "última etapa"}
+                          <span className="mx-1 opacity-50">·</span>
+                          {et.dias_medios != null
+                            ? `${et.dias_medios} dias em média`
+                            : "sem histórico"}
+                        </p>
                       </li>
                     ))}
                   </ul>
@@ -784,6 +798,8 @@ export function RelatoriosClient({
                   colunas={[
                     { chave: "nome", titulo: "Vendedor" },
                     { chave: "vendido", titulo: "Vendido" },
+                    { chave: "meta", titulo: "Meta" },
+                    { chave: "atingimento_pct", titulo: "Atingimento %" },
                     { chave: "qtd", titulo: "Qtd" },
                     { chave: "aberto", titulo: "Aberto" },
                     { chave: "conversao_pct", titulo: "Conversão %" },
@@ -808,6 +824,15 @@ export function RelatoriosClient({
                       onToggle={toggleSort}
                     >
                       Vendido
+                    </SortHead>
+                    <SortHead
+                      id="atingimento_pct"
+                      className="text-right"
+                      sortKey={sortKey}
+                      sortDir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Meta
                     </SortHead>
                     <SortHead
                       id="qtd"
@@ -882,6 +907,26 @@ export function RelatoriosClient({
                           {formatarMoeda(r.vendido)}
                           <DeltaBadge atual={r.vendido} anterior={r.vendido_ant} />
                         </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.meta > 0 ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span
+                              className={
+                                (r.atingimento_pct ?? 0) >= 100
+                                  ? "font-semibold text-emerald-700"
+                                  : undefined
+                              }
+                            >
+                              {r.atingimento_pct}%
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              de {formatarMoeda(r.meta)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">{r.qtd}</TableCell>
                       <TableCell className="text-right">

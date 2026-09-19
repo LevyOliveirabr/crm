@@ -292,10 +292,99 @@ async function carregarPresidencia(
   };
 }
 
+type ConversaoEtapa = { passaram: number; diasTotal: number; n: number };
+
+/**
+ * Passagem e permanência por etapa, a partir de `etapa_historico`, para as
+ * negociações criadas no período (coorte). Retorna vazio se a tabela ainda
+ * não existir no banco (migration 0007).
+ */
+async function carregarConversaoFunil(
+  supabase: Client,
+  filtros: FiltrosRelatorio,
+): Promise<Map<string, ConversaoEtapa>> {
+  let q = supabase
+    .from("etapa_historico")
+    .select(
+      "etapa_id, negociacao_id, entrou_em, saiu_em, negociacoes!inner(criado_em, responsavel_id, linha, origem, arquivado_em)",
+    )
+    .gte("negociacoes.criado_em", filtros.periodo.inicio)
+    .lt("negociacoes.criado_em", filtros.periodo.fimExclusivo)
+    .is("negociacoes.arquivado_em", null);
+  if (filtros.vendedorId) q = q.eq("negociacoes.responsavel_id", filtros.vendedorId);
+  if (filtros.linha) q = q.eq("negociacoes.linha", filtros.linha);
+  if (filtros.origem) q = q.eq("negociacoes.origem", filtros.origem);
+
+  const { data, error } = await q;
+  const out = new Map<string, ConversaoEtapa>();
+  if (error || !data) return out;
+
+  const vistos = new Map<string, Set<string>>();
+  const agora = Date.now();
+  for (const h of data as unknown as {
+    etapa_id: string;
+    negociacao_id: string;
+    entrou_em: string;
+    saiu_em: string | null;
+  }[]) {
+    const cur = out.get(h.etapa_id) ?? { passaram: 0, diasTotal: 0, n: 0 };
+    const set = vistos.get(h.etapa_id) ?? new Set<string>();
+    if (!set.has(h.negociacao_id)) {
+      set.add(h.negociacao_id);
+      cur.passaram += 1;
+    }
+    vistos.set(h.etapa_id, set);
+    const fim = h.saiu_em ? Date.parse(h.saiu_em) : agora;
+    const ini = Date.parse(h.entrou_em);
+    if (Number.isFinite(fim) && Number.isFinite(ini) && fim >= ini) {
+      cur.diasTotal += (fim - ini) / 86_400_000;
+      cur.n += 1;
+    }
+    out.set(h.etapa_id, cur);
+  }
+  return out;
+}
+
+function enriquecerConversao(
+  linhas: Omit<LinhaFunil, "passaram" | "conversao_pct" | "dias_medios">[],
+  conv: Map<string, ConversaoEtapa>,
+): LinhaFunil[] {
+  const ordenadas = [...linhas].sort(
+    (a, b) => a.funil.localeCompare(b.funil, "pt-BR") || a.ordem - b.ordem,
+  );
+  return ordenadas.map((l, i) => {
+    const c = conv.get(l.etapa_id);
+    const passaram = c?.passaram ?? 0;
+    const proxima = ordenadas[i + 1];
+    const proximaMesmoFunil = proxima && proxima.funil_id === l.funil_id ? proxima : null;
+    const passaramProx = proximaMesmoFunil ? (conv.get(proximaMesmoFunil.etapa_id)?.passaram ?? 0) : null;
+    return {
+      ...l,
+      passaram,
+      conversao_pct:
+        proximaMesmoFunil && passaram > 0 && passaramProx != null
+          ? Math.round(Math.min(100, (passaramProx / passaram) * 100) * 10) / 10
+          : null,
+      dias_medios: c && c.n > 0 ? Math.round((c.diasTotal / c.n) * 10) / 10 : null,
+    };
+  });
+}
+
 async function carregarFunil(
   supabase: Client,
   filtros: FiltrosRelatorio,
 ): Promise<LinhaFunil[]> {
+  const [base, conv] = await Promise.all([
+    carregarFunilBase(supabase, filtros),
+    carregarConversaoFunil(supabase, filtros),
+  ]);
+  return enriquecerConversao(base, conv);
+}
+
+async function carregarFunilBase(
+  supabase: Client,
+  filtros: FiltrosRelatorio,
+): Promise<Omit<LinhaFunil, "passaram" | "conversao_pct" | "dias_medios">[]> {
   // v_funil não tem linha/origem/vendedor — recalcula quando há filtro.
   if (!filtros.vendedorId && !filtros.linha && !filtros.origem) {
     const { data } = await supabase
@@ -447,7 +536,7 @@ async function carregarRanking(
   filtros: FiltrosRelatorio,
 ): Promise<LinhaRanking[]> {
   const { periodo } = filtros;
-  const [{ data: usuarios }, { data: resultado }, { data: resultadoAnt }, { data: abertas }, { data: interacoes }, { data: interacoesAnt }] =
+  const [{ data: usuarios }, { data: resultado }, { data: resultadoAnt }, { data: abertas }, { data: interacoes }, { data: interacoesAnt }, { data: metasRows }] =
     await Promise.all([
       supabase
         .from("usuarios")
@@ -489,7 +578,16 @@ async function carregarRanking(
         .neq("tipo", "sistema")
         .gte("criado_em", periodo.anterior.inicio)
         .lt("criado_em", periodo.anterior.fimExclusivo),
+      supabase
+        .from("metas")
+        .select("responsavel_id, valor, mes")
+        .in("mes", periodo.meses.length ? periodo.meses : ["1970-01-01"]),
     ]);
+
+  const metaPor = new Map<string, number>();
+  for (const m of metasRows ?? []) {
+    metaPor.set(m.responsavel_id, (metaPor.get(m.responsavel_id) ?? 0) + num(m.valor));
+  }
 
   let interacoesFiltradas = interacoes ?? [];
   let interacoesAntFiltradas = interacoesAnt ?? [];
@@ -590,6 +688,7 @@ async function carregarRanking(
 
   const linhas: LinhaRanking[] = (usuarios ?? [])
     .filter((u) => {
+      if (filtros.equipeIds && !filtros.equipeIds.includes(u.id)) return false;
       if (filtros.vendedorId && u.id !== filtros.vendedorId) return false;
       const a = map.get(u.id);
       // Mostra ativos sempre; inativos só se tiverem movimento
@@ -623,6 +722,11 @@ async function carregarRanking(
             ? Math.round((a.com_acao / a.abertas) * 1000) / 10
             : null,
         acoes_atrasadas: a.acoes_atrasadas,
+        meta: metaPor.get(u.id) ?? 0,
+        atingimento_pct:
+          (metaPor.get(u.id) ?? 0) > 0
+            ? Math.round((a.vendido / (metaPor.get(u.id) ?? 1)) * 1000) / 10
+            : null,
         vendido_ant: a.vendido_ant,
         qtd_ant: a.qtd_ant,
         aberto_ant: a.aberto_ant,

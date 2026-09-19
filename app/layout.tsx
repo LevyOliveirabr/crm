@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Manrope, Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -22,6 +22,24 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "F-Led · CRM Comercial",
   description: "CRM comercial da F-Led",
+  applicationName: "F-Led CRM",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black",
+    title: "F-Led CRM",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f0f0f",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
