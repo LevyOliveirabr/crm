@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { BotaoConsultarCnpj } from "@/components/crm/botao-consultar-cnpj";
 import {
   Table,
   TableBody,
@@ -340,6 +341,20 @@ export function EmpresasLista({
                   setForm((f) => ({ ...f, cnpj: e.target.value }))
                 }
               />
+              <div className="mt-1.5">
+                <BotaoConsultarCnpj
+                  cnpj={form.cnpj}
+                  onDados={(d) =>
+                    setForm((f) => ({
+                      ...f,
+                      cnpj: d.cnpj,
+                      nome: f.nome.trim() ? f.nome : d.razaoSocial,
+                      cidade: f.cidade.trim() ? f.cidade : (d.cidade ?? ""),
+                      uf: f.uf.trim() ? f.uf : (d.uf ?? ""),
+                    }))
+                  }
+                />
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">

@@ -57,6 +57,15 @@ export type Kpis = {
   forecastTrimestreAnterior: number;
   mesAtual: string;
   mesSeguinte: string;
+  /** Vendido (valor final) no mês atual, dentro dos filtros. */
+  vendidoMes: number;
+  /** Soma das metas do mês atual (do vendedor filtrado ou de todos). */
+  metaMes: number;
+  /** Totais por categoria de forecast (valor estimado das abertas). */
+  forecastCompromisso: number;
+  forecastProvavel: number;
+  forecastPossivel: number;
+  forecastSemCategoria: number;
 };
 
 export type BarraTrimestre = {
@@ -93,6 +102,7 @@ export type NegociacaoResumo = {
   etapaNome: string;
   valor: number;
   previsaoMes: string | null;
+  previsaoData: string | null;
   /** Só em "risco": motivo legível. */
   motivo?: string;
   /** Só em "risco": dias parada. */
@@ -110,8 +120,10 @@ export type LinhaBase = {
   segmento: TipoSegmento | null;
   valor: number;
   previsaoMes: string | null;
+  previsaoData: string | null;
   dataFaturamento: string | null;
   temperatura: number;
+  categoriaForecast: "compromisso" | "provavel" | "possivel" | null;
 };
 
 export type DadosDashboard = {

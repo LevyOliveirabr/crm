@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { BotaoConsultarCnpj } from "@/components/crm/botao-consultar-cnpj";
 import { cn } from "@/lib/utils";
 
 export type EmpresaFichaData = {
@@ -502,6 +503,21 @@ export function EmpresaFicha({
               }
               onBlur={() => salvarCadastro({ cnpj: e.cnpj })}
             />
+            <div className="mt-1.5">
+              <BotaoConsultarCnpj
+                cnpj={e.cnpj ?? ""}
+                disabled={inputDisabled}
+                onDados={(d) => {
+                  // Preenche só o que está vazio; nunca sobrescreve o que o usuário digitou.
+                  salvarCadastro({
+                    cnpj: d.cnpj,
+                    nome: e.nome.trim() ? e.nome : d.razaoSocial || e.nome,
+                    cidade: e.cidade ?? d.cidade,
+                    uf: e.uf ?? d.uf,
+                  });
+                }}
+              />
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs text-muted-foreground">

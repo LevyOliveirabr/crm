@@ -139,10 +139,20 @@ export async function atualizarEtapa(
     dica?: string | null;
     conta_como_proposta?: boolean;
     ativo?: boolean;
+    /** 0 a 100, ou null para usar só a temperatura na previsão. */
+    probabilidade?: number | null;
   },
 ): Promise<ConfigActionResult> {
   const diretor = await exigirDiretor();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
+
+  if (patch.probabilidade != null) {
+    const p = Math.round(Number(patch.probabilidade));
+    if (!Number.isFinite(p) || p < 0 || p > 100) {
+      return { ok: false, error: "Probabilidade deve ser entre 0 e 100." };
+    }
+    patch.probabilidade = p;
+  }
 
   const supabase = await createClient();
 

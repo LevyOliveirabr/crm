@@ -57,6 +57,9 @@ function EtapaSortable({
   const [nome, setNome] = useState(etapa.nome);
   const [dica, setDica] = useState(etapa.dica ?? "");
   const [proposta, setProposta] = useState(etapa.conta_como_proposta);
+  const [probabilidade, setProbabilidade] = useState(
+    etapa.probabilidade == null ? "" : String(etapa.probabilidade),
+  );
   const [moverAberto, setMoverAberto] = useState(false);
   const [abertas, setAbertas] = useState(0);
   const [destino, setDestino] = useState(outrasEtapas[0]?.id ?? "");
@@ -71,10 +74,12 @@ function EtapaSortable({
 
   const salvar = () => {
     startTransition(async () => {
+      const prob = probabilidade.trim() === "" ? null : Number(probabilidade);
       const res = await atualizarEtapa(etapa.id, {
         nome,
         dica: dica || null,
         conta_como_proposta: proposta,
+        probabilidade: prob != null && Number.isFinite(prob) ? prob : null,
       });
       if (!res.ok) {
         toast.add({ title: res.error, type: "error" });
@@ -169,6 +174,28 @@ function EtapaSortable({
             rows={2}
             disabled={pending}
           />
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Probabilidade de fechar</span>
+            <span className="inline-flex items-center gap-1">
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={5}
+                value={probabilidade}
+                onChange={(e) => setProbabilidade(e.target.value)}
+                onBlur={salvar}
+                placeholder="—"
+                disabled={pending}
+                className="h-8 w-20 tabular-nums"
+                aria-label="Probabilidade de fechamento nesta etapa (%)"
+              />
+              %
+            </span>
+            <span className="text-xs text-muted-foreground">
+              vazio = usa só a temperatura
+            </span>
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

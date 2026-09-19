@@ -23,6 +23,12 @@ function iniciais(nome: string): string {
   return `${a}${b}`.toUpperCase();
 }
 
+const CATEGORIA_LABEL: Record<string, string> = {
+  compromisso: "Compromisso",
+  provavel: "Provável",
+  possivel: "Possível",
+};
+
 const TEMP_LABEL: Record<number, string> = {
   1: "Fria",
   2: "Morna",
@@ -75,7 +81,9 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
                       {l.titulo}
                     </Link>
                     <span className="block text-[11.5px] text-muted-foreground">
-                      {[l.linha, TEMP_LABEL[l.temperatura]].filter(Boolean).join(" · ")}
+                      {[l.linha, TEMP_LABEL[l.temperatura], CATEGORIA_LABEL[l.categoriaForecast ?? ""]]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </Td>
                   <Td>
@@ -110,7 +118,7 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
                     {formatarMoeda(l.valor)}
                   </Td>
                   <Td direita numerico>
-                    {mesAbrev(l.previsaoMes)}
+                    {l.previsaoData ? formatarData(l.previsaoData) : mesAbrev(l.previsaoMes)}
                   </Td>
                   <Td direita numerico>
                     {l.dataFaturamento ? formatarData(l.dataFaturamento) : "—"}

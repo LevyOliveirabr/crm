@@ -68,7 +68,7 @@ export default async function NegociacaoPage({
   // continuar abrindo em bancos onde a migration ainda não foi aplicada.
   const { data: faturamentoRow } = await supabase
     .from("negociacoes")
-    .select("data_faturamento")
+    .select("data_faturamento, previsao_data, categoria_forecast")
     .eq("id", id)
     .maybeSingle();
 
@@ -193,6 +193,8 @@ export default async function NegociacaoPage({
         origem: neg.origem,
         previsaoMes: neg.previsao_mes,
         dataFaturamento: faturamentoRow?.data_faturamento ?? null,
+        previsaoData: faturamentoRow?.previsao_data ?? null,
+        categoriaForecast: faturamentoRow?.categoria_forecast ?? null,
         status: neg.status,
         valorFinal: neg.valor_final != null ? Number(neg.valor_final) : null,
         motivoPerda: neg.motivo_perda,
