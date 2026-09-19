@@ -5,6 +5,11 @@ import type { CartaoNegociacaoData } from "@/components/crm/cartao-negociacao";
 import type { EtapaColuna } from "@/components/crm/funil-kanban";
 import type { LinhaLista } from "@/components/crm/funil-lista";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import {
+  listarVendedoresVisiveis,
+  podeVerEquipe,
+  resolverFiltroVendedor,
+} from "@/lib/auth/equipe";
 import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = Promise<{
@@ -40,12 +45,11 @@ export default async function FunilPage({
   const vistaParam = paramUnico(sp.vista);
   const vista = vistaParam === "lista" ? "lista" : "kanban";
 
-  const filtrarVendedor =
-    usuario.perfil === "diretor" && vendedorParam ? vendedorParam : null;
-
   const supabase = await createClient();
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
+  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam);
 
-  const [{ data: funisRaw }, { data: linhasRaw }, { data: vendedores }] =
+  const [{ data: funisRaw }, { data: linhasRaw }] =
     await Promise.all([
       supabase
         .from("funis")
@@ -58,13 +62,6 @@ export default async function FunilPage({
         .eq("tipo", "linha")
         .eq("ativo", true)
         .order("ordem", { ascending: true }),
-      usuario.perfil === "diretor"
-        ? supabase
-            .from("usuarios")
-            .select("id, nome")
-            .eq("ativo", true)
-            .order("nome")
-        : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
     ]);
 
   const funis = funisRaw ?? [];
@@ -210,8 +207,8 @@ export default async function FunilPage({
         negociacoes={negociacoes}
         linhas={linhas}
         linhasOpcoes={(linhasRaw ?? []).map((l) => l.valor)}
-        vendedores={vendedores ?? []}
-        isDiretor={usuario.perfil === "diretor"}
+        vendedores={vendedores}
+        isDiretor={podeVerEquipe(usuario)}
         filtros={{
           vendedor: filtrarVendedor,
           linha: linhaParam ?? null,

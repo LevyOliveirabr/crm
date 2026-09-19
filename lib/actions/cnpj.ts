@@ -1,6 +1,7 @@
 "use server";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { apenasDigitosCnpj, formatarCnpj, validarCnpj } from "@/lib/cnpj";
 
 export type DadosCnpj = {
   cnpj: string; // formatado 00.000.000/0000-00
@@ -17,34 +18,6 @@ export type DadosCnpj = {
 export type ConsultaCnpjResult =
   | { ok: true; dados: DadosCnpj }
   | { ok: false; error: string };
-
-function apenasDigitos(v: string): string {
-  return v.replace(/\D/g, "");
-}
-
-/** Validação dos dígitos verificadores do CNPJ. */
-export async function cnpjValido(cnpj: string): Promise<boolean> {
-  return validarCnpj(cnpj);
-}
-
-function validarCnpj(cnpj: string): boolean {
-  const d = apenasDigitos(cnpj);
-  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
-  const calc = (base: string, pesos: number[]) => {
-    const soma = base.split("").reduce((s, ch, i) => s + Number(ch) * pesos[i]!, 0);
-    const resto = soma % 11;
-    return resto < 2 ? 0 : 11 - resto;
-  };
-  const p1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  const p2 = [6, ...p1];
-  const dv1 = calc(d.slice(0, 12), p1);
-  const dv2 = calc(d.slice(0, 12) + dv1, p2);
-  return d.endsWith(`${dv1}${dv2}`);
-}
-
-function formatarCnpj(d: string): string {
-  return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-}
 
 function titulo(v: string | null | undefined): string | null {
   if (!v) return null;
@@ -66,7 +39,7 @@ export async function consultarCnpj(cnpj: string): Promise<ConsultaCnpjResult> {
   const usuario = await getUsuarioAtual();
   if (!usuario) return { ok: false, error: "Não autenticado." };
 
-  const d = apenasDigitos(cnpj ?? "");
+  const d = apenasDigitosCnpj(cnpj ?? "");
   if (!validarCnpj(d)) return { ok: false, error: "CNPJ inválido." };
 
   try {

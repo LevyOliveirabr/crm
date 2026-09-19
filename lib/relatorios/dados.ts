@@ -688,6 +688,7 @@ async function carregarRanking(
 
   const linhas: LinhaRanking[] = (usuarios ?? [])
     .filter((u) => {
+      if (filtros.equipeIds && !filtros.equipeIds.includes(u.id)) return false;
       if (filtros.vendedorId && u.id !== filtros.vendedorId) return false;
       const a = map.get(u.id);
       // Mostra ativos sempre; inativos só se tiverem movimento

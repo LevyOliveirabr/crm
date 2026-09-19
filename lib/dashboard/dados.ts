@@ -150,17 +150,10 @@ function winRate(rows: LinhaFechada[]): {
 
 export async function carregarOpcoesDashboard(
   supabase: Client,
-  isDiretor: boolean,
+  vendedores: { id: string; nome: string }[],
 ): Promise<OpcoesDashboard> {
-  const [{ data: vendedores }, { data: etapas }, { data: ufsRaw }, { data: origens }] =
+  const [{ data: etapas }, { data: ufsRaw }, { data: origens }] =
     await Promise.all([
-      isDiretor
-        ? supabase
-            .from("usuarios")
-            .select("id, nome")
-            .eq("ativo", true)
-            .order("nome")
-        : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
       supabase
         .from("etapas")
         .select("id, nome, ordem, funis!inner(nome, ordem, ativo)")
@@ -210,7 +203,7 @@ export async function carregarOpcoesDashboard(
   ].sort();
 
   return {
-    vendedores: vendedores ?? [],
+    vendedores,
     etapas: etapasLista,
     ufs,
     origens: (origens ?? []).map((o) => o.valor),
@@ -326,6 +319,7 @@ export async function carregarDadosDashboard(
     (() => {
       let q = supabase.from("metas").select("responsavel_id, valor").eq("mes", mesAtual);
       if (filtros.vendedorId) q = q.eq("responsavel_id", filtros.vendedorId);
+      else if (filtros.equipeIds && filtros.equipeIds.length > 0) q = q.in("responsavel_id", filtros.equipeIds);
       return q;
     })(),
   ]);

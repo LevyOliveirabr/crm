@@ -6,6 +6,8 @@ export type FiltrosRelatorio = {
   linha: string | null;
   origem: string | null;
   isDiretor: boolean;
+  /** Gerente: ids da equipe (limita o ranking). null = todos. */
+  equipeIds?: string[] | null;
 };
 
 export type PresidenciaTop = {

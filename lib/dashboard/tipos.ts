@@ -31,6 +31,8 @@ export type FiltrosDashboard = {
   origem: string | null;
   segmento: TipoSegmento | null;
   isDiretor: boolean;
+  /** Ids visíveis (gerente: equipe; vendedor: ele mesmo). null = todos. */
+  equipeIds?: string[] | null;
 };
 
 export type OpcoesDashboard = {

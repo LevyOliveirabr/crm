@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ConvidarUsuarioForm } from "@/components/crm/convidar-usuario-form";
 import { UsuarioAtivoToggle } from "@/components/crm/usuario-ativo-toggle";
+import { UsuarioGerenteSelect } from "@/components/crm/usuario-gerente-select";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { listarUsuarios } from "@/lib/actions/usuarios";
 import {
@@ -22,6 +23,7 @@ export default async function UsuariosPage() {
   }
 
   const usuarios = await listarUsuarios();
+  const gerentes = usuarios.filter((u) => u.perfil === "gerente" && u.ativo);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
@@ -37,7 +39,8 @@ export default async function UsuariosPage() {
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Convide vendedores e diretores. Sem cadastro público.
+          Convide vendedores, gerentes e diretores. Sem cadastro público. O
+          gerente vê e edita as negociações da equipe dele; o diretor vê tudo.
         </p>
       </div>
 
@@ -54,6 +57,7 @@ export default async function UsuariosPage() {
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Perfil</TableHead>
+              <TableHead>Gerente</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ação</TableHead>
             </TableRow>
@@ -67,6 +71,17 @@ export default async function UsuariosPage() {
                 </TableCell>
                 <TableCell className="capitalize">{u.perfil}</TableCell>
                 <TableCell>
+                  {u.perfil === "vendedor" ? (
+                    <UsuarioGerenteSelect
+                      usuarioId={u.id}
+                      gerenteId={u.gerente_id ?? null}
+                      gerentes={gerentes.map((g) => ({ id: g.id, nome: g.nome }))}
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
                   <Badge variant={u.ativo ? "secondary" : "outline"}>
                     {u.ativo ? "Ativo" : "Inativo"}
                   </Badge>
@@ -78,7 +93,7 @@ export default async function UsuariosPage() {
             ))}
             {usuarios.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
+                <TableCell colSpan={6} className="text-muted-foreground">
                   Nenhum usuário ainda.
                 </TableCell>
               </TableRow>

@@ -17,11 +17,14 @@ Pré-requisitos antes dos testes:
 1. Projeto `crm-fled` na Vercel no ar (`vercel.json` com região `gru1`).
 2. Variáveis acima configuradas em Production (e Preview se quiser) **no dashboard** — não só no workaround do build.
 3. Supabase → SQL Editor: aplicar as migrations novas ainda não executadas em produção. O dashboard (`/dashboard`) precisa de `supabase/migrations/0006_dashboard.sql` (campos `empresas.tipo_segmento`, `negociacoes.data_faturamento` e views `v_negociacoes` / `v_empresas` recriadas). Sem ela o app continua funcionando, mas o dashboard não filtra por UF/segmento e os campos "Tipo de cliente" e "Faturamento" não salvam.
-4. Supabase → Authentication → URL Configuration:
+4. Supabase → SQL Editor: aplicar também `supabase/migrations/0007_gestao_comercial.sql` (metas, probabilidade por etapa, forecast, data prevista, histórico de etapas, perfil gerente, aceite de orçamento). Sem ela: Configurações › Metas não abre, o relatório de funil não mostra conversão e o perfil gerente não existe.
+5. Supabase → Database → Backups: confirmar backup diário ativo (plano Pro) e, se possível, Point in Time Recovery. Anotar quem restaura e testar uma restauração em projeto de staging uma vez por semestre.
+6. Vercel → Environment Variables: além das 5 originais, `CRON_SECRET` (obrigatório para o lembrete diário), `RESEND_API_KEY` e `EMAIL_FROM` (e-mails), `ACEITE_SECRET` (opcional), `SENTRY_DSN` e `NEXT_PUBLIC_SENTRY_DSN` (opcional, monitoramento).
+7. Supabase → Authentication → URL Configuration:
    - **Site URL** = `https://crm-fled.vercel.app`
    - **Redirect URLs** inclui `https://crm-fled.vercel.app/auth/callback` e `https://crm-fled.vercel.app/auth/definir-senha`
   (obrigatório também para “Esqueci minha senha”)
-5. Diretor e Levy com usuário ativo (convite / senha definida).
+8. Diretor e Levy com usuário ativo (convite / senha definida).
 
 ---
 

@@ -2,6 +2,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import {
+  listarVendedoresVisiveis,
+  podeVerEquipe,
+  resolverFiltroVendedor,
+} from "@/lib/auth/equipe";
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import {
   formatarMoeda,
@@ -40,30 +45,22 @@ export default async function HojePage({
 
   const sp = await searchParams;
   const vendedorParam = paramUnico(sp.vendedor);
-  const filtrarVendedor =
-    usuario.perfil === "diretor" && vendedorParam
-      ? vendedorParam
-      : null;
 
   const supabase = await createClient();
   const hoje = hojeISO();
   const inicioMes = inicioMesAtualISO();
   const fimMes = inicioProximoMesISO(hoje);
 
-  const [{ data: configRow }, { data: vendedores }, dadosNova] =
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
+  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam);
+
+  const [{ data: configRow }, dadosNova] =
     await Promise.all([
       supabase
         .from("config")
         .select("valor")
         .eq("chave", "alerta_validade_orcamento_dias")
         .maybeSingle(),
-      usuario.perfil === "diretor"
-        ? supabase
-            .from("usuarios")
-            .select("id, nome")
-            .eq("ativo", true)
-            .order("nome")
-        : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
       carregarDadosFormNegociacao(),
     ]);
 
@@ -293,10 +290,10 @@ export default async function HojePage({
             filtros={{ vendedor: filtrarVendedor }}
           />
         </div>
-        {usuario.perfil === "diretor" ? (
+        {podeVerEquipe(usuario) ? (
           <Suspense fallback={null}>
             <SeletorVendedor
-              vendedores={vendedores ?? []}
+              vendedores={vendedores}
               valor={filtrarVendedor}
             />
           </Suspense>

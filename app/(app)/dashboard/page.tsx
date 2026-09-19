@@ -12,6 +12,11 @@ import {
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import {
+  listarVendedoresVisiveis,
+  podeVerEquipe,
+  resolverFiltroVendedor,
+} from "@/lib/auth/equipe";
+import {
   carregarDadosDashboard,
   carregarOpcoesDashboard,
 } from "@/lib/dashboard/dados";
@@ -70,7 +75,7 @@ export default async function DashboardPage({
   if (!usuario) return null;
 
   const sp = await searchParams;
-  const isDiretor = usuario.perfil === "diretor";
+  const isDiretor = podeVerEquipe(usuario);
 
   const hoje = hojeISO();
   const inicioMes = inicioMesAtualISO();
@@ -94,22 +99,34 @@ export default async function DashboardPage({
 
   const ufParam = paramUnico(sp.uf)?.trim().toUpperCase();
 
+  const supabase = await createClient();
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
+  const vendedorFiltro = resolverFiltroVendedor(
+    usuario,
+    vendedores,
+    uuidValido(paramUnico(sp.vendedor)) ?? undefined,
+  );
+
   const filtros: FiltrosDashboard = {
     de,
     ate,
-    vendedorId: isDiretor ? uuidValido(paramUnico(sp.vendedor)) : null,
+    vendedorId: vendedorFiltro,
     etapaId: uuidValido(paramUnico(sp.etapa)),
     visao,
     uf: ufParam && /^[A-Z]{2}$/.test(ufParam) ? ufParam : null,
     origem: paramUnico(sp.origem)?.trim() || null,
     segmento,
     isDiretor,
+    equipeIds:
+      usuario.perfil === "diretor"
+        ? null
+        : usuario.perfil === "gerente"
+          ? vendedores.map((v) => v.id)
+          : [usuario.id],
   };
 
-  const supabase = await createClient();
-
   const [opcoes, dados, dadosNova] = await Promise.all([
-    carregarOpcoesDashboard(supabase, isDiretor),
+    carregarOpcoesDashboard(supabase, vendedores),
     carregarDadosDashboard(supabase, filtros),
     carregarDadosFormNegociacao(),
   ]);
