@@ -13,7 +13,7 @@ export default function EsqueciSenhaPage() {
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Informe o e-mail da sua conta. Enviaremos um link para criar uma
-            nova senha.
+            nova senha no site online (crm-fled.vercel.app).
           </p>
         </div>
         <div className="rounded-2xl border border-border/80 bg-background/90 p-6 shadow-sm backdrop-blur">
