@@ -182,6 +182,7 @@ export async function criarOrcamentoUpload(
   revalidatePath(`/negociacoes/${negociacao.id}`);
   revalidatePath("/funil");
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
 
   return {
     ok: true,

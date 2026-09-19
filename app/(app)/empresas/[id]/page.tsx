@@ -34,7 +34,7 @@ export default async function EmpresaDetalhePage({
     supabase
       .from("empresas")
       .select(
-        "id, nome, cidade, uf, segmento, cnpj, responsavel_id, observacoes, arquivado_em, usuarios:responsavel_id(nome)",
+        "id, nome, cidade, uf, segmento, tipo_segmento, cnpj, responsavel_id, observacoes, arquivado_em, usuarios:responsavel_id(nome)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -68,6 +68,11 @@ export default async function EmpresaDetalhePage({
     cidade: (viewRow?.cidade ?? empresaRow!.cidade) as string | null,
     uf: (viewRow?.uf ?? empresaRow!.uf) as string | null,
     segmento: (viewRow?.segmento ?? empresaRow!.segmento) as string | null,
+    tipoSegmento: (viewRow?.tipo_segmento ?? empresaRow?.tipo_segmento ?? null) as
+      | "publico"
+      | "privado"
+      | "ppp"
+      | null,
     cnpj: (viewRow?.cnpj ?? empresaRow!.cnpj) as string | null,
     responsavelId: (viewRow?.responsavel_id ??
       empresaRow!.responsavel_id) as string | null,

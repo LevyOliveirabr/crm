@@ -50,6 +50,7 @@ export type EmpresaFichaData = {
   cidade: string | null;
   uf: string | null;
   segmento: string | null;
+  tipoSegmento: "publico" | "privado" | "ppp" | null;
   cnpj: string | null;
   responsavelId: string | null;
   responsavelNome: string | null;
@@ -226,6 +227,7 @@ export function EmpresaFicha({
         cidade: next.cidade,
         uf: next.uf,
         segmento: next.segmento,
+        tipo_segmento: next.tipoSegmento,
         cnpj: next.cnpj,
         responsavel_id: next.responsavelId,
         observacoes: next.observacoes,
@@ -458,6 +460,33 @@ export function EmpresaFicha({
                 <option key={s} value={s} />
               ))}
             </datalist>
+          </div>
+          <div>
+            <label
+              htmlFor="empresa-tipo-segmento"
+              className="mb-1 block text-xs text-muted-foreground"
+            >
+              Tipo de cliente
+            </label>
+            <select
+              id="empresa-tipo-segmento"
+              value={e.tipoSegmento ?? ""}
+              disabled={inputDisabled}
+              onChange={(ev) => {
+                const v = (ev.target.value || null) as
+                  | "publico"
+                  | "privado"
+                  | "ppp"
+                  | null;
+                salvarCadastro({ tipoSegmento: v });
+              }}
+              className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+            >
+              <option value="">—</option>
+              <option value="publico">Público</option>
+              <option value="privado">Privado</option>
+              <option value="ppp">PPP</option>
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">

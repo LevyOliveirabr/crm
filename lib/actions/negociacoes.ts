@@ -64,6 +64,7 @@ const CAMPOS_EDITAVEIS = [
   "linha",
   "origem",
   "previsao_mes",
+  "data_faturamento",
   "contato_id",
 ] as const;
 
@@ -95,6 +96,7 @@ function revalidarNegociacao(id: string) {
   revalidatePath(`/negociacoes/${id}`);
   revalidatePath("/funil");
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
 }
 
 /** Move a negociação para outra etapa (R3). O trigger grava interação `sistema`. */
@@ -359,6 +361,18 @@ export async function atualizarCampo(
         const m = s.match(/^(\d{4})-(\d{2})/);
         if (!m) return { ok: false, error: "Mês inválido." };
         patch.previsao_mes = `${m[1]}-${m[2]}-01`;
+      }
+      break;
+    }
+    case "data_faturamento": {
+      const s = String(parsed.data.valor ?? "").trim();
+      if (!s) {
+        patch.data_faturamento = null;
+      } else {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(`${s}T12:00:00Z`))) {
+          return { ok: false, error: "Data de faturamento inválida." };
+        }
+        patch.data_faturamento = s;
       }
       break;
     }
@@ -638,6 +652,7 @@ export async function arquivar(
 
   revalidatePath("/funil");
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
   revalidatePath(`/negociacoes/${negociacao.id}`);
 
   return { ok: true, negociacaoId: negociacao.id };

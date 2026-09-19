@@ -42,6 +42,7 @@ export type EmpresaDetalhe = {
   cidade: string | null;
   uf: string | null;
   segmento: string | null;
+  tipoSegmento: "publico" | "privado" | "ppp" | null;
   cnpj: string | null;
   responsavelId: string | null;
   responsavelNome: string | null;
@@ -154,6 +155,7 @@ export async function criarEmpresa(
       cidade: parsed.data.cidade,
       uf: parsed.data.uf,
       segmento: parsed.data.segmento,
+      tipo_segmento: parsed.data.tipo_segmento ?? null,
       cnpj: parsed.data.cnpj,
       responsavel_id: parsed.data.responsavel_id ?? usuario.id,
       observacoes: parsed.data.observacoes,
@@ -227,6 +229,9 @@ export async function atualizarEmpresa(
       cidade: parsed.data.cidade,
       uf: parsed.data.uf,
       segmento: parsed.data.segmento,
+      ...(parsed.data.tipo_segmento !== undefined
+        ? { tipo_segmento: parsed.data.tipo_segmento }
+        : {}),
       cnpj: parsed.data.cnpj,
       observacoes: parsed.data.observacoes,
       ...(podeAlterarResp && parsed.data.responsavel_id !== undefined

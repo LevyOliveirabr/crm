@@ -15,6 +15,12 @@ export const empresaSchema = z.object({
     (v) => (v === "" || v === undefined ? null : v),
     z.string().trim().nullable(),
   ),
+  tipo_segmento: z
+    .preprocess(
+      (v) => (v === "" || v === undefined ? null : v),
+      z.enum(["publico", "privado", "ppp"]).nullable(),
+    )
+    .optional(),
   cnpj: z.preprocess(
     (v) => (v === "" || v === undefined ? null : v),
     z.string().trim().nullable(),

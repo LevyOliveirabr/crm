@@ -25,6 +25,7 @@ const criarSchema = acaoSchema
 
 async function revalidarTelasAcao() {
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
   revalidatePath("/funil");
 }
 
