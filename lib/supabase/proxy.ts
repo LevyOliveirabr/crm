@@ -48,6 +48,18 @@ export async function atualizarSessao(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+  const code = request.nextUrl.searchParams.get("code");
+
+  // Links de convite/recovery do Supabase às vezes chegam como /?code=...
+  if (pathname === "/" && code) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    url.searchParams.set("code", code);
+    if (!url.searchParams.get("next")) {
+      url.searchParams.set("next", "/auth/definir-senha");
+    }
+    return NextResponse.redirect(url);
+  }
 
   if (!user && ehRotaApp(pathname)) {
     const url = request.nextUrl.clone();
@@ -81,6 +93,7 @@ export async function atualizarSessao(request: NextRequest) {
   if (pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = user ? "/hoje" : "/login";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
