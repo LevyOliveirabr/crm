@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { getAppUrl } from "@/lib/app-url";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -47,7 +48,7 @@ export async function convidarUsuarioAction(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const admin = createAdminClient();
 
   const { error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
