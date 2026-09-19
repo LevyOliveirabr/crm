@@ -20,7 +20,8 @@ export function EsqueciSenhaForm() {
       <div className="flex flex-col gap-4">
         <p className="text-sm text-foreground" role="status">
           Se existir uma conta com esse e-mail, enviamos um link para redefinir
-          a senha. Confira a caixa de entrada e o spam.
+          a senha. O link abre o site online (crm-fled.vercel.app) — confira a
+          caixa de entrada e o spam.
         </p>
         <Link
           href="/login"
