@@ -28,7 +28,23 @@ Primeiro acesso por convite: o diretor convida em **Configurações → Usuário
 
 ## 2. Telas principais
 
-### Hoje (`/hoje`)
+### Dashboard (`/dashboard`) — tela inicial
+
+Visão consolidada da carteira (negociações abertas), no padrão do PPT "Dashboard - CRM".
+
+- **Filtros** (ficam na URL, dá para compartilhar o link): período, responsável (diretor), fase/estágio, visão data (previsão de fechamento, criação ou fechamento real), região (UF da empresa), fonte (origem) e segmento (público / privado / PPP).
+- **Pipeline de vendas**: barras por trimestre do ano atual e do próximo; o trimestre atual fica em amarelo.
+- **Por estágio**: valor e quantidade por etapa de cada funil ativo.
+- **KPIs**: pipeline total, pipeline ponderado (pesos de temperatura), win rate do período, forecast do mês, do mês seguinte e do trimestre.
+- **Próximos fechamentos**: negociações quentes com previsão nos próximos 30 dias.
+- **Oportunidades em risco**: sem próxima ação, ação atrasada ou sem interação há mais de `dias_risco_dashboard` dias (padrão 15; chave opcional em `config`).
+- **Base de dados**: tabela das abertas com conta, responsável, fase, segmento, valor, previsão e data de faturamento.
+- **Memorial de cálculo**: botão no topo explica a fórmula de cada número.
+- **Nova oportunidade**: abre o mesmo formulário de nova negociação.
+
+Campos novos que alimentam o dashboard: **Tipo de cliente** na ficha da empresa (público / privado / PPP) e **Faturamento** (data) na ficha da negociação.
+
+### Meu dia (`/hoje`)
 
 Centro do dia a dia.
 

@@ -75,6 +75,7 @@ export type NegociacaoFichaData = {
   linha: string | null;
   origem: string | null;
   previsaoMes: string | null;
+  dataFaturamento: string | null;
   status: StatusNeg;
   valorFinal: number | null;
   motivoPerda: string | null;
@@ -513,6 +514,23 @@ export function NegociacaoFicha({
                       previsaoMes: v ? `${v}-01` : null,
                     }),
                   );
+                }}
+                className="h-8 w-40"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Faturamento</span>
+              <Input
+                type="date"
+                value={n.dataFaturamento ?? ""}
+                disabled={pending || !aberta}
+                onChange={(e) => {
+                  const v = e.target.value || null;
+                  salvarCampo("data_faturamento", v, (p) => ({
+                    ...p,
+                    dataFaturamento: v,
+                  }));
                 }}
                 className="h-8 w-40"
               />

@@ -25,6 +25,7 @@ function revalidateConfig() {
   revalidatePath("/configuracoes", "layout");
   revalidatePath("/funil");
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
 }
 
 // ---------- Funis ----------

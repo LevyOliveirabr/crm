@@ -16,11 +16,12 @@ Pré-requisitos antes dos testes:
 
 1. Projeto `crm-fled` na Vercel no ar (`vercel.json` com região `gru1`).
 2. Variáveis acima configuradas em Production (e Preview se quiser) **no dashboard** — não só no workaround do build.
-3. Supabase → Authentication → URL Configuration:
+3. Supabase → SQL Editor: aplicar as migrations novas ainda não executadas em produção. O dashboard (`/dashboard`) precisa de `supabase/migrations/0006_dashboard.sql` (campos `empresas.tipo_segmento`, `negociacoes.data_faturamento` e views `v_negociacoes` / `v_empresas` recriadas). Sem ela o app continua funcionando, mas o dashboard não filtra por UF/segmento e os campos "Tipo de cliente" e "Faturamento" não salvam.
+4. Supabase → Authentication → URL Configuration:
    - **Site URL** = `https://crm-fled.vercel.app`
    - **Redirect URLs** inclui `https://crm-fled.vercel.app/auth/callback` e `https://crm-fled.vercel.app/auth/definir-senha`
   (obrigatório também para “Esqueci minha senha”)
-4. Diretor e Levy com usuário ativo (convite / senha definida).
+5. Diretor e Levy com usuário ativo (convite / senha definida).
 
 ---
 

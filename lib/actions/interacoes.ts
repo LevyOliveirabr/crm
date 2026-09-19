@@ -73,6 +73,7 @@ export async function registrarInteracao(
 
   revalidatePath("/funil");
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
   revalidatePath(`/negociacoes/${parsed.data.negociacaoId}`);
 
   return { ok: true };

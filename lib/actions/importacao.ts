@@ -210,6 +210,7 @@ export async function confirmarImportacao(input: {
   revalidatePath("/contatos");
   revalidatePath("/funil");
   revalidatePath("/hoje");
+  revalidatePath("/dashboard");
 
   return { ok: true, relatorio };
 }

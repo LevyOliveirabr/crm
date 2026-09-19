@@ -144,6 +144,7 @@ export type Database = {
           cidade: string | null;
           uf: string | null;
           segmento: string | null;
+          tipo_segmento: Database["public"]["Enums"]["tipo_segmento"] | null;
           cnpj: string | null;
           responsavel_id: string | null;
           observacoes: string | null;
@@ -157,6 +158,7 @@ export type Database = {
           cidade?: string | null;
           uf?: string | null;
           segmento?: string | null;
+          tipo_segmento?: Database["public"]["Enums"]["tipo_segmento"] | null;
           cnpj?: string | null;
           responsavel_id?: string | null;
           observacoes?: string | null;
@@ -170,6 +172,7 @@ export type Database = {
           cidade?: string | null;
           uf?: string | null;
           segmento?: string | null;
+          tipo_segmento?: Database["public"]["Enums"]["tipo_segmento"] | null;
           cnpj?: string | null;
           responsavel_id?: string | null;
           observacoes?: string | null;
@@ -244,6 +247,7 @@ export type Database = {
           valor_estimado: number;
           temperatura: number;
           previsao_mes: string | null;
+          data_faturamento: string | null;
           responsavel_id: string;
           status: Database["public"]["Enums"]["status_negociacao"];
           valor_final: number | null;
@@ -267,6 +271,7 @@ export type Database = {
           valor_estimado?: number;
           temperatura?: number;
           previsao_mes?: string | null;
+          data_faturamento?: string | null;
           responsavel_id: string;
           status?: Database["public"]["Enums"]["status_negociacao"];
           valor_final?: number | null;
@@ -290,6 +295,7 @@ export type Database = {
           valor_estimado?: number;
           temperatura?: number;
           previsao_mes?: string | null;
+          data_faturamento?: string | null;
           responsavel_id?: string;
           status?: Database["public"]["Enums"]["status_negociacao"];
           valor_final?: number | null;
@@ -730,6 +736,7 @@ export type Database = {
           valor_estimado: number | null;
           temperatura: number | null;
           previsao_mes: string | null;
+          data_faturamento: string | null;
           responsavel_id: string | null;
           status: Database["public"]["Enums"]["status_negociacao"] | null;
           valor_final: number | null;
@@ -754,6 +761,8 @@ export type Database = {
           proxima_acao_descricao: string | null;
           acao_atrasada: boolean | null;
           sem_acao: boolean | null;
+          empresa_uf: string | null;
+          empresa_tipo_segmento: Database["public"]["Enums"]["tipo_segmento"] | null;
         };
         Relationships: [];
       };
@@ -825,6 +834,7 @@ export type Database = {
           ticket_medio: number | null;
           ciclo_medio_dias: number | null;
           ultimo_contato: string | null;
+          tipo_segmento: Database["public"]["Enums"]["tipo_segmento"] | null;
         };
         Relationships: [];
       };
@@ -847,6 +857,8 @@ export type Database = {
       perfil_usuario: "diretor" | "vendedor";
       tipo_lista: "segmento" | "linha" | "origem" | "motivo_perda";
       status_negociacao: "aberta" | "vendida" | "perdida";
+      /** Não é enum no Postgres (check constraint em empresas.tipo_segmento). */
+      tipo_segmento: "publico" | "privado" | "ppp";
       tipo_interacao:
         | "ligacao"
         | "whatsapp"
