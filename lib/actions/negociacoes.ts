@@ -692,3 +692,75 @@ export async function arquivar(
 
   return { ok: true, negociacaoId: negociacao.id };
 }
+
+/**
+ * Excluir definitivamente (R14). Só o diretor.
+ * Apaga a negociação e, por cascade, interações, ações, orçamentos, itens e
+ * histórico de etapas. Os arquivos dos orçamentos no Storage são removidos
+ * antes, para não ficarem órfãos.
+ */
+export async function excluirNegociacao(
+  negociacaoId: string,
+): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+
+  const idParsed = z.uuid().safeParse(negociacaoId);
+  if (!idParsed.success) return { ok: false, error: "Negociação inválida." };
+
+  if (usuario.perfil !== "diretor") {
+    return {
+      ok: false,
+      error: "Só o diretor pode excluir. Use Arquivar para tirar da tela.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: negociacao, error: erroNeg } = await supabase
+    .from("negociacoes")
+    .select("id")
+    .eq("id", idParsed.data)
+    .maybeSingle();
+
+  if (erroNeg || !negociacao) {
+    return { ok: false, error: "Negociação não encontrada." };
+  }
+
+  const { data: orcamentos, error: erroOrc } = await supabase
+    .from("orcamentos")
+    .select("arquivo_path, arquivo_pdf_path, arquivo_xlsx_path")
+    .eq("negociacao_id", negociacao.id);
+
+  if (erroOrc) return { ok: false, error: erroOrc.message };
+
+  const arquivos = (orcamentos ?? [])
+    .flatMap((o) => [o.arquivo_path, o.arquivo_pdf_path, o.arquivo_xlsx_path])
+    .filter((p): p is string => Boolean(p));
+
+  if (arquivos.length > 0) {
+    const { error: erroStorage } = await supabase.storage
+      .from("orcamentos")
+      .remove(arquivos);
+    if (erroStorage) {
+      return {
+        ok: false,
+        error: `Falha ao remover arquivos de orçamento: ${erroStorage.message}`,
+      };
+    }
+  }
+
+  const { error: erroDelete } = await supabase
+    .from("negociacoes")
+    .delete()
+    .eq("id", negociacao.id);
+
+  if (erroDelete) return { ok: false, error: erroDelete.message };
+
+  revalidatePath("/funil");
+  revalidatePath("/hoje");
+  revalidatePath("/dashboard");
+  revalidatePath("/relatorios");
+  revalidatePath(`/negociacoes/${negociacao.id}`);
+
+  return { ok: true, negociacaoId: negociacao.id };
+}

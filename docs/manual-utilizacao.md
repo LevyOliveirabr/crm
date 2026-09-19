@@ -93,6 +93,8 @@ Na ficha você:
 - Move de **etapa**.
 - Anexa **orçamento** (quando disponível).
 - Fecha como **vendida** (valor final obrigatório) ou **perdida** (motivo obrigatório).
+- **Arquivar** tira a negociação de todas as telas sem apagar (diretor: qualquer uma; vendedor: só as suas).
+- **Excluir** (só diretor) apaga de vez a negociação com interações, ações e orçamentos, após confirmação. Não tem volta.
 
 Botão flutuante **+** (quando visível) abre nova negocição.
 

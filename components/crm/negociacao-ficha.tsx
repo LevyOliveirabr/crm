@@ -14,6 +14,7 @@ import {
   StickyNote,
   Users,
   Archive,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -27,6 +28,7 @@ import { registrarInteracao } from "@/lib/actions/interacoes";
 import {
   atualizarCampo,
   arquivar,
+  excluirNegociacao,
   marcarPerda,
   marcarVenda,
   moverEtapa,
@@ -238,6 +240,7 @@ export function NegociacaoFicha({
 
   const [vendaOpen, setVendaOpen] = useState(false);
   const [perdaOpen, setPerdaOpen] = useState(false);
+  const [excluirOpen, setExcluirOpen] = useState(false);
   const [orcOpen, setOrcOpen] = useState(false);
   const [editarAcaoOpen, setEditarAcaoOpen] = useState(false);
   const [novaAcaoOpen, setNovaAcaoOpen] = useState(false);
@@ -673,6 +676,19 @@ export function NegociacaoFicha({
             <Archive className="size-4" />
             Arquivar
           </Button>
+          {isDiretor ? (
+            <Button
+              type="button"
+              size="lg"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={pending}
+              onClick={() => setExcluirOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Excluir
+            </Button>
+          ) : null}
         </div>
 
         {!aberta && n.status === "perdida" && n.motivoPerda ? (
@@ -1165,6 +1181,48 @@ export function NegociacaoFicha({
               }
             >
               Confirmar perda
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={excluirOpen} onOpenChange={setExcluirOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir negociação</DialogTitle>
+            <DialogDescription>
+              Isso apaga definitivamente &ldquo;{n.titulo}&rdquo;, junto com
+              interações, ações e orçamentos. Não dá para desfazer. Se a ideia
+              é só tirar da tela, prefira <strong>Arquivar</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => setExcluirOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  const res = await excluirNegociacao(n.id);
+                  if (!res.ok) {
+                    setErro(res.error);
+                    setExcluirOpen(false);
+                    return;
+                  }
+                  setExcluirOpen(false);
+                  router.push("/funil");
+                })
+              }
+            >
+              Excluir definitivamente
             </Button>
           </DialogFooter>
         </DialogContent>
