@@ -15,6 +15,9 @@ function ehRotaApp(pathname: string) {
   if (pathname.startsWith("/api/cron")) return false;
   // aceite de orçamento pelo cliente (link assinado, sem login)
   if (pathname.startsWith("/aceite/")) return false;
+  // manifest e ícones do PWA precisam ser públicos para o "instalar app"
+  if (pathname === "/manifest.webmanifest") return false;
+  if (pathname.startsWith("/icons/")) return false;
   if (pathname === "/") return false;
   return true;
 }
