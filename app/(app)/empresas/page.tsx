@@ -1,10 +1,14 @@
 import { BotaoExportar } from "@/components/crm/botao-exportar";
 import { EmpresasLista } from "@/components/crm/empresas-lista";
+import { Pagina, PaginaCabecalho } from "@/components/crm/pagina";
 import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
-type SearchParams = Promise<{ q?: string | string[]; emitente?: string | string[] }>;
+type SearchParams = Promise<{
+  q?: string | string[];
+  emitente?: string | string[];
+}>;
 
 function paramUnico(valor: string | string[] | undefined): string | undefined {
   if (Array.isArray(valor)) return valor[0];
@@ -36,19 +40,24 @@ export default async function EmpresasPage({
     query = query.ilike("nome", `%${q}%`);
   }
 
-  const [{ data: rows, error: erroView }, { data: listas }] = await Promise.all([
-    query,
-    supabase
-      .from("listas")
-      .select("valor")
-      .eq("tipo", "segmento")
-      .eq("ativo", true)
-      .order("ordem"),
-  ]);
+  const [{ data: rows, error: erroView }, { data: listas }] = await Promise.all(
+    [
+      query,
+      supabase
+        .from("listas")
+        .select("valor")
+        .eq("tipo", "segmento")
+        .eq("ativo", true)
+        .order("ordem"),
+    ],
+  );
 
   // Com uma empresa vendedora selecionada, os indicadores vêm só das
   // negociações dela (v_empresas agrega todas as empresas do grupo).
-  const porEmpresa = new Map<string, { qtdAbertas: number; ultimoContato: string | null }>();
+  const porEmpresa = new Map<
+    string,
+    { qtdAbertas: number; ultimoContato: string | null }
+  >();
   if (escopo.emitenteId) {
     const { data: negs } = await supabase
       .from("v_negociacoes")
@@ -56,9 +65,15 @@ export default async function EmpresasPage({
       .eq("emitente_id", escopo.emitenteId);
     for (const n of negs ?? []) {
       if (!n.empresa_id) continue;
-      const cur = porEmpresa.get(n.empresa_id) ?? { qtdAbertas: 0, ultimoContato: null };
+      const cur = porEmpresa.get(n.empresa_id) ?? {
+        qtdAbertas: 0,
+        ultimoContato: null,
+      };
       if (n.status === "aberta") cur.qtdAbertas += 1;
-      if (n.ultima_interacao && (!cur.ultimoContato || n.ultima_interacao > cur.ultimoContato)) {
+      if (
+        n.ultima_interacao &&
+        (!cur.ultimoContato || n.ultima_interacao > cur.ultimoContato)
+      ) {
         cur.ultimoContato = n.ultima_interacao;
       }
       porEmpresa.set(n.empresa_id, cur);
@@ -121,21 +136,18 @@ export default async function EmpresasPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4 pb-24 lg:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Empresas</h1>
-          <p className="text-sm text-muted-foreground">
-            Carteira com último contato — abandonadas primeiro.
-          </p>
-        </div>
-        <BotaoExportar tela="empresas" filtros={{ q: q || null }} />
-      </div>
+    <Pagina className="pb-20">
+      <PaginaCabecalho
+        titulo="Empresas"
+        subtitulo={escopo.emitente?.nome ?? "Todas as empresas"}
+        descricao="Carteira de clientes com o último contato. As abandonadas aparecem primeiro."
+        acoes={<BotaoExportar tela="empresas" filtros={{ q: q || null }} />}
+      />
       <EmpresasLista
         empresas={listaFinal}
         segmentos={(listas ?? []).map((l) => l.valor)}
         buscaInicial={q}
       />
-    </div>
+    </Pagina>
   );
 }

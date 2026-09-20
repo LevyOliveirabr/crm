@@ -1,5 +1,6 @@
 import { BotaoExportar } from "@/components/crm/botao-exportar";
 import { ContatosLista } from "@/components/crm/contatos-lista";
+import { Pagina, PaginaCabecalho } from "@/components/crm/pagina";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,14 +27,12 @@ export default async function ContatosPage() {
 
   const contatos = (contatosRaw ?? [])
     .map((c) => {
-      const emp = c.empresas as
-        | {
-            id: string;
-            nome: string;
-            responsavel_id: string | null;
-            arquivado_em: string | null;
-          }
-        | null;
+      const emp = c.empresas as {
+        id: string;
+        nome: string;
+        responsavel_id: string | null;
+        arquivado_em: string | null;
+      } | null;
       if (!emp || emp.arquivado_em) return null;
       const podeEditar =
         usuario.ehDiretorEmAlguma ||
@@ -61,20 +60,16 @@ export default async function ContatosPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4 pb-24 lg:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Contatos</h1>
-          <p className="text-sm text-muted-foreground">
-            Pessoas nas empresas da carteira.
-          </p>
-        </div>
-        <BotaoExportar tela="contatos" />
-      </div>
+    <Pagina className="pb-20">
+      <PaginaCabecalho
+        titulo="Contatos"
+        descricao="Pessoas nas empresas da carteira, com cargo, WhatsApp e quem decide."
+        acoes={<BotaoExportar tela="contatos" />}
+      />
       <ContatosLista
         contatos={contatos}
         empresas={empresasEditaveis.map((e) => ({ id: e.id, nome: e.nome }))}
       />
-    </div>
+    </Pagina>
   );
 }

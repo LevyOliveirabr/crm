@@ -12,6 +12,15 @@ import {
 } from "@/components/crm/funil-kanban";
 import { FunilLista, type LinhaLista } from "@/components/crm/funil-lista";
 import { MiniFormProximaAcao } from "@/components/crm/mini-form-proxima-acao";
+import {
+  BarraFiltros,
+  CampoFiltro,
+  PaginaCabecalho,
+  Pilulas,
+  Secao,
+  campoClass,
+} from "@/components/crm/pagina";
+import { formatarMoedaCurta } from "@/lib/format";
 import { SeletorVendedor, type VendedorOption } from "@/components/crm/seletor-vendedor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +57,7 @@ export function FunilClient({
     temperatura: string | null;
     q: string;
     vista: "kanban" | "lista";
+    emitenteNome?: string | null;
   };
 }) {
   const router = useRouter();
@@ -70,13 +80,28 @@ export function FunilClient({
     setMiniOpen(true);
   }
 
+  const funilAtual = funis.find((f) => f.id === funilId);
+  const totalValor = etapas.reduce((s, e) => s + e.valor, 0);
+  const totalQtd = etapas.reduce((s, e) => s + e.qtd, 0);
+  const temFiltro = Boolean(filtros.vendedor || filtros.linha || filtros.temperatura || filtros.q);
+
   return (
     <Toaster>
       <div className="flex flex-col gap-4">
-        <header className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">Funil</h1>
-            <div className="flex flex-wrap items-center gap-2">
+        <PaginaCabecalho
+          titulo="Funil"
+          subtitulo={funilAtual?.nome}
+          descricao={
+            <>
+              <span className="font-semibold text-foreground tabular-nums">{totalQtd}</span>{" "}
+              negociações abertas ·{" "}
+              <span className="font-semibold text-foreground tabular-nums">{formatarMoedaCurta(totalValor)}</span>
+              {filtros.emitenteNome ? ` · ${filtros.emitenteNome}` : " · todas as empresas"}
+              {temFiltro ? " · com filtros" : ""}
+            </>
+          }
+          acoes={
+            <>
               {filtros.vista === "lista" ? (
                 <BotaoExportar
                   tela="funil-lista"
@@ -89,117 +114,118 @@ export function FunilClient({
                   }}
                 />
               ) : null}
-              <div className="inline-flex rounded-lg border border-border p-0.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={filtros.vista === "kanban" ? "secondary" : "ghost"}
-                  onClick={() => setParam("vista", "kanban")}
-                  aria-pressed={filtros.vista === "kanban"}
-                >
-                  <LayoutGrid className="size-4" />
-                  Kanban
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={filtros.vista === "lista" ? "secondary" : "ghost"}
-                  onClick={() => setParam("vista", "lista")}
-                  aria-pressed={filtros.vista === "lista"}
-                >
-                  <List className="size-4" />
-                  Lista
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filtro-funil" className="text-sm font-medium">
-                Funil
-              </label>
-              <select
-                id="filtro-funil"
-                value={funilId}
-                onChange={(e) => setParam("funil", e.target.value)}
-                className="h-8 w-full min-w-[10rem] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-auto"
-              >
-                {funis.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {isDiretor ? (
-              <SeletorVendedor
-                vendedores={vendedores}
-                valor={filtros.vendedor}
+              <Pilulas
+                ariaLabel="Visão do funil"
+                valor={filtros.vista}
+                onChange={(v) => setParam("vista", v === "kanban" ? null : v)}
+                opcoes={[
+                  { id: "kanban", label: "Kanban", icone: LayoutGrid },
+                  { id: "lista", label: "Lista", icone: List },
+                ]}
               />
-            ) : null}
+            </>
+          }
+        />
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filtro-linha" className="text-sm font-medium">
-                Linha
-              </label>
-              <select
-                id="filtro-linha"
-                value={filtros.linha ?? ""}
-                onChange={(e) => setParam("linha", e.target.value || null)}
-                className="h-8 w-full min-w-[10rem] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-auto"
+        <BarraFiltros
+          acoes={
+            temFiltro ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  for (const k of ["vendedor", "linha", "temperatura", "q"]) params.delete(k);
+                  setBuscaLocal("");
+                  const qs = params.toString();
+                  router.push(qs ? `${pathname}?${qs}` : pathname);
+                }}
               >
-                <option value="">Todas</option>
-                {linhasOpcoes.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
+                Limpar filtros
+              </Button>
+            ) : undefined
+          }
+        >
+          <CampoFiltro id="filtro-funil" label="Funil">
+            <select
+              id="filtro-funil"
+              value={funilId}
+              onChange={(e) => setParam("funil", e.target.value)}
+              className={campoClass}
+            >
+              {funis.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
+              ))}
+            </select>
+          </CampoFiltro>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filtro-temp" className="text-sm font-medium">
-                Temperatura
-              </label>
-              <select
-                id="filtro-temp"
-                value={filtros.temperatura ?? ""}
-                onChange={(e) =>
-                  setParam("temperatura", e.target.value || null)
-                }
-                className="h-8 w-full min-w-[8rem] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-auto"
-              >
-                <option value="">Todas</option>
-                <option value="1">1 · Fria</option>
-                <option value="2">2 · Morna</option>
-                <option value="3">3 · Quente</option>
-              </select>
-            </div>
+          {isDiretor ? (
+            <SeletorVendedor vendedores={vendedores} valor={filtros.vendedor} />
+          ) : null}
 
+          <CampoFiltro id="filtro-linha" label="Linha">
+            <select
+              id="filtro-linha"
+              value={filtros.linha ?? ""}
+              onChange={(e) => setParam("linha", e.target.value || null)}
+              className={campoClass}
+            >
+              <option value="">Todas</option>
+              {linhasOpcoes.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </CampoFiltro>
+
+          <CampoFiltro id="filtro-temp" label="Temperatura">
+            <select
+              id="filtro-temp"
+              value={filtros.temperatura ?? ""}
+              onChange={(e) => setParam("temperatura", e.target.value || null)}
+              className={campoClass}
+            >
+              <option value="">Todas</option>
+              <option value="1">1 · Fria</option>
+              <option value="2">2 · Morna</option>
+              <option value="3">3 · Quente</option>
+            </select>
+          </CampoFiltro>
+
+          <CampoFiltro id="filtro-busca" label="Busca" className="col-span-2">
             <form
-              className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-xs"
+              className="flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 setParam("q", buscaLocal.trim() || null);
               }}
             >
-              <label htmlFor="filtro-busca" className="text-sm font-medium">
-                Busca
-              </label>
               <Input
                 id="filtro-busca"
                 value={buscaLocal}
                 onChange={(e) => setBuscaLocal(e.target.value)}
                 placeholder="Título ou empresa"
+                className={campoClass}
               />
+              <Button type="submit" variant="secondary" size="sm" className="h-9">
+                Buscar
+              </Button>
             </form>
-          </div>
-        </header>
+          </CampoFiltro>
+        </BarraFiltros>
 
         {filtros.vista === "lista" ? (
-          <FunilLista linhas={linhas} />
+          <Secao
+            titulo="Negociações abertas"
+            meta={`${linhas.length} de ${totalQtd}`}
+            semPadding
+          >
+            <FunilLista linhas={linhas} />
+          </Secao>
         ) : (
           <FunilKanban
             etapas={etapas}

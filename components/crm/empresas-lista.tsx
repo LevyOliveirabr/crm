@@ -18,6 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BotaoConsultarCnpj } from "@/components/crm/botao-consultar-cnpj";
 import {
+  BarraFiltros,
+  CampoFiltro,
+  EstadoVazio,
+  Secao,
+  campoClass,
+} from "@/components/crm/pagina";
+import {
   Table,
   TableBody,
   TableCell,
@@ -171,112 +178,130 @@ export function EmpresasLista({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome…"
-            className="pl-9"
-            aria-label="Buscar empresas"
-          />
-        </div>
-        <Button type="button" onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4" />
-          Empresa
-        </Button>
-      </div>
+    <div className="flex flex-col gap-4">
+      <BarraFiltros
+        acoes={
+          <Button
+            type="button"
+            className="rounded-full px-4 font-semibold"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Plus className="size-4" />
+            Nova empresa
+          </Button>
+        }
+      >
+        <CampoFiltro
+          id="busca-empresas"
+          label="Busca"
+          className="col-span-2 sm:col-span-2"
+        >
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="busca-empresas"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome…"
+              className={`${campoClass} pl-9`}
+              aria-label="Buscar empresas"
+            />
+          </div>
+        </CampoFiltro>
+      </BarraFiltros>
 
-      {filtradas.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhuma empresa encontrada.
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortHead
-                  label="Nome"
-                  column="nome"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={toggleSort}
-                />
-                <SortHead
-                  label="Cidade"
-                  column="cidade"
-                  className="hidden md:table-cell"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={toggleSort}
-                />
-                <SortHead
-                  label="Segmento"
-                  column="segmento"
-                  className="hidden lg:table-cell"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={toggleSort}
-                />
-                <SortHead
-                  label="Responsável"
-                  column="responsavelNome"
-                  className="hidden sm:table-cell"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={toggleSort}
-                />
-                <SortHead
-                  label="Abertas"
-                  column="qtdAbertas"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={toggleSort}
-                />
-                <SortHead
-                  label="Último contato"
-                  column="ultimoContato"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={toggleSort}
-                />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtradas.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell>
-                    <Link
-                      href={`/empresas/${e.id}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {e.nome}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {e.cidade ?? "—"}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {e.segmento ?? "—"}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {e.responsavelNome ?? "—"}
-                  </TableCell>
-                  <TableCell>{e.qtdAbertas}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {e.ultimoContato
-                      ? formatarData(e.ultimoContato)
-                      : "Nunca"}
-                  </TableCell>
+      <Secao
+        titulo="Carteira"
+        meta={`${filtradas.length} ${filtradas.length === 1 ? "empresa" : "empresas"}`}
+        semPadding
+      >
+        {filtradas.length === 0 ? (
+          <EstadoVazio texto="Nenhuma empresa encontrada." />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <SortHead
+                    label="Nome"
+                    column="nome"
+                    sortKey={sortKey}
+                    sortAsc={sortAsc}
+                    onSort={toggleSort}
+                  />
+                  <SortHead
+                    label="Cidade"
+                    column="cidade"
+                    className="hidden md:table-cell"
+                    sortKey={sortKey}
+                    sortAsc={sortAsc}
+                    onSort={toggleSort}
+                  />
+                  <SortHead
+                    label="Segmento"
+                    column="segmento"
+                    className="hidden lg:table-cell"
+                    sortKey={sortKey}
+                    sortAsc={sortAsc}
+                    onSort={toggleSort}
+                  />
+                  <SortHead
+                    label="Responsável"
+                    column="responsavelNome"
+                    className="hidden sm:table-cell"
+                    sortKey={sortKey}
+                    sortAsc={sortAsc}
+                    onSort={toggleSort}
+                  />
+                  <SortHead
+                    label="Abertas"
+                    column="qtdAbertas"
+                    sortKey={sortKey}
+                    sortAsc={sortAsc}
+                    onSort={toggleSort}
+                  />
+                  <SortHead
+                    label="Último contato"
+                    column="ultimoContato"
+                    sortKey={sortKey}
+                    sortAsc={sortAsc}
+                    onSort={toggleSort}
+                  />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              </TableHeader>
+              <TableBody>
+                {filtradas.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell>
+                      <Link
+                        href={`/empresas/${e.id}`}
+                        className="font-medium text-foreground hover:underline"
+                      >
+                        {e.nome}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {e.cidade ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
+                      {e.segmento ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground sm:table-cell">
+                      {e.responsavelNome ?? "—"}
+                    </TableCell>
+                    <TableCell>{e.qtdAbertas}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {e.ultimoContato
+                        ? formatarData(e.ultimoContato)
+                        : "Nunca"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Secao>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">

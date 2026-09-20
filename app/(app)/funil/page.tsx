@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 
 import { FunilClient } from "@/components/crm/funil-client";
+import { BotaoFlutuanteNovaNegociacao } from "@/components/crm/botao-flutuante-nova-negociacao";
+import { EstadoVazio, Pagina, PaginaCabecalho, Secao } from "@/components/crm/pagina";
+import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import type { CartaoNegociacaoData } from "@/components/crm/cartao-negociacao";
 import type { EtapaColuna } from "@/components/crm/funil-kanban";
 import type { LinhaLista } from "@/components/crm/funil-lista";
@@ -70,12 +73,12 @@ export default async function FunilPage({
   const funis = funisRaw ?? [];
   if (funis.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-2xl">
-        <h1 className="text-xl font-semibold tracking-tight">Funil</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Nenhum funil ativo cadastrado.
-        </p>
-      </div>
+      <Pagina>
+        <PaginaCabecalho titulo="Funil" />
+        <Secao>
+          <EstadoVazio texto="Nenhum funil ativo cadastrado. Crie um em Configurações › Funis." />
+        </Secao>
+      </Pagina>
     );
   }
 
@@ -210,9 +213,12 @@ export default async function FunilPage({
     etapaNome: etapaNomeById.get(n.etapaId) ?? "—",
   }));
 
+  const dadosNova = await carregarDadosFormNegociacao();
+
   return (
-    <Suspense fallback={null}>
-      <FunilClient
+    <Pagina className="pb-20">
+      <Suspense fallback={null}>
+        <FunilClient
         funis={funis}
         funilId={funilId}
         etapas={etapas}
@@ -232,8 +238,11 @@ export default async function FunilPage({
               : null,
           q: qParam,
           vista,
+          emitenteNome: escopo.emitente?.nome ?? null,
         }}
       />
-    </Suspense>
+      </Suspense>
+      {dadosNova.ok ? <BotaoFlutuanteNovaNegociacao dados={dadosNova.dados} /> : null}
+    </Pagina>
   );
 }

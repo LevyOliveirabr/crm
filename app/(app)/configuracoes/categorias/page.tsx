@@ -3,6 +3,7 @@ import { listarCategorias } from "@/lib/actions/emitentes";
 import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { empresasOndeEhDiretor } from "@/lib/auth/permissoes";
+import { Secao } from "@/components/crm/pagina";
 
 export default async function CategoriasPage() {
   const usuario = await getUsuarioAtual();
@@ -17,20 +18,21 @@ export default async function CategoriasPage() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-medium">Categorias de produto</h2>
-        <p className="text-sm text-muted-foreground">
-          Agrupam os produtos de cada empresa vendedora e podem ter um catálogo
-          próprio, que aparece nos links da proposta comercial.
-          {escopo.emitente ? ` Mostrando: ${escopo.emitente.nome}.` : ""}
-        </p>
-      </div>
+    <Secao titulo="Categorias de produto">
+      <p className="mb-4 text-sm text-muted-foreground">
+        Agrupam os produtos de cada empresa vendedora e podem ter um catálogo
+        próprio, que aparece nos links da proposta comercial.
+        {escopo.emitente ? ` Mostrando: ${escopo.emitente.nome}.` : ""}
+      </p>
       <CategoriasConfigClient
         categorias={categorias}
         emitentes={emitentes}
-        emitenteInicial={escopo.emitenteId && dirigidas.has(escopo.emitenteId) ? escopo.emitenteId : null}
+        emitenteInicial={
+          escopo.emitenteId && dirigidas.has(escopo.emitenteId)
+            ? escopo.emitenteId
+            : null
+        }
       />
-    </div>
+    </Secao>
   );
 }

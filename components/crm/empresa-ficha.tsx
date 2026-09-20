@@ -26,11 +26,7 @@ import {
   criarContato,
 } from "@/lib/actions/contatos";
 import type { DadosFormNegociacao } from "@/lib/actions/form-negociacao";
-import {
-  formatarData,
-  formatarDataHora,
-  formatarMoeda,
-} from "@/lib/format";
+import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 import { NovaNegociacaoForm } from "@/components/crm/nova-negociacao-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +39,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BotaoConsultarCnpj } from "@/components/crm/botao-consultar-cnpj";
+import {
+  EstadoVazio,
+  Pagina,
+  PaginaCabecalho,
+  Secao,
+  Tile,
+  Tiles,
+} from "@/components/crm/pagina";
 import { cn } from "@/lib/utils";
 
 export type EmpresaFichaData = {
@@ -144,21 +148,6 @@ function iconeTimeline(item: TimelineEmpresaItem) {
     default:
       return StickyNote;
   }
-}
-
-function Indicador({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border px-3 py-2.5">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
-    </div>
-  );
 }
 
 export function EmpresaFicha({
@@ -324,12 +313,13 @@ export function EmpresaFicha({
   const inputDisabled = !podeEditar || pending;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-24">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+    <Pagina largura="media" className="pb-20">
+      <PaginaCabecalho
+        voltar={{ href: "/empresas", label: "Empresas" }}
+        titulo={
           <input
             className={cn(
-              "w-full bg-transparent text-2xl font-semibold tracking-tight outline-none",
+              "w-full min-w-[12rem] bg-transparent font-heading text-2xl font-semibold tracking-tight outline-none sm:text-3xl",
               !podeEditar && "cursor-default",
             )}
             value={e.nome}
@@ -342,40 +332,52 @@ export function EmpresaFicha({
             }}
             aria-label="Nome da empresa"
           />
-          <p className="mt-1 text-sm text-muted-foreground">
+        }
+        descricao={
+          <>
             {[e.cidade, e.uf].filter(Boolean).join(" / ") || "Sem cidade"}
             {e.segmento ? ` · ${e.segmento}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => setNovaNegOpen(true)}>
-            <Plus className="size-4" />
-            Negociação
-          </Button>
-          {podeEditar ? (
+            {e.responsavelNome ? ` · responsável ${e.responsavelNome}` : ""}
+          </>
+        }
+        acoes={
+          <>
             <Button
               type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  const res = await arquivarEmpresa(e.id);
-                  if (!res.ok) {
-                    setErro(res.error);
-                    return;
-                  }
-                  router.push("/empresas");
-                })
-              }
+              size="lg"
+              className="rounded-full px-4 font-semibold"
+              onClick={() => setNovaNegOpen(true)}
             >
-              Arquivar
+              <Plus className="size-4" />
+              Nova negociação
             </Button>
-          ) : null}
-        </div>
-      </div>
+            {podeEditar ? (
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                className="rounded-full border-foreground/80 bg-card px-4 font-semibold"
+                disabled={pending}
+                onClick={() =>
+                  run(async () => {
+                    const res = await arquivarEmpresa(e.id);
+                    if (!res.ok) {
+                      setErro(res.error);
+                      return;
+                    }
+                    router.push("/empresas");
+                  })
+                }
+              >
+                Arquivar
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {!podeEditar ? (
-        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+        <p className="card-surface border-l-4 border-l-brand px-4 py-3 text-sm text-muted-foreground">
           Você pode ver esta empresa, mas só o responsável ou um diretor pode
           editar.
         </p>
@@ -387,386 +389,393 @@ export function EmpresaFicha({
         </p>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        <Indicador label="Aberto" value={formatarMoeda(e.aberto)} />
-        <Indicador label="Vendido" value={formatarMoeda(e.vendido)} />
-        <Indicador label="Perdido" value={formatarMoeda(e.perdido)} />
-        <Indicador label="Negociações" value={String(e.qtdNegociacoes)} />
-        <Indicador
-          label="Ticket médio"
-          value={
-            e.ticketMedio != null ? formatarMoeda(e.ticketMedio) : "—"
+      <Tiles colunas={4}>
+        <Tile
+          label="Aberto"
+          valor={formatarMoeda(e.aberto)}
+          detalhe={`${e.qtdNegociacoes} negociações no total`}
+        />
+        <Tile
+          label="Vendido"
+          valor={formatarMoeda(e.vendido)}
+          tom="ok"
+          detalhe={
+            e.ticketMedio != null
+              ? `ticket médio ${formatarMoeda(e.ticketMedio)}`
+              : "sem vendas"
           }
         />
-        <Indicador
-          label="Ciclo médio"
-          value={
+        <Tile
+          label="Perdido"
+          valor={formatarMoeda(e.perdido)}
+          tom="ruim"
+          detalhe={
             e.cicloMedioDias != null
-              ? `${Math.round(e.cicloMedioDias)} d`
-              : "—"
+              ? `ciclo médio ${Math.round(e.cicloMedioDias)} dias`
+              : undefined
           }
         />
-        <Indicador
+        <Tile
           label="Último contato"
-          value={
-            e.ultimoContato ? formatarData(e.ultimoContato) : "Nunca"
-          }
+          valor={e.ultimoContato ? formatarData(e.ultimoContato) : "Nunca"}
         />
-      </section>
+      </Tiles>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">Cadastro</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground">
-              Cidade
-            </label>
-            <Input
-              value={e.cidade ?? ""}
-              disabled={inputDisabled}
-              onChange={(ev) =>
-                setE((x) => ({ ...x, cidade: ev.target.value || null }))
-              }
-              onBlur={() => salvarCadastro({ cidade: e.cidade })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground">
-              UF
-            </label>
-            <Input
-              value={e.uf ?? ""}
-              maxLength={2}
-              disabled={inputDisabled}
-              onChange={(ev) =>
-                setE((x) => ({
-                  ...x,
-                  uf: ev.target.value.toUpperCase() || null,
-                }))
-              }
-              onBlur={() => salvarCadastro({ uf: e.uf })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground">
-              Segmento
-            </label>
-            <Input
-              value={e.segmento ?? ""}
-              list="segmentos-ficha"
-              disabled={inputDisabled}
-              onChange={(ev) =>
-                setE((x) => ({ ...x, segmento: ev.target.value || null }))
-              }
-              onBlur={() => salvarCadastro({ segmento: e.segmento })}
-            />
-            <datalist id="segmentos-ficha">
-              {segmentos.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
-          </div>
-          <div>
-            <label
-              htmlFor="empresa-tipo-segmento"
-              className="mb-1 block text-xs text-muted-foreground"
-            >
-              Tipo de cliente
-            </label>
-            <select
-              id="empresa-tipo-segmento"
-              value={e.tipoSegmento ?? ""}
-              disabled={inputDisabled}
-              onChange={(ev) => {
-                const v = (ev.target.value || null) as
-                  | "publico"
-                  | "privado"
-                  | "ppp"
-                  | null;
-                salvarCadastro({ tipoSegmento: v });
-              }}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-            >
-              <option value="">—</option>
-              <option value="publico">Público</option>
-              <option value="privado">Privado</option>
-              <option value="ppp">PPP</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground">
-              CNPJ
-            </label>
-            <Input
-              value={e.cnpj ?? ""}
-              disabled={inputDisabled}
-              onChange={(ev) =>
-                setE((x) => ({ ...x, cnpj: ev.target.value || null }))
-              }
-              onBlur={() => salvarCadastro({ cnpj: e.cnpj })}
-            />
-            <div className="mt-1.5">
-              <BotaoConsultarCnpj
-                cnpj={e.cnpj ?? ""}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Secao titulo="Cadastro" className="lg:col-span-2">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Cidade
+              </label>
+              <Input
+                value={e.cidade ?? ""}
                 disabled={inputDisabled}
-                onDados={(d) => {
-                  // Preenche só o que está vazio; nunca sobrescreve o que o usuário digitou.
-                  salvarCadastro({
-                    cnpj: d.cnpj,
-                    nome: e.nome.trim() ? e.nome : d.razaoSocial || e.nome,
-                    cidade: e.cidade ?? d.cidade,
-                    uf: e.uf ?? d.uf,
-                  });
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, cidade: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ cidade: e.cidade })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                UF
+              </label>
+              <Input
+                value={e.uf ?? ""}
+                maxLength={2}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({
+                    ...x,
+                    uf: ev.target.value.toUpperCase() || null,
+                  }))
+                }
+                onBlur={() => salvarCadastro({ uf: e.uf })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Segmento
+              </label>
+              <Input
+                value={e.segmento ?? ""}
+                list="segmentos-ficha"
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, segmento: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ segmento: e.segmento })}
+              />
+              <datalist id="segmentos-ficha">
+                {segmentos.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            </div>
+            <div>
+              <label
+                htmlFor="empresa-tipo-segmento"
+                className="mb-1 block text-xs text-muted-foreground"
+              >
+                Tipo de cliente
+              </label>
+              <select
+                id="empresa-tipo-segmento"
+                value={e.tipoSegmento ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) => {
+                  const v = (ev.target.value || null) as
+                    | "publico"
+                    | "privado"
+                    | "ppp"
+                    | null;
+                  salvarCadastro({ tipoSegmento: v });
                 }}
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+              >
+                <option value="">—</option>
+                <option value="publico">Público</option>
+                <option value="privado">Privado</option>
+                <option value="ppp">PPP</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                CNPJ
+              </label>
+              <Input
+                value={e.cnpj ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, cnpj: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ cnpj: e.cnpj })}
+              />
+              <div className="mt-1.5">
+                <BotaoConsultarCnpj
+                  cnpj={e.cnpj ?? ""}
+                  disabled={inputDisabled}
+                  onDados={(d) => {
+                    // Preenche só o que está vazio; nunca sobrescreve o que o usuário digitou.
+                    salvarCadastro({
+                      cnpj: d.cnpj,
+                      nome: e.nome.trim() ? e.nome : d.razaoSocial || e.nome,
+                      cidade: e.cidade ?? d.cidade,
+                      uf: e.uf ?? d.uf,
+                    });
+                  }}
+                />
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Responsável
+              </label>
+              <select
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none disabled:opacity-50"
+                value={e.responsavelId ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) => {
+                  const responsavelId = ev.target.value || null;
+                  const responsavelNome =
+                    vendedores.find((v) => v.id === responsavelId)?.nome ??
+                    null;
+                  salvarCadastro({ responsavelId, responsavelNome });
+                }}
+              >
+                <option value="">Sem responsável</option>
+                {vendedores.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Observações
+              </label>
+              <Textarea
+                value={e.observacoes ?? ""}
+                disabled={inputDisabled}
+                rows={3}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, observacoes: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ observacoes: e.observacoes })}
               />
             </div>
           </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              Responsável
-            </label>
-            <select
-              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none disabled:opacity-50"
-              value={e.responsavelId ?? ""}
-              disabled={inputDisabled}
-              onChange={(ev) => {
-                const responsavelId = ev.target.value || null;
-                const responsavelNome =
-                  vendedores.find((v) => v.id === responsavelId)?.nome ?? null;
-                salvarCadastro({ responsavelId, responsavelNome });
-              }}
-            >
-              <option value="">Sem responsável</option>
-              {vendedores.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              Observações
-            </label>
-            <Textarea
-              value={e.observacoes ?? ""}
-              disabled={inputDisabled}
-              rows={3}
-              onChange={(ev) =>
-                setE((x) => ({ ...x, observacoes: ev.target.value || null }))
-              }
-              onBlur={() => salvarCadastro({ observacoes: e.observacoes })}
-            />
-          </div>
-        </div>
-      </section>
+        </Secao>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Negociações</h2>
-        {negociacoesOrdenadas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma negociação ainda.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {negociacoesOrdenadas.map((n) => (
-              <li key={n.id}>
-                <Link
-                  href={`/negociacoes/${n.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 hover:bg-muted/40"
+        <Secao titulo="Negociações" meta={`${negociacoesOrdenadas.length}`}>
+          {negociacoesOrdenadas.length === 0 ? (
+            <EstadoVazio texto="Nenhuma negociação ainda." compacto />
+          ) : (
+            <ul className="divide-y divide-border">
+              {negociacoesOrdenadas.map((n) => (
+                <li key={n.id}>
+                  <Link
+                    href={`/negociacoes/${n.id}`}
+                    className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0 hover:bg-muted/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{n.titulo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {n.etapaNome ?? "—"}
+                        {n.responsavelNome ? ` · ${n.responsavelNome}` : ""}
+                        {n.emitenteNome ? ` · ${n.emitenteNome}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          n.status === "aberta"
+                            ? "secondary"
+                            : n.status === "vendida"
+                              ? "default"
+                              : "outline"
+                        }
+                      >
+                        {n.status}
+                      </Badge>
+                      <span className="text-sm tabular-nums">
+                        {formatarMoeda(
+                          n.status === "vendida" && n.valorFinal != null
+                            ? n.valorFinal
+                            : n.valorEstimado,
+                        )}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Secao>
+
+        <Secao
+          titulo="Contatos"
+          meta={`${contatos.length}`}
+          acoes={
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!podeEditar}
+              onClick={abrirNovoContato}
+            >
+              <Plus className="size-4" />
+              Contato
+            </Button>
+          }
+        >
+          {contatos.length === 0 ? (
+            <EstadoVazio texto="Nenhum contato." compacto />
+          ) : (
+            <ul className="divide-y divide-border">
+              {contatos.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{n.titulo}</p>
+                    <p className="text-sm font-medium">
+                      {c.nome}
+                      {c.decisor ? (
+                        <Check
+                          className="ml-1 inline size-3.5 text-success"
+                          aria-label="Decisor"
+                        />
+                      ) : null}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {n.etapaNome ?? "—"}
-                      {n.responsavelNome ? ` · ${n.responsavelNome}` : ""}
-                      {n.emitenteNome ? ` · ${n.emitenteNome}` : ""}
+                      {c.cargo ?? "Sem cargo"}
+                      {c.whatsapp ? (
+                        <>
+                          {" · "}
+                          <a
+                            href={`https://wa.me/${c.whatsapp}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-foreground underline-offset-2 hover:underline"
+                          >
+                            WhatsApp
+                          </a>
+                        </>
+                      ) : null}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        n.status === "aberta"
-                          ? "secondary"
-                          : n.status === "vendida"
-                            ? "default"
-                            : "outline"
-                      }
-                    >
-                      {n.status}
-                    </Badge>
-                    <span className="text-sm tabular-nums">
-                      {formatarMoeda(
-                        n.status === "vendida" && n.valorFinal != null
-                          ? n.valorFinal
-                          : n.valorEstimado,
-                      )}
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Contatos</h2>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!podeEditar}
-            onClick={abrirNovoContato}
-          >
-            <Plus className="size-4" />
-            Contato
-          </Button>
-        </div>
-        {contatos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum contato.</p>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {contatos.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {c.nome}
-                    {c.decisor ? (
-                      <Check
-                        className="ml-1 inline size-3.5 text-green-600"
-                        aria-label="Decisor"
-                      />
-                    ) : null}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.cargo ?? "Sem cargo"}
-                    {c.whatsapp ? (
-                      <>
-                        {" · "}
-                        <a
-                          href={`https://wa.me/${c.whatsapp}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-foreground underline-offset-2 hover:underline"
-                        >
-                          WhatsApp
-                        </a>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                {podeEditar ? (
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => abrirEditarContato(c)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={pending}
-                      onClick={() =>
-                        run(async () => {
-                          const res = await arquivarContato(c.id);
-                          if (!res.ok) {
-                            setErro(res.error);
-                            return;
-                          }
-                          setContatos((list) =>
-                            list.filter((x) => x.id !== c.id),
-                          );
-                        })
-                      }
-                    >
-                      Arquivar
-                    </Button>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Timeline</h2>
-        {timeline.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nada registrado ainda.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {timeline.map((item) => {
-              const Icon = iconeTimeline(item);
-              return (
-                <li
-                  key={`${item.kind}-${item.id}`}
-                  className="flex gap-3 px-3 py-2.5"
-                >
-                  <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground">
-                      <Link
-                        href={`/negociacoes/${item.negociacaoId}`}
-                        className="hover:underline"
+                  {podeEditar ? (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => abrirEditarContato(c)}
                       >
-                        {item.negociacaoTitulo}
-                      </Link>
-                      {" · "}
-                      {formatarDataHora(item.em)}
-                    </p>
-                    {item.kind === "interacao" ? (
-                      <>
-                        <p className="text-sm font-medium capitalize">
-                          {item.tipo}
-                        </p>
-                        {item.texto ? (
-                          <p className="text-sm text-muted-foreground">
-                            {item.texto}
-                          </p>
-                        ) : null}
-                      </>
-                    ) : null}
-                    {item.kind === "acao" ? (
-                      <p className="text-sm">
-                        <span className="font-medium">Ação concluída:</span>{" "}
-                        {item.descricao}{" "}
-                        <span className="text-muted-foreground">
-                          ({formatarData(item.data)})
-                        </span>
-                      </p>
-                    ) : null}
-                    {item.kind === "orcamento" ? (
-                      <p className="text-sm">
-                        <span className="font-medium">
-                          Orçamento
-                          {item.numero ? ` ${item.numero}` : ""}
-                        </span>
-                        {" · "}
-                        {formatarMoeda(item.valor)}
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {item.situacao}
-                        </span>
-                      </p>
-                    ) : null}
-                  </div>
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending}
+                        onClick={() =>
+                          run(async () => {
+                            const res = await arquivarContato(c.id);
+                            if (!res.ok) {
+                              setErro(res.error);
+                              return;
+                            }
+                            setContatos((list) =>
+                              list.filter((x) => x.id !== c.id),
+                            );
+                          })
+                        }
+                      >
+                        Arquivar
+                      </Button>
+                    </div>
+                  ) : null}
                 </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+              ))}
+            </ul>
+          )}
+        </Secao>
+
+        <Secao
+          titulo="Linha do tempo"
+          meta="interações, ações e orçamentos"
+          className="lg:col-span-2"
+        >
+          {timeline.length === 0 ? (
+            <EstadoVazio texto="Nada registrado ainda." compacto />
+          ) : (
+            <ul className="divide-y divide-border">
+              {timeline.map((item) => {
+                const Icon = iconeTimeline(item);
+                return (
+                  <li
+                    key={`${item.kind}-${item.id}`}
+                    className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
+                  >
+                    <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground">
+                        <Link
+                          href={`/negociacoes/${item.negociacaoId}`}
+                          className="hover:underline"
+                        >
+                          {item.negociacaoTitulo}
+                        </Link>
+                        {" · "}
+                        {formatarDataHora(item.em)}
+                      </p>
+                      {item.kind === "interacao" ? (
+                        <>
+                          <p className="text-sm font-medium capitalize">
+                            {item.tipo}
+                          </p>
+                          {item.texto ? (
+                            <p className="text-sm text-muted-foreground">
+                              {item.texto}
+                            </p>
+                          ) : null}
+                        </>
+                      ) : null}
+                      {item.kind === "acao" ? (
+                        <p className="text-sm">
+                          <span className="font-medium">Ação concluída:</span>{" "}
+                          {item.descricao}{" "}
+                          <span className="text-muted-foreground">
+                            ({formatarData(item.data)})
+                          </span>
+                        </p>
+                      ) : null}
+                      {item.kind === "orcamento" ? (
+                        <p className="text-sm">
+                          <span className="font-medium">
+                            Orçamento
+                            {item.numero ? ` ${item.numero}` : ""}
+                          </span>
+                          {" · "}
+                          {formatarMoeda(item.valor)}
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {item.situacao}
+                          </span>
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Secao>
+      </div>
 
       <Dialog open={novaNegOpen} onOpenChange={setNovaNegOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
@@ -865,6 +874,6 @@ export function EmpresaFicha({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
   );
 }

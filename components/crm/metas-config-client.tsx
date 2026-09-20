@@ -12,7 +12,20 @@ import { formatarMoeda, parseMoedaBR } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Toaster, toast } from "@/components/ui/toast";
 
-const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
 
 function chave(id: string, mes: number) {
   return `${id}|${mes}`;
@@ -25,11 +38,14 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
     const out: Record<string, string> = {};
     for (const m of dados.metas) {
       const mes = Number(m.mes.slice(5, 7));
-      out[chave(m.responsavel_id, mes)] = m.valor > 0 ? formatarMoeda(m.valor) : "";
+      out[chave(m.responsavel_id, mes)] =
+        m.valor > 0 ? formatarMoeda(m.valor) : "";
     }
     return out;
   });
-  const [mesReplicar, setMesReplicar] = useState<number>(new Date().getMonth() + 1);
+  const [mesReplicar, setMesReplicar] = useState<number>(
+    new Date().getMonth() + 1,
+  );
 
   const totais = useMemo(() => {
     const porMes = Array.from({ length: 12 }, () => 0);
@@ -60,7 +76,9 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
   }
 
   function mudarAno(delta: number) {
-    router.push(`/configuracoes/metas?ano=${dados.ano + delta}&empresa=${dados.emitenteId}`);
+    router.push(
+      `/configuracoes/metas?ano=${dados.ano + delta}&empresa=${dados.emitenteId}`,
+    );
   }
 
   function mudarEmpresa(id: string) {
@@ -85,12 +103,26 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
               ))}
             </select>
           </label>
-          <div className="inline-flex items-center gap-1 rounded-lg border border-border p-0.5">
-            <Button type="button" size="sm" variant="ghost" onClick={() => mudarAno(-1)} aria-label="Ano anterior">
+          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-0.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => mudarAno(-1)}
+              aria-label="Ano anterior"
+            >
               ‹
             </Button>
-            <span className="px-2 text-sm font-semibold tabular-nums">{dados.ano}</span>
-            <Button type="button" size="sm" variant="ghost" onClick={() => mudarAno(1)} aria-label="Próximo ano">
+            <span className="px-2 text-sm font-semibold tabular-nums">
+              {dados.ano}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => mudarAno(1)}
+              aria-label="Próximo ano"
+            >
               ›
             </Button>
           </div>
@@ -117,12 +149,19 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
               disabled={pending || mesReplicar >= 12}
               onClick={() =>
                 startTransition(async () => {
-                  const res = await replicarMetaAno({ emitenteId: dados.emitenteId, ano: dados.ano, mesOrigem: mesReplicar });
+                  const res = await replicarMetaAno({
+                    emitenteId: dados.emitenteId,
+                    ano: dados.ano,
+                    mesOrigem: mesReplicar,
+                  });
                   if (!res.ok) {
                     toast.add({ title: res.error, type: "error" });
                     return;
                   }
-                  toast.add({ title: `${res.copiadas} meta(s) copiada(s) para os meses seguintes.`, type: "success" });
+                  toast.add({
+                    title: `${res.copiadas} meta(s) copiada(s) para os meses seguintes.`,
+                    type: "success",
+                  });
                   router.refresh();
                 })
               }
@@ -132,11 +171,13 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-xl border border-input">
           <table className="w-full min-w-[980px] border-collapse text-sm">
             <thead>
               <tr className="bg-muted/60">
-                <th className="sticky left-0 z-10 bg-muted/60 px-3 py-2 text-left font-semibold">Vendedor</th>
+                <th className="sticky left-0 z-10 bg-muted/60 px-3 py-2 text-left font-semibold">
+                  Vendedor
+                </th>
                 {MESES.map((m) => (
                   <th key={m} className="px-1.5 py-2 text-right font-semibold">
                     {m}
@@ -150,7 +191,9 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
                   <td className="sticky left-0 z-10 bg-card px-3 py-1.5 font-medium whitespace-nowrap">
                     {v.nome}
                     {v.perfil === "diretor" ? (
-                      <span className="ml-1 text-xs text-muted-foreground">(diretor)</span>
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        (diretor)
+                      </span>
                     ) : null}
                   </td>
                   {MESES.map((_, i) => {
@@ -163,15 +206,27 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
                           inputMode="decimal"
                           value={valores[k] ?? ""}
                           placeholder="—"
-                          onChange={(e) => setValores((s) => ({ ...s, [k]: e.target.value }))}
+                          onChange={(e) =>
+                            setValores((s) => ({ ...s, [k]: e.target.value }))
+                          }
                           onBlur={(e) => {
                             const original = dados.metas.find(
-                              (m) => m.responsavel_id === v.id && Number(m.mes.slice(5, 7)) === mes,
+                              (m) =>
+                                m.responsavel_id === v.id &&
+                                Number(m.mes.slice(5, 7)) === mes,
                             );
                             const novo = parseMoedaBR(e.target.value) ?? 0;
-                            if ((original?.valor ?? 0) === novo && !e.target.value.trim() && !original) return;
+                            if (
+                              (original?.valor ?? 0) === novo &&
+                              !e.target.value.trim() &&
+                              !original
+                            )
+                              return;
                             if ((original?.valor ?? 0) === novo) {
-                              setValores((s) => ({ ...s, [k]: novo > 0 ? formatarMoeda(novo) : "" }));
+                              setValores((s) => ({
+                                ...s,
+                                [k]: novo > 0 ? formatarMoeda(novo) : "",
+                              }));
                               return;
                             }
                             salvar(v.id, mes, e.target.value);
@@ -193,9 +248,14 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-input bg-muted/40 font-semibold">
-                <td className="sticky left-0 z-10 bg-muted/40 px-3 py-2">Total</td>
+                <td className="sticky left-0 z-10 bg-muted/40 px-3 py-2">
+                  Total
+                </td>
                 {totais.map((t, i) => (
-                  <td key={i} className="px-1.5 py-2 text-right text-xs tabular-nums whitespace-nowrap">
+                  <td
+                    key={i}
+                    className="px-1.5 py-2 text-right text-xs tabular-nums whitespace-nowrap"
+                  >
                     {t > 0 ? formatarMoeda(t) : "—"}
                   </td>
                 ))}
@@ -204,7 +264,8 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
           </table>
         </div>
         <p className="text-xs text-muted-foreground">
-          Valores em R$ de vendas fechadas (valor final) no mês. O atingimento aparece no dashboard e no ranking.
+          Valores em R$ de vendas fechadas (valor final) no mês. O atingimento
+          aparece no dashboard e no ranking.
         </p>
       </div>
     </Toaster>

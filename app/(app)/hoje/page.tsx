@@ -13,6 +13,7 @@ import {
   formatarMoeda,
   formatarData,
   hojeISO,
+  mesPorExtenso,
   inicioMesAtualISO,
   inicioProximoMesISO,
   adicionarDiasISO,
@@ -25,6 +26,16 @@ import {
   type AcaoHojeItem,
   type NegociacaoSemAcaoItem,
 } from "@/components/crm/hoje-interativo";
+import {
+  BarraFiltros,
+  CampoFiltro,
+  EstadoVazio,
+  Pagina,
+  PaginaCabecalho,
+  Secao,
+  Tile,
+  Tiles,
+} from "@/components/crm/pagina";
 import { SeletorVendedor } from "@/components/crm/seletor-vendedor";
 
 type SearchParams = Promise<{
@@ -288,111 +299,88 @@ export default async function HojePage({
     titulo: tituloNeg(o.negociacoes),
   }));
 
+  const dataHoje = new Date(`${hoje}T12:00:00-03:00`).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const podeEquipe = podeVerEquipe(usuario, escopo);
+
   return (
-    <div className="relative mx-auto w-full max-w-2xl pb-20">
-      <header className="mb-4 flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-xl font-semibold tracking-tight">Hoje</h1>
-          <BotaoExportar
-            tela="acoes"
-            filtros={{ vendedor: filtrarVendedor }}
-          />
-        </div>
-        {podeVerEquipe(usuario, escopo) ? (
-          <Suspense fallback={null}>
-            <SeletorVendedor
-              vendedores={vendedores}
-              valor={filtrarVendedor}
-            />
-          </Suspense>
-        ) : null}
-      </header>
-
-      <section
-        aria-label="Resumo do mês"
-        className="grid grid-cols-3 gap-2 sm:gap-3"
-      >
-        <NumeroResumo label="Aberto" valor={aberto} />
-        <NumeroResumo label="Vendido no mês" valor={vendido} destaque="ok" />
-        <NumeroResumo
-          label="Perdido no mês"
-          valor={perdido}
-          destaque="ruim"
-        />
-      </section>
-
-      <HojeInterativo
-        atrasadas={atrasadas}
-        deHoje={deHoje}
-        semAcao={semAcao}
+    <Pagina className="pb-20">
+      <PaginaCabecalho
+        titulo="Meu dia"
+        subtitulo={dataHoje}
+        descricao="Ações atrasadas, ações de hoje, negociações sem próximo passo e orçamentos vencendo."
+        acoes={<BotaoExportar tela="acoes" filtros={{ vendedor: filtrarVendedor }} />}
       />
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-sm font-semibold tracking-tight text-foreground">
-          Orçamentos vencendo
-          <span className="ml-1.5 font-normal text-muted-foreground">
-            ({alertaDias}d)
-          </span>
-        </h2>
-        {orcamentos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum orçamento vencendo.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {orcamentos.map((o) => (
-              <li key={o.id} className="px-3 py-2.5">
-                <Link
-                  href={`/orcamentos/${o.id}`}
-                  className="block text-sm font-medium hover:underline"
-                >
-                  {o.numero ? `Orçamento ${o.numero}` : o.titulo}
-                </Link>
-                <p className="text-xs text-muted-foreground">
-                  {o.empresaNome}
-                  <span className="mx-1 opacity-50">·</span>
-                  {formatarMoeda(o.valor)}
-                  <span className="mx-1 opacity-50">·</span>
-                  validade {o.validade ? formatarData(o.validade) : "—"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {podeEquipe ? (
+        <BarraFiltros>
+          <Suspense fallback={null}>
+            <SeletorVendedor vendedores={vendedores} valor={filtrarVendedor} />
+          </Suspense>
+          <CampoFiltro label="Empresa">
+            <p className="flex h-9 items-center text-sm font-medium">
+              {escopo.emitente?.nome ?? "Todas as empresas"}
+            </p>
+          </CampoFiltro>
+        </BarraFiltros>
+      ) : null}
+
+      <Tiles colunas={3}>
+        <Tile label="Aberto" valor={formatarMoeda(aberto)} detalhe="negociações abertas" />
+        <Tile
+          label="Vendido no mês"
+          valor={formatarMoeda(vendido)}
+          detalhe={mesPorExtenso(inicioMes)}
+          tom="ok"
+        />
+        <Tile
+          label="Perdido no mês"
+          valor={formatarMoeda(perdido)}
+          detalhe={mesPorExtenso(inicioMes)}
+          tom="ruim"
+        />
+      </Tiles>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <HojeInterativo atrasadas={atrasadas} deHoje={deHoje} semAcao={semAcao} />
+
+        <Secao
+          titulo="Orçamentos vencendo"
+          meta={`próximos ${alertaDias} dias`}
+          className="lg:col-start-2"
+        >
+          {orcamentos.length === 0 ? (
+            <EstadoVazio texto="Nenhum orçamento vencendo." compacto />
+          ) : (
+            <ul className="divide-y divide-border">
+              {orcamentos.map((o) => (
+                <li key={o.id} className="py-2.5 first:pt-0 last:pb-0">
+                  <Link
+                    href={`/orcamentos/${o.id}`}
+                    className="block text-sm font-medium hover:underline"
+                  >
+                    {o.numero ? `Orçamento ${o.numero}` : o.titulo}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    {o.empresaNome}
+                    <span className="mx-1 opacity-50">·</span>
+                    <span className="tabular-nums">{formatarMoeda(o.valor)}</span>
+                    <span className="mx-1 opacity-50">·</span>
+                    validade {o.validade ? formatarData(o.validade) : "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Secao>
+      </div>
 
       {dadosNova.ok ? (
         <BotaoFlutuanteNovaNegociacao dados={dadosNova.dados} />
       ) : null}
-    </div>
-  );
-}
-
-function NumeroResumo({
-  label,
-  valor,
-  destaque,
-}: {
-  label: string;
-  valor: number;
-  destaque?: "ok" | "ruim";
-}) {
-  return (
-    <div className="rounded-lg border border-border px-2.5 py-3 sm:px-3">
-      <p className="text-[11px] font-medium text-muted-foreground sm:text-xs">
-        {label}
-      </p>
-      <p
-        className={
-          destaque === "ok"
-            ? "mt-1 text-sm font-semibold tabular-nums text-emerald-700 sm:text-base"
-            : destaque === "ruim"
-              ? "mt-1 text-sm font-semibold tabular-nums text-destructive sm:text-base"
-              : "mt-1 text-sm font-semibold tabular-nums sm:text-base"
-        }
-      >
-        {formatarMoeda(valor)}
-      </p>
-    </div>
+    </Pagina>
   );
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { KeyRound } from "lucide-react";
 
 import { ConvidarUsuarioForm } from "@/components/crm/convidar-usuario-form";
+import { Secao } from "@/components/crm/pagina";
 import { UsuarioAtivoToggle } from "@/components/crm/usuario-ativo-toggle";
 import { UsuarioEmpresasEditor } from "@/components/crm/usuario-empresas-editor";
 import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
@@ -17,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default async function UsuariosPage() {
   const atual = await getUsuarioAtual();
@@ -46,36 +49,41 @@ export default async function UsuariosPage() {
   const nomeEmpresa = new Map(empresas.map((e) => [e.id, e.nome]));
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-      <div>
-        <div className="mb-2 flex flex-wrap gap-3 text-sm">
-          <span className="font-medium text-foreground">Usuários</span>
-          <Link
-            href="/configuracoes/api-keys"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            API keys
-          </Link>
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          O perfil é por empresa vendedora: a mesma pessoa pode ser diretor em
-          uma empresa e vendedor (ou sem acesso) em outra. O gerente vê e edita
-          as negociações da equipe dele naquela empresa; o diretor vê tudo da
-          empresa. Você só altera vínculos das empresas que dirige.
+    <>
+      <Secao titulo="Convidar" meta="o perfil é por empresa vendedora">
+        <p className="mb-4 text-sm text-muted-foreground">
+          A mesma pessoa pode ser diretor em uma empresa e vendedor (ou sem
+          acesso) em outra. O gerente vê e edita as negociações da equipe dele
+          naquela empresa; o diretor vê tudo da empresa. Você só altera vínculos
+          das empresas que dirige.
         </p>
-      </div>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-base font-medium">Convidar</h2>
         <ConvidarUsuarioForm
           empresas={empresas}
-          empresaInicial={escopo.emitenteId && dirigidas.has(escopo.emitenteId) ? escopo.emitenteId : null}
+          empresaInicial={
+            escopo.emitenteId && dirigidas.has(escopo.emitenteId)
+              ? escopo.emitenteId
+              : null
+          }
         />
-      </section>
+      </Secao>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-base font-medium">Lista</h2>
+      <Secao
+        titulo="Usuários"
+        meta={`${usuarios.length} ${usuarios.length === 1 ? "usuário" : "usuários"}`}
+        acoes={
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            nativeButton={false}
+            render={<Link href="/configuracoes/api-keys" />}
+          >
+            <KeyRound className="size-4" />
+            API keys
+          </Button>
+        }
+        semPadding
+      >
         <Table>
           <TableHeader>
             <TableRow>
@@ -93,7 +101,11 @@ export default async function UsuariosPage() {
                   {u.nome}
                   <div className="mt-1 flex flex-wrap gap-1">
                     {u.vinculos.map((v) => (
-                      <Badge key={v.emitenteId} variant="outline" className="text-[10px]">
+                      <Badge
+                        key={v.emitenteId}
+                        variant="outline"
+                        className="text-[10px]"
+                      >
                         {nomeEmpresa.get(v.emitenteId) ?? "…"}: {v.perfil}
                       </Badge>
                     ))}
@@ -130,7 +142,7 @@ export default async function UsuariosPage() {
             ) : null}
           </TableBody>
         </Table>
-      </section>
-    </div>
+      </Secao>
+    </>
   );
 }

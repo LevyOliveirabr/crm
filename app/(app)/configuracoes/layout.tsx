@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 
-import { ConfiguracoesNav } from "@/components/crm/configuracoes-nav";
+import {
+  ConfiguracoesNav,
+  ConfiguracoesSubtitulo,
+} from "@/components/crm/configuracoes-nav";
+import { Pagina, PaginaCabecalho } from "@/components/crm/pagina";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 
 export default async function ConfiguracoesLayout({
@@ -14,15 +18,14 @@ export default async function ConfiguracoesLayout({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Funis, listas, metas, parâmetros, empresas vendedoras, categorias, produtos, usuários e importação.
-        </p>
-      </div>
+    <Pagina largura="media">
+      <PaginaCabecalho
+        titulo="Configurações"
+        subtitulo={<ConfiguracoesSubtitulo />}
+        descricao="Funis, listas, metas, parâmetros, empresas vendedoras, categorias, produtos, usuários e importação."
+      />
       <ConfiguracoesNav />
       {children}
-    </div>
+    </Pagina>
   );
 }

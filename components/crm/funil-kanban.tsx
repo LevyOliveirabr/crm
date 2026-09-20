@@ -102,18 +102,18 @@ function Coluna({
     <section
       ref={setNodeRef}
       className={cn(
-        "flex w-[min(85vw,18rem)] shrink-0 flex-col rounded-xl border border-border bg-muted/30 lg:w-72",
-        isOver && "border-ring bg-muted/50",
+        "card-surface flex w-[min(85vw,18rem)] shrink-0 flex-col overflow-hidden lg:w-72",
+        isOver && "border-ring ring-2 ring-ring/40",
       )}
       aria-label={`Etapa ${etapa.nome}`}
     >
-      <header className="sticky top-0 z-10 border-b border-border bg-muted/80 px-3 py-2 backdrop-blur">
-        <h2 className="truncate text-sm font-semibold">{etapa.nome}</h2>
-        <p className="text-xs text-muted-foreground tabular-nums">
-          {etapa.qtd} · {formatarMoedaCurta(etapa.valor)}
+      <header className="sticky top-0 z-10 border-b border-border bg-card px-3 py-2.5">
+        <h2 className="truncate font-heading text-sm font-semibold">{etapa.nome}</h2>
+        <p className="eyebrow mt-0.5 tabular-nums">
+          {etapa.qtd} {etapa.qtd === 1 ? "negociação" : "negociações"} · {formatarMoedaCurta(etapa.valor)}
         </p>
       </header>
-      <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex flex-1 flex-col gap-2 overflow-y-auto bg-muted/40 p-2">
         {cards.map((n) => (
           <CartaoDraggable
             key={n.id}
@@ -125,7 +125,7 @@ function Coluna({
         ))}
         {cards.length === 0 ? (
           <p className="px-1 py-6 text-center text-xs text-muted-foreground">
-            Vazia
+            Nenhuma negociação nesta etapa
           </p>
         ) : null}
       </div>

@@ -19,7 +19,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster, toast } from "@/components/ui/toast";
 
-type ProdutoOpcao = Awaited<ReturnType<typeof buscarProdutosParaOrcamento>>[number];
+type ProdutoOpcao = Awaited<
+  ReturnType<typeof buscarProdutosParaOrcamento>
+>[number];
 
 /**
  * Editor do orçamento montado por itens: busca produtos do catálogo da
@@ -32,7 +34,12 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
   const [busca, setBusca] = useState("");
   const [opcoes, setOpcoes] = useState<ProdutoOpcao[]>([]);
   const [livreAberto, setLivreAberto] = useState(false);
-  const [livre, setLivre] = useState({ descricao: "", unidade: "un", quantidade: "1", preco: "" });
+  const [livre, setLivre] = useState({
+    descricao: "",
+    unidade: "un",
+    quantidade: "1",
+    preco: "",
+  });
 
   useEffect(() => {
     if (busca.trim().length < 2) return;
@@ -52,7 +59,10 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
     if (valor.trim().length < 2) setOpcoes([]);
   }
 
-  function run(fn: () => Promise<{ ok: boolean; error?: string }>, okMsg?: string) {
+  function run(
+    fn: () => Promise<{ ok: boolean; error?: string }>,
+    okMsg?: string,
+  ) {
     startTransition(async () => {
       const res = await fn();
       if (!res.ok) {
@@ -66,11 +76,14 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
 
   return (
     <Toaster>
-      <section className="flex flex-col gap-4 rounded-xl border border-border p-4 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Montar orçamento</h2>
+      <section className="card-surface flex flex-col gap-4 border-l-4 border-l-brand p-4 sm:p-5 print:hidden">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-heading text-base font-semibold sm:text-lg">
+            Montar orçamento
+          </h2>
           <p className="text-xs text-muted-foreground">
-            Produtos do catálogo de {o.emitente?.nome ?? "—"}. Preço e descrição são editáveis item a item.
+            Produtos do catálogo de {o.emitente?.nome ?? "—"}. Preço e descrição
+            são editáveis item a item.
           </p>
         </div>
 
@@ -87,7 +100,11 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
                 disabled={pending}
               />
             </div>
-            <Button type="button" variant="outline" onClick={() => setLivreAberto((v) => !v)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLivreAberto((v) => !v)}
+            >
               <Plus className="size-4" /> Item livre
             </Button>
           </div>
@@ -101,7 +118,14 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
                     onClick={() => {
                       setBusca("");
                       setOpcoes([]);
-                      run(() => adicionarItemOrcamento(o.id, { produto_id: p.id, quantidade: 1 }), "Item adicionado");
+                      run(
+                        () =>
+                          adicionarItemOrcamento(o.id, {
+                            produto_id: p.id,
+                            quantidade: 1,
+                          }),
+                        "Item adicionado",
+                      );
                     }}
                   >
                     <span>
@@ -135,7 +159,12 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
                   }),
                 "Item adicionado",
               );
-              setLivre({ descricao: "", unidade: "un", quantidade: "1", preco: "" });
+              setLivre({
+                descricao: "",
+                unidade: "un",
+                quantidade: "1",
+                preco: "",
+              });
               setLivreAberto(false);
             }}
           >
@@ -143,11 +172,33 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
               placeholder="Descrição *"
               required
               value={livre.descricao}
-              onChange={(e) => setLivre((v) => ({ ...v, descricao: e.target.value }))}
+              onChange={(e) =>
+                setLivre((v) => ({ ...v, descricao: e.target.value }))
+              }
             />
-            <Input placeholder="un" value={livre.unidade} onChange={(e) => setLivre((v) => ({ ...v, unidade: e.target.value }))} />
-            <Input placeholder="Qtd" inputMode="decimal" value={livre.quantidade} onChange={(e) => setLivre((v) => ({ ...v, quantidade: e.target.value }))} />
-            <Input placeholder="Preço unit." inputMode="decimal" value={livre.preco} onChange={(e) => setLivre((v) => ({ ...v, preco: e.target.value }))} />
+            <Input
+              placeholder="un"
+              value={livre.unidade}
+              onChange={(e) =>
+                setLivre((v) => ({ ...v, unidade: e.target.value }))
+              }
+            />
+            <Input
+              placeholder="Qtd"
+              inputMode="decimal"
+              value={livre.quantidade}
+              onChange={(e) =>
+                setLivre((v) => ({ ...v, quantidade: e.target.value }))
+              }
+            />
+            <Input
+              placeholder="Preço unit."
+              inputMode="decimal"
+              value={livre.preco}
+              onChange={(e) =>
+                setLivre((v) => ({ ...v, preco: e.target.value }))
+              }
+            />
             <Button type="submit" disabled={pending}>
               Adicionar
             </Button>
@@ -171,13 +222,22 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
               </thead>
               <tbody>
                 {o.itens.map((i) => (
-                  <LinhaItem key={i.id} orcamentoId={o.id} item={i} pending={pending} run={run} />
+                  <LinhaItem
+                    key={i.id}
+                    orcamentoId={o.id}
+                    item={i}
+                    pending={pending}
+                    run={run}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Nenhum item ainda. Busque um produto acima ou adicione um item livre.</p>
+          <p className="text-sm text-muted-foreground">
+            Nenhum item ainda. Busque um produto acima ou adicione um item
+            livre.
+          </p>
         )}
 
         {/* Cabeçalho / condições */}
@@ -196,7 +256,9 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
                   prazo_entrega: str("prazo_entrega") || null,
                   frete: str("frete") || null,
                   observacoes: str("observacoes") || null,
-                  desconto_geral_pct: Number(str("desconto_geral_pct").replace(",", ".") || "0"),
+                  desconto_geral_pct: Number(
+                    str("desconto_geral_pct").replace(",", ".") || "0",
+                  ),
                 }),
               "Condições salvas",
             );
@@ -204,31 +266,64 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
         >
           <label className="text-sm sm:col-span-2">
             Título / referência
-            <Input name="titulo" className="mt-1" defaultValue={o.titulo ?? ""} />
+            <Input
+              name="titulo"
+              className="mt-1"
+              defaultValue={o.titulo ?? ""}
+            />
           </label>
           <label className="text-sm">
             Validade
-            <Input name="validade" type="date" className="mt-1" defaultValue={o.validade ?? ""} />
+            <Input
+              name="validade"
+              type="date"
+              className="mt-1"
+              defaultValue={o.validade ?? ""}
+            />
           </label>
           <label className="text-sm">
             Desconto geral (%)
-            <Input name="desconto_geral_pct" inputMode="decimal" className="mt-1" defaultValue={String(o.descontoGeralPct)} />
+            <Input
+              name="desconto_geral_pct"
+              inputMode="decimal"
+              className="mt-1"
+              defaultValue={String(o.descontoGeralPct)}
+            />
           </label>
           <label className="text-sm">
             Condições de pagamento
-            <Textarea name="condicoes_pagamento" rows={2} className="mt-1" defaultValue={o.condicoesPagamento ?? ""} />
+            <Textarea
+              name="condicoes_pagamento"
+              rows={2}
+              className="mt-1"
+              defaultValue={o.condicoesPagamento ?? ""}
+            />
           </label>
           <label className="text-sm">
             Prazo de entrega
-            <Input name="prazo_entrega" className="mt-1" defaultValue={o.prazoEntrega ?? ""} />
+            <Input
+              name="prazo_entrega"
+              className="mt-1"
+              defaultValue={o.prazoEntrega ?? ""}
+            />
           </label>
           <label className="text-sm">
             Frete
-            <Input name="frete" placeholder="CIF / FOB / a combinar" className="mt-1" defaultValue={o.frete ?? ""} />
+            <Input
+              name="frete"
+              placeholder="CIF / FOB / a combinar"
+              className="mt-1"
+              defaultValue={o.frete ?? ""}
+            />
           </label>
           <label className="text-sm sm:col-span-2">
             Observações
-            <Textarea name="observacoes" rows={2} className="mt-1" defaultValue={o.observacoes ?? ""} />
+            <Textarea
+              name="observacoes"
+              rows={2}
+              className="mt-1"
+              defaultValue={o.observacoes ?? ""}
+            />
           </label>
           <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
             <Button type="submit" disabled={pending}>
@@ -238,7 +333,12 @@ export function OrcamentoItensEditor({ o }: { o: OrcamentoCompleto }) {
               type="button"
               variant="outline"
               disabled={pending || o.itens.length === 0}
-              onClick={() => run(() => usarTotalComoValorNegociacao(o.id), "Valor da negociação atualizado")}
+              onClick={() =>
+                run(
+                  () => usarTotalComoValorNegociacao(o.id),
+                  "Valor da negociação atualizado",
+                )
+              }
             >
               Usar total ({formatarMoeda(o.valor)}) como valor da negociação
             </Button>
@@ -258,7 +358,10 @@ function LinhaItem({
   orcamentoId: string;
   item: OrcamentoCompleto["itens"][number];
   pending: boolean;
-  run: (fn: () => Promise<{ ok: boolean; error?: string }>, okMsg?: string) => void;
+  run: (
+    fn: () => Promise<{ ok: boolean; error?: string }>,
+    okMsg?: string,
+  ) => void;
 }) {
   const [v, setV] = useState({
     descricao: item.descricao,
@@ -292,7 +395,8 @@ function LinhaItem({
     );
   }
 
-  const cls = "h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring";
+  const cls =
+    "h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring";
   return (
     <tr className="border-b border-border">
       <td className="px-2 py-1">
@@ -305,22 +409,58 @@ function LinhaItem({
           onBlur={salvar}
         />
         {item.produto ? (
-          <span className="text-xs text-muted-foreground">{item.produto.nome}{item.produto.codigo ? ` · ${item.produto.codigo}` : ""}</span>
+          <span className="text-xs text-muted-foreground">
+            {item.produto.nome}
+            {item.produto.codigo ? ` · ${item.produto.codigo}` : ""}
+          </span>
         ) : null}
       </td>
       <td className="px-2 py-1">
-        <input aria-label="Unidade" className={`${cls} w-14`} value={v.unidade} disabled={pending} onChange={(e) => setV((s) => ({ ...s, unidade: e.target.value }))} onBlur={salvar} />
+        <input
+          aria-label="Unidade"
+          className={`${cls} w-14`}
+          value={v.unidade}
+          disabled={pending}
+          onChange={(e) => setV((s) => ({ ...s, unidade: e.target.value }))}
+          onBlur={salvar}
+        />
       </td>
       <td className="px-2 py-1 text-right">
-        <input aria-label="Quantidade" inputMode="decimal" className={`${cls} w-20 text-right`} value={v.quantidade} disabled={pending} onChange={(e) => setV((s) => ({ ...s, quantidade: e.target.value }))} onBlur={salvar} />
+        <input
+          aria-label="Quantidade"
+          inputMode="decimal"
+          className={`${cls} w-20 text-right`}
+          value={v.quantidade}
+          disabled={pending}
+          onChange={(e) => setV((s) => ({ ...s, quantidade: e.target.value }))}
+          onBlur={salvar}
+        />
       </td>
       <td className="px-2 py-1 text-right">
-        <input aria-label="Preço unitário" inputMode="decimal" className={`${cls} w-28 text-right`} value={v.preco} disabled={pending} onChange={(e) => setV((s) => ({ ...s, preco: e.target.value }))} onBlur={salvar} />
+        <input
+          aria-label="Preço unitário"
+          inputMode="decimal"
+          className={`${cls} w-28 text-right`}
+          value={v.preco}
+          disabled={pending}
+          onChange={(e) => setV((s) => ({ ...s, preco: e.target.value }))}
+          onBlur={salvar}
+        />
       </td>
       <td className="px-2 py-1 text-right">
-        <input aria-label="Desconto %" inputMode="decimal" className={`${cls} w-16 text-right`} value={v.desconto} disabled={pending} onChange={(e) => setV((s) => ({ ...s, desconto: e.target.value }))} onBlur={salvar} />
+        <input
+          aria-label="Desconto %"
+          inputMode="decimal"
+          className={`${cls} w-16 text-right`}
+          value={v.desconto}
+          disabled={pending}
+          onChange={(e) => setV((s) => ({ ...s, desconto: e.target.value }))}
+          onBlur={salvar}
+        />
       </td>
-      <td className="px-2 py-1 text-right font-semibold tabular-nums">{formatarMoeda(item.total)}</td>
+      <td className="px-2 py-1 text-right font-semibold tabular-nums">
+        {formatarMoeda(item.total)}
+      </td>
       <td className="px-2 py-1 text-right">
         <Button
           type="button"
