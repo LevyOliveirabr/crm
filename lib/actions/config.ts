@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { ehDiretorDe } from "@/lib/auth/permissoes";
+import { exigirDiretorDe, exigirDiretorEmAlguma } from "@/lib/auth/permissoes-server";
+import { chaveComentarioPresidencia } from "@/lib/relatorios/dados";
+import { produtoSchema } from "@/lib/schemas/produto";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,13 +17,6 @@ export type ConfigActionResult =
 
 type TipoLista = Database["public"]["Enums"]["tipo_lista"];
 
-async function exigirDiretor() {
-  const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor" || !usuario.ativo) {
-    return null;
-  }
-  return usuario;
-}
 
 function revalidateConfig() {
   revalidatePath("/configuracoes", "layout");
@@ -39,7 +36,7 @@ export type FunilComEtapas = {
 };
 
 export async function listarFunisComEtapas(): Promise<FunilComEtapas[]> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return [];
 
   const supabase = await createClient();
@@ -59,7 +56,7 @@ export async function listarFunisComEtapas(): Promise<FunilComEtapas[]> {
 }
 
 export async function criarFunil(nome: string): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
 
   const n = nome.trim();
@@ -88,7 +85,7 @@ export async function atualizarFunil(
   id: string,
   patch: { nome?: string; ativo?: boolean },
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
 
   const supabase = await createClient();
@@ -102,7 +99,7 @@ export async function criarEtapa(
   funilId: string,
   nome: string,
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
 
   const n = nome.trim();
@@ -143,7 +140,7 @@ export async function atualizarEtapa(
     probabilidade?: number | null;
   },
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
 
   if (patch.probabilidade != null) {
@@ -182,7 +179,7 @@ export async function atualizarEtapa(
 export async function contarNegociacoesAbertasEtapa(
   etapaId: string,
 ): Promise<number> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return 0;
   const supabase = await createClient();
   const { count } = await supabase
@@ -198,7 +195,7 @@ export async function moverNegociacoesEtapa(
   deEtapaId: string,
   paraEtapaId: string,
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
   if (deEtapaId === paraEtapaId) {
     return { ok: false, error: "Escolha outra etapa de destino." };
@@ -235,7 +232,7 @@ export async function reordenarEtapas(
   funilId: string,
   ordemIds: string[],
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
   if (ordemIds.length === 0) return { ok: true };
 
@@ -269,7 +266,7 @@ export async function reordenarEtapas(
 export async function listarListasPorTipo(
   tipo: TipoLista,
 ): Promise<Database["public"]["Tables"]["listas"]["Row"][]> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return [];
   const supabase = await createClient();
   const { data } = await supabase
@@ -284,7 +281,7 @@ export async function criarListaItem(
   tipo: TipoLista,
   valor: string,
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
   const v = valor.trim();
   if (!v) return { ok: false, error: "Informe o valor." };
@@ -313,7 +310,7 @@ export async function atualizarListaItem(
   id: string,
   patch: { valor?: string; ativo?: boolean },
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
   const supabase = await createClient();
   const { error } = await supabase.from("listas").update(patch).eq("id", id);
@@ -326,7 +323,7 @@ export async function reordenarListas(
   tipo: TipoLista,
   ordemIds: string[],
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
   const supabase = await createClient();
 
@@ -353,7 +350,7 @@ export async function reordenarListas(
 // ---------- Parâmetros (config) ----------
 
 export async function obterParametros(): Promise<Record<string, string>> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return {};
   const supabase = await createClient();
   const { data } = await supabase.from("config").select("chave, valor");
@@ -369,13 +366,12 @@ const parametrosSchema = z.object({
   peso_morna: z.coerce.number().min(0).max(1),
   peso_quente: z.coerce.number().min(0).max(1),
   alerta_validade_orcamento_dias: z.coerce.number().int().nonnegative(),
-  orcamento_prefixo: z.string().trim().min(1).max(20),
 });
 
 export async function salvarParametros(
   input: z.input<typeof parametrosSchema>,
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
 
   const parsed = parametrosSchema.safeParse(input);
@@ -398,144 +394,83 @@ export async function salvarParametros(
   return { ok: true, message: "Parâmetros salvos." };
 }
 
-// ---------- Emitente ----------
-
-export async function obterEmitente() {
-  const diretor = await exigirDiretor();
-  if (!diretor) return null;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("emitente")
-    .select("*")
-    .eq("id", 1)
-    .maybeSingle();
-  return data;
-}
-
-const emitenteSchema = z.object({
-  razao_social: z.string().trim().min(1, "Razão social é obrigatória"),
-  cnpj: z.string().trim().optional().nullable(),
-  endereco: z.string().trim().optional().nullable(),
-  telefone: z.string().trim().optional().nullable(),
-  email: z.string().trim().optional().nullable(),
-  site: z.string().trim().optional().nullable(),
-  validade_padrao_dias: z.coerce.number().int().positive().default(15),
-  condicoes_pagamento_padrao: z.string().trim().optional().nullable(),
-  prazo_entrega_padrao: z.string().trim().optional().nullable(),
-  rodape: z.string().trim().optional().nullable(),
-});
-
-export async function salvarEmitente(
-  input: z.input<typeof emitenteSchema>,
-): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
-  if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
-
-  const parsed = emitenteSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
-    };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("emitente")
-    .upsert({ id: 1, ...parsed.data });
-  if (error) return { ok: false, error: error.message };
-  revalidateConfig();
-  return { ok: true, message: "Emitente salvo." };
-}
-
-export async function uploadLogoEmitente(
-  formData: FormData,
-): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
-  if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
-
-  const file = formData.get("logo");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Selecione um arquivo de logo." };
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    return { ok: false, error: "Logo deve ter no máximo 2 MB." };
-  }
-
-  const ext = (file.name.split(".").pop() ?? "png").toLowerCase();
-  const path = `emitente/logo-${Date.now()}.${ext}`;
-  const supabase = await createClient();
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  const { error: upErr } = await supabase.storage
-    .from("publico")
-    .upload(path, buffer, {
-      contentType: file.type || "image/png",
-      upsert: false,
-    });
-
-  if (upErr) return { ok: false, error: upErr.message };
-
-  const { error } = await supabase
-    .from("emitente")
-    .update({ logo_path: path })
-    .eq("id", 1);
-
-  if (error) return { ok: false, error: error.message };
-  revalidateConfig();
-  return { ok: true, message: "Logo enviado." };
-}
-
 // ---------- Produtos ----------
 
-export async function listarProdutos(busca?: string) {
-  const diretor = await exigirDiretor();
-  if (!diretor) return [];
+export type ProdutoLista = Database["public"]["Tables"]["produtos"]["Row"] & {
+  emitente_nome: string;
+  categoria_nome: string | null;
+  catalogo_url_final: string | null;
+  podeEditar: boolean;
+};
+
+/** Produtos das empresas do usuário (ou só da empresa informada). */
+export async function listarProdutos(
+  busca?: string,
+  emitenteId?: string | null,
+): Promise<ProdutoLista[]> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario || !usuario.ehDiretorEmAlguma) return [];
   const supabase = await createClient();
-  let q = supabase.from("produtos").select("*").order("nome");
+  let q = supabase
+    .from("produtos")
+    .select("*, emitentes ( nome ), categorias_produto ( nome )")
+    .order("nome");
+  if (emitenteId) q = q.eq("emitente_id", emitenteId);
   const termo = busca?.trim();
   if (termo) {
     q = q.or(
       `nome.ilike.%${termo}%,codigo.ilike.%${termo}%,descricao.ilike.%${termo}%`,
     );
   }
-  const { data } = await q.limit(200);
-  return data ?? [];
+  const { data } = await q.limit(300);
+  type Join = Database["public"]["Tables"]["produtos"]["Row"] & {
+    emitentes: { nome: string } | { nome: string }[] | null;
+    categorias_produto: { nome: string } | { nome: string }[] | null;
+  };
+  const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+  return ((data ?? []) as unknown as Join[]).map((p) => {
+    const { emitentes, categorias_produto, ...row } = p;
+    return {
+      ...row,
+      emitente_nome: um(emitentes)?.nome ?? "—",
+      categoria_nome: um(categorias_produto)?.nome ?? null,
+      catalogo_url_final:
+        row.catalogo_url ??
+        (row.catalogo_path
+          ? supabase.storage.from("publico").getPublicUrl(row.catalogo_path).data.publicUrl
+          : null),
+      podeEditar: ehDiretorDe(usuario, row.emitente_id),
+    };
+  });
 }
 
-export async function salvarProduto(input: {
-  id?: string;
-  codigo?: string | null;
-  nome: string;
-  descricao?: string | null;
-  linha?: string | null;
-  unidade?: string;
-  preco_base?: number;
-  ativo?: boolean;
-}): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
-  if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
-
-  const nome = input.nome.trim();
-  if (!nome) return { ok: false, error: "Nome é obrigatório." };
+export async function salvarProduto(
+  input: { id?: string } & z.input<typeof produtoSchema>,
+): Promise<ConfigActionResult> {
+  const parsed = produtoSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const diretor = await exigirDiretorDe(parsed.data.emitente_id);
+  if (!diretor) return { ok: false, error: "Apenas o diretor desta empresa pode alterar." };
 
   const row = {
-    codigo: input.codigo?.trim() || null,
-    nome,
-    descricao: input.descricao?.trim() || null,
-    linha: input.linha?.trim() || null,
-    unidade: input.unidade?.trim() || "un",
-    preco_base: Number(input.preco_base ?? 0),
-    ativo: input.ativo ?? true,
+    ...parsed.data,
+    codigo: parsed.data.codigo?.trim() || null,
+    descricao: parsed.data.descricao?.trim() || null,
+    linha: parsed.data.linha?.trim() || null,
+    categoria_id: parsed.data.categoria_id || null,
     atualizado_em: new Date().toISOString(),
   };
 
   const supabase = await createClient();
   if (input.id) {
+    // não permite mover produto entre empresas por aqui
     const { error } = await supabase
       .from("produtos")
       .update(row)
-      .eq("id", input.id);
+      .eq("id", input.id)
+      .eq("emitente_id", parsed.data.emitente_id);
     if (error) return { ok: false, error: error.message };
     revalidateConfig();
     return { ok: true, id: input.id };
@@ -555,9 +490,11 @@ export async function alternarProdutoAtivo(
   id: string,
   ativo: boolean,
 ): Promise<ConfigActionResult> {
-  const diretor = await exigirDiretor();
-  if (!diretor) return { ok: false, error: "Apenas o diretor pode alterar." };
   const supabase = await createClient();
+  const { data: p } = await supabase.from("produtos").select("emitente_id").eq("id", id).maybeSingle();
+  if (!p) return { ok: false, error: "Produto não encontrado." };
+  const diretor = await exigirDiretorDe(p.emitente_id);
+  if (!diretor) return { ok: false, error: "Apenas o diretor desta empresa pode alterar." };
   const { error } = await supabase
     .from("produtos")
     .update({ ativo, atualizado_em: new Date().toISOString() })
@@ -577,23 +514,25 @@ export type ConfigActionState = {
 const comentarioSchema = z.object({
   mes: z.string().regex(/^\d{4}-\d{2}/, "Mês inválido."),
   texto: z.string().max(4000),
+  emitenteId: z.uuid().optional().nullable(),
 });
 
 export async function salvarComentarioPresidencia(
   mes: string,
   texto: string,
+  emitenteId?: string | null,
 ): Promise<ConfigActionState> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) {
     return { error: "Apenas o diretor pode salvar o comentário." };
   }
 
-  const parsed = comentarioSchema.safeParse({ mes, texto });
+  const parsed = comentarioSchema.safeParse({ mes, texto, emitenteId });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const chave = `comentario_${parsed.data.mes.slice(0, 7)}`;
+  const chave = chaveComentarioPresidencia(parsed.data.mes, parsed.data.emitenteId ?? null);
   const supabase = await createClient();
   const { error } = await supabase.from("config").upsert({
     chave,

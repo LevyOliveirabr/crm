@@ -12,10 +12,12 @@ import {
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import {
+  idsEquipeVisivel,
   listarVendedoresVisiveis,
   podeVerEquipe,
   resolverFiltroVendedor,
 } from "@/lib/auth/equipe";
+import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import {
   carregarDadosDashboard,
   carregarOpcoesDashboard,
@@ -45,6 +47,7 @@ type SearchParams = Promise<{
   uf?: string | string[];
   origem?: string | string[];
   segmento?: string | string[];
+  emitente?: string | string[];
 }>;
 
 function paramUnico(
@@ -75,7 +78,8 @@ export default async function DashboardPage({
   if (!usuario) return null;
 
   const sp = await searchParams;
-  const isDiretor = podeVerEquipe(usuario);
+  const escopo = await getEscopoEmpresa(usuario, sp);
+  const isDiretor = podeVerEquipe(usuario, escopo);
 
   const hoje = hojeISO();
   const inicioMes = inicioMesAtualISO();
@@ -100,11 +104,12 @@ export default async function DashboardPage({
   const ufParam = paramUnico(sp.uf)?.trim().toUpperCase();
 
   const supabase = await createClient();
-  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
   const vendedorFiltro = resolverFiltroVendedor(
     usuario,
     vendedores,
     uuidValido(paramUnico(sp.vendedor)) ?? undefined,
+    escopo,
   );
 
   const filtros: FiltrosDashboard = {
@@ -117,12 +122,8 @@ export default async function DashboardPage({
     origem: paramUnico(sp.origem)?.trim() || null,
     segmento,
     isDiretor,
-    equipeIds:
-      usuario.perfil === "diretor"
-        ? null
-        : usuario.perfil === "gerente"
-          ? vendedores.map((v) => v.id)
-          : [usuario.id],
+    equipeIds: idsEquipeVisivel(usuario, vendedores, escopo),
+    emitenteId: escopo.emitenteId,
   };
 
   const [opcoes, dados, dadosNova] = await Promise.all([
@@ -135,7 +136,7 @@ export default async function DashboardPage({
     <div className="mx-auto w-full max-w-[1400px]">
       <DashboardCabecalho
         titulo="Sua carteira"
-        subtitulo={mesPorExtenso(hoje)}
+        subtitulo={`${mesPorExtenso(hoje)} · ${escopo.emitente?.nome ?? "Todas as empresas"}`}
         descricao={
           isDiretor && !filtros.vendedorId
             ? "Visão consolidada das negociações abertas de toda a equipe."

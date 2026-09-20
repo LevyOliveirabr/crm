@@ -8,13 +8,16 @@ import {
   inicioProximoMesISO,
   normalizarNome,
 } from "@/lib/format";
+import { encontrarEmpresa } from "@/lib/auth/escopo-empresa-core";
 import type { McpAuthContext } from "@/lib/mcp-auth";
 import { clientForApiKey, McpAuthError } from "@/lib/mcp-auth";
 import { registrarMcpLog } from "@/lib/mcp-log";
+import { criarOrcamentoGerado } from "@/lib/orcamentos/gerado";
 import { checarRateLimit } from "@/lib/mcp-rate-limit";
 import {
   buscarEmpresaArgsSchema,
   buscarProdutoArgsSchema,
+  listarEmpresasVendedorasArgsSchema,
   concluirAcaoArgsSchema,
   criarAcaoArgsSchema,
   criarEmpresaArgsSchema,
@@ -107,6 +110,36 @@ async function comLog(
   }
 }
 
+/**
+ * Resolve o argumento `empresa_vendedora` (nome ou id) contra as empresas do
+ * dono da key. Leitura: omitido = todas (null). Escrita (`obrigatoria`):
+ * omitido = a única empresa do usuário; com várias, exige o argumento.
+ */
+function resolverEmpresaVendedora(
+  auth: McpAuthContext,
+  texto: string | undefined,
+  obrigatoria = false,
+): { ok: true; id: string | null; nome: string | null } | { ok: false; erro: string } {
+  const empresas = auth.usuario.empresas;
+  if (texto) {
+    const hit = encontrarEmpresa(empresas, texto);
+    if (!hit) {
+      return {
+        ok: false,
+        erro: `Empresa vendedora "${texto}" não encontrada. Disponíveis: ${empresas.map((e) => e.nome).join(", ") || "nenhuma"}.`,
+      };
+    }
+    return { ok: true, id: hit.id, nome: hit.nome };
+  }
+  if (!obrigatoria) return { ok: true, id: null, nome: null };
+  if (empresas.length === 1) return { ok: true, id: empresas[0]!.id, nome: empresas[0]!.nome };
+  if (empresas.length === 0) return { ok: false, erro: "Usuário sem empresa vendedora vinculada." };
+  return {
+    ok: false,
+    erro: `Informe empresa_vendedora. Opções: ${empresas.map((e) => e.nome).join(", ")}.`,
+  };
+}
+
 async function obterFicha(
   auth: McpAuthContext,
   id: string,
@@ -149,6 +182,22 @@ async function obterFicha(
 }
 
 export function registrarToolsEResources(server: McpServer) {
+  server.registerTool(
+    "listar_empresas_vendedoras",
+    {
+      title: "Listar empresas vendedoras",
+      description:
+        "Empresas do grupo em que o usuário da key participa, com o perfil em cada uma. Use o nome ou o id em `empresa_vendedora` nas outras tools.",
+      inputSchema: listarEmpresasVendedorasArgsSchema,
+    },
+    async (args, ctx) =>
+      comLog("listar_empresas_vendedoras", args, ctx, async (auth) =>
+        jsonText(
+          auth.usuario.empresas.map((e) => ({ id: e.id, nome: e.nome, perfil: e.perfil })),
+        ),
+      ),
+  );
+
   server.registerTool(
     "buscar_empresa",
     {
@@ -259,7 +308,10 @@ export function registrarToolsEResources(server: McpServer) {
     },
     async (args, ctx) =>
       comLog("listar_negociacoes", args, ctx, async (auth) => {
+        const emp = resolverEmpresaVendedora(auth, args.empresa_vendedora);
+        if (!emp.ok) return texto(emp.erro, true);
         let query = auth.supabase.from("v_negociacoes").select("*");
+        if (emp.id) query = query.eq("emitente_id", emp.id);
 
         if (args.status) query = query.eq("status", args.status);
         if (args.funil) query = query.ilike("funil_nome", args.funil);
@@ -314,6 +366,8 @@ export function registrarToolsEResources(server: McpServer) {
     },
     async (args, ctx) =>
       comLog("criar_negociacao", args, ctx, async (auth) => {
+        const vendedora = resolverEmpresaVendedora(auth, args.empresa_vendedora, true);
+        if (!vendedora.ok) return texto(vendedora.erro, true);
         let empresaId = args.empresa_id ?? null;
         let empresaNome = "";
 
@@ -395,6 +449,7 @@ export function registrarToolsEResources(server: McpServer) {
           .from("negociacoes")
           .insert({
             empresa_id: empresaId,
+            emitente_id: vendedora.id!,
             funil_id: funil.id,
             etapa_id: etapa.id,
             titulo,
@@ -434,7 +489,7 @@ export function registrarToolsEResources(server: McpServer) {
         });
 
         return texto(
-          `Criada negociação para ${empresaNome}, ${formatarMoeda(args.valor_estimado)}, funil ${funil.nome}. id=${criada.id}`,
+          `Criada negociação para ${empresaNome} (vendida por ${vendedora.nome}), ${formatarMoeda(args.valor_estimado)}, funil ${funil.nome}. id=${criada.id}`,
         );
       }),
   );
@@ -724,11 +779,13 @@ export function registrarToolsEResources(server: McpServer) {
     },
     async (args, ctx) =>
       comLog("relatorio_presidencia", args, ctx, async (auth) => {
+        const emp = resolverEmpresaVendedora(auth, args.empresa_vendedora);
+        if (!emp.ok) return texto(emp.erro, true);
         const p_mes = args.mes ? `${args.mes}-01` : undefined;
-        const { data, error } = await auth.supabase.rpc(
-          "relatorio_presidencia",
-          p_mes ? { p_mes } : {},
-        );
+        const { data, error } = await auth.supabase.rpc("relatorio_presidencia", {
+          ...(p_mes ? { p_mes } : {}),
+          p_emitente: emp.id,
+        });
         if (error) return texto(error.message, true);
         return jsonText(data);
       }),
@@ -743,11 +800,13 @@ export function registrarToolsEResources(server: McpServer) {
     },
     async (args, ctx) =>
       comLog("previsao", args, ctx, async (auth) => {
-        const { data, error } = await auth.supabase
-          .from("v_previsao")
-          .select("*")
+        const emp = resolverEmpresaVendedora(auth, args.empresa_vendedora);
+        if (!emp.ok) return texto(emp.erro, true);
+        let q = auth.supabase.from("v_previsao").select("*");
+        if (emp.id) q = q.eq("emitente_id", emp.id);
+        const { data, error } = await q
           .order("mes", { ascending: true })
-          .limit(args.meses * 20);
+          .limit(args.meses * 40);
         if (error) return texto(error.message, true);
 
         const mesesUnicos: string[] = [];
@@ -757,10 +816,22 @@ export function registrarToolsEResources(server: McpServer) {
           if (mesesUnicos.length >= args.meses) break;
         }
         const permitidos = new Set(mesesUnicos.slice(0, args.meses));
-        const filtrado = (data ?? []).filter((r) =>
-          permitidos.has(r.mes?.slice(0, 7) ?? ""),
-        );
-        return jsonText(filtrado);
+        // v_previsao tem uma linha por mês × responsável × empresa vendedora: soma por mês.
+        const porMes = new Map<
+          string,
+          { mes: string; aberto: number; realista: number; otimista: number; qtd: number }
+        >();
+        for (const r of data ?? []) {
+          const mes = r.mes ?? "";
+          if (!permitidos.has(mes.slice(0, 7))) continue;
+          const cur = porMes.get(mes) ?? { mes, aberto: 0, realista: 0, otimista: 0, qtd: 0 };
+          cur.aberto += Number(r.aberto ?? 0);
+          cur.realista += Number(r.realista ?? 0);
+          cur.otimista += Number(r.otimista ?? 0);
+          cur.qtd += Number(r.qtd ?? 0);
+          porMes.set(mes, cur);
+        }
+        return jsonText([...porMes.values()]);
       }),
   );
 
@@ -773,15 +844,38 @@ export function registrarToolsEResources(server: McpServer) {
     },
     async (args, ctx) =>
       comLog("buscar_produto", args, ctx, async (auth) => {
-        const { data, error } = await auth.supabase
+        const emp = resolverEmpresaVendedora(auth, args.empresa_vendedora);
+        if (!emp.ok) return texto(emp.erro, true);
+        let q = auth.supabase
           .from("produtos")
-          .select("id, codigo, nome, unidade, preco_base")
+          .select(
+            "id, codigo, nome, unidade, preco_base, link, catalogo_url, catalogo_path, emitente_id, emitentes ( nome ), categorias_produto ( nome, catalogo_url, catalogo_path )",
+          )
           .eq("ativo", true)
-          .or(`nome.ilike.%${args.texto}%,codigo.ilike.%${args.texto}%`)
-          .order("nome")
-          .limit(10);
+          .or(`nome.ilike.%${args.texto}%,codigo.ilike.%${args.texto}%`);
+        if (emp.id) q = q.eq("emitente_id", emp.id);
+        const { data, error } = await q.order("nome").limit(10);
         if (error) return texto(error.message, true);
-        return jsonText(data ?? []);
+        const publica = (path: string | null) =>
+          path ? auth.supabase.storage.from("publico").getPublicUrl(path).data.publicUrl : null;
+        const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+        return jsonText(
+          (data ?? []).map((p) => {
+            const cat = um(p.categorias_produto);
+            return {
+              id: p.id,
+              codigo: p.codigo,
+              nome: p.nome,
+              unidade: p.unidade,
+              preco_base: p.preco_base,
+              empresa_vendedora: um(p.emitentes)?.nome ?? null,
+              categoria: cat?.nome ?? null,
+              link: p.link,
+              catalogo: p.catalogo_url ?? publica(p.catalogo_path),
+              catalogo_categoria: cat ? (cat.catalogo_url ?? publica(cat.catalogo_path)) : null,
+            };
+          }),
+        );
       }),
   );
 
@@ -789,13 +883,37 @@ export function registrarToolsEResources(server: McpServer) {
     "montar_orcamento",
     {
       title: "Montar orçamento",
-      description: "Disponível na entrega 3 (stub).",
+      description:
+        "Cria um orçamento numerado com itens (produtos do catálogo da empresa vendedora da negociação, via produto_id de buscar_produto, ou itens livres por descrição). Preço omitido = preço base do produto. O vendedor revisa e imprime na tela.",
       inputSchema: montarOrcamentoArgsSchema,
     },
     async (args, ctx) =>
-      comLog("montar_orcamento", args, ctx, async () =>
-        texto("montar_orcamento disponível na entrega 3"),
-      ),
+      comLog("montar_orcamento", args, ctx, async (auth) => {
+        const res = await criarOrcamentoGerado(auth.supabase, {
+          negociacaoId: args.negociacao_id,
+          itens: args.itens,
+          cabecalho: {
+            condicoes_pagamento: args.condicoes_pagamento ?? undefined,
+            prazo_entrega: args.prazo_entrega ?? undefined,
+            observacoes: args.observacoes ?? undefined,
+          },
+        });
+        if (!res.ok) return texto(res.error, true);
+
+        await auth.supabase.from("interacoes").insert({
+          negociacao_id: args.negociacao_id,
+          tipo: "anotacao",
+          texto: prefixoAgente(`Orçamento ${res.numero} montado: ${formatarMoeda(res.total)}`),
+          usuario_id: auth.usuario.id,
+          origem_agente: true,
+        });
+
+        return texto(
+          `Orçamento ${res.numero} criado com ${args.itens.length} item(ns), total ${formatarMoeda(res.total)}` +
+            (res.moveuEtapa ? `; negociação movida para "${res.etapaNome}"` : "") +
+            `. id=${res.orcamentoId}. Revise em /orcamentos/${res.orcamentoId}.`,
+        );
+      }),
   );
 
   server.registerResource(
@@ -824,6 +942,31 @@ export function registrarToolsEResources(server: McpServer) {
             uri: "crm://funis",
             mimeType: "application/json",
             text: JSON.stringify(payload, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerResource(
+    "empresas-vendedoras",
+    "crm://empresas-vendedoras",
+    {
+      description: "Empresas vendedoras do usuário da key, com o perfil em cada uma",
+      mimeType: "application/json",
+    },
+    async (_uri, ctx) => {
+      const auth = await autenticarDoCtx(ctx as ToolCtx);
+      return {
+        contents: [
+          {
+            uri: "crm://empresas-vendedoras",
+            mimeType: "application/json",
+            text: JSON.stringify(
+              auth.usuario.empresas.map((e) => ({ id: e.id, nome: e.nome, perfil: e.perfil })),
+              null,
+              2,
+            ),
           },
         ],
       };

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { ehDiretorDe, ehMembroDe } from "@/lib/auth/permissoes";
 import {
   inicioMesAtualISO,
   inicioProximoMesISO,
@@ -28,6 +29,7 @@ const moverEtapaSchema = z.object({
 
 const criarNegociacaoSchema = z.object({
   empresa_id: z.uuid("Empresa é obrigatória"),
+  emitente_id: z.uuid("Empresa vendedora é obrigatória"),
   valor_estimado: z.coerce.number().nonnegative().default(0),
   funil_id: z.uuid("Funil é obrigatório"),
   linha: z.string().trim().optional().nullable(),
@@ -205,6 +207,10 @@ export async function criarNegociacao(
   const supabase = await createClient();
   const data = parsed.data;
 
+  if (!ehMembroDe(usuario, data.emitente_id)) {
+    return { ok: false, error: "Você não participa desta empresa vendedora." };
+  }
+
   const { data: empresa, error: erroEmp } = await supabase
     .from("empresas")
     .select("id, nome")
@@ -245,6 +251,7 @@ export async function criarNegociacao(
     .from("negociacoes")
     .insert({
       empresa_id: empresa.id,
+      emitente_id: data.emitente_id,
       contato_id: data.contato_id ?? null,
       funil_id: data.funil_id,
       etapa_id: etapa.id,
@@ -306,7 +313,7 @@ export async function atualizarCampo(
   const supabase = await createClient();
   const { data: negociacao, error: erroNeg } = await supabase
     .from("negociacoes")
-    .select("id, responsavel_id, status, arquivado_em")
+    .select("id, responsavel_id, status, arquivado_em, emitente_id")
     .eq("id", parsed.data.negociacaoId)
     .maybeSingle();
 
@@ -319,9 +326,21 @@ export async function atualizarCampo(
 
   if (
     parsed.data.campo === "responsavel_id" &&
-    usuario.perfil !== "diretor"
+    !ehDiretorDe(usuario, negociacao.emitente_id)
   ) {
-    return { ok: false, error: "Só o diretor pode transferir responsável." };
+    return { ok: false, error: "Só o diretor da empresa pode transferir responsável." };
+  }
+  if (parsed.data.campo === "responsavel_id") {
+    const novoId = String(parsed.data.valor ?? "");
+    const { data: vinculo } = await supabase
+      .from("usuario_emitentes")
+      .select("usuario_id")
+      .eq("usuario_id", novoId)
+      .eq("emitente_id", negociacao.emitente_id)
+      .maybeSingle();
+    if (!vinculo) {
+      return { ok: false, error: "O novo responsável não participa desta empresa vendedora." };
+    }
   }
 
   const patch: Database["public"]["Tables"]["negociacoes"]["Update"] = {};
@@ -608,7 +627,7 @@ export async function reabrir(
   const supabase = await createClient();
   const { data: negociacao, error: erroNeg } = await supabase
     .from("negociacoes")
-    .select("id, status, responsavel_id, arquivado_em, etapa_id")
+    .select("id, status, responsavel_id, arquivado_em, etapa_id, emitente_id")
     .eq("id", idParsed.data)
     .maybeSingle();
 
@@ -623,7 +642,7 @@ export async function reabrir(
   }
 
   if (
-    usuario.perfil !== "diretor" &&
+    !ehDiretorDe(usuario, negociacao.emitente_id) &&
     negociacao.responsavel_id !== usuario.id
   ) {
     return { ok: false, error: "Sem permissão para reabrir." };
@@ -660,7 +679,7 @@ export async function arquivar(
   const supabase = await createClient();
   const { data: negociacao, error: erroNeg } = await supabase
     .from("negociacoes")
-    .select("id, responsavel_id, arquivado_em")
+    .select("id, responsavel_id, arquivado_em, emitente_id")
     .eq("id", idParsed.data)
     .maybeSingle();
 
@@ -672,7 +691,7 @@ export async function arquivar(
   }
 
   if (
-    usuario.perfil !== "diretor" &&
+    !ehDiretorDe(usuario, negociacao.emitente_id) &&
     negociacao.responsavel_id !== usuario.id
   ) {
     return { ok: false, error: "Sem permissão para arquivar." };
@@ -708,22 +727,22 @@ export async function excluirNegociacao(
   const idParsed = z.uuid().safeParse(negociacaoId);
   if (!idParsed.success) return { ok: false, error: "Negociação inválida." };
 
-  if (usuario.perfil !== "diretor") {
-    return {
-      ok: false,
-      error: "Só o diretor pode excluir. Use Arquivar para tirar da tela.",
-    };
-  }
-
   const supabase = await createClient();
   const { data: negociacao, error: erroNeg } = await supabase
     .from("negociacoes")
-    .select("id")
+    .select("id, emitente_id")
     .eq("id", idParsed.data)
     .maybeSingle();
 
   if (erroNeg || !negociacao) {
     return { ok: false, error: "Negociação não encontrada." };
+  }
+
+  if (!ehDiretorDe(usuario, negociacao.emitente_id)) {
+    return {
+      ok: false,
+      error: "Só o diretor da empresa pode excluir. Use Arquivar para tirar da tela.",
+    };
   }
 
   const { data: orcamentos, error: erroOrc } = await supabase

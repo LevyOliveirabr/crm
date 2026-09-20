@@ -1,5 +1,6 @@
 "use server";
 
+import { aplicarEscopoEmitente, getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,6 +29,7 @@ export async function buscarGlobal(termo: string): Promise<ResultadoBusca> {
   const like = `%${q}%`;
 
   const supabase = await createClient();
+  const escopo = await getEscopoEmpresa(usuario);
   const [{ data: empresas }, { data: contatos }, { data: negociacoes }] =
     await Promise.all([
       supabase
@@ -44,10 +46,13 @@ export async function buscarGlobal(termo: string): Promise<ResultadoBusca> {
         .ilike("nome", like)
         .order("nome")
         .limit(6),
-      supabase
-        .from("v_negociacoes")
-        .select("id, titulo, empresa_nome, status, valor_estimado, etapa_nome")
-        .or(`titulo.ilike.${like},empresa_nome.ilike.${like}`)
+      aplicarEscopoEmitente(
+        supabase
+          .from("v_negociacoes")
+          .select("id, titulo, empresa_nome, status, valor_estimado, etapa_nome")
+          .or(`titulo.ilike.${like},empresa_nome.ilike.${like}`),
+        escopo,
+      )
         .order("status", { ascending: true })
         .order("valor_estimado", { ascending: false })
         .limit(6),

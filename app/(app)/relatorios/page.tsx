@@ -6,16 +6,19 @@ import {
 } from "@/components/crm/relatorios-client";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import {
+  idsEquipeVisivel,
   listarVendedoresVisiveis,
   podeVerEquipe,
   resolverFiltroVendedor,
 } from "@/lib/auth/equipe";
+import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { carregarDadosRelatorios } from "@/lib/relatorios/dados";
 import { resolverPeriodo, type TipoPeriodo } from "@/lib/relatorios/periodo";
 import { createClient } from "@/lib/supabase/server";
 import { inicioMesAtualISO, hojeISO } from "@/lib/format";
 
 type SearchParams = Promise<{
+  emitente?: string | string[];
   aba?: string | string[];
   periodo?: string | string[];
   mes?: string | string[];
@@ -60,7 +63,8 @@ export default async function RelatoriosPage({
   const origemParam = paramUnico(sp.origem);
   const abaParam = paramUnico(sp.aba);
 
-  const isDiretor = podeVerEquipe(usuario);
+  const escopo = await getEscopoEmpresa(usuario, sp);
+  const isDiretor = podeVerEquipe(usuario, escopo);
   let abaInicial = (ABAS.includes(abaParam as AbaRelatorio)
     ? abaParam
     : "presidencia") as AbaRelatorio;
@@ -76,9 +80,9 @@ export default async function RelatoriosPage({
   });
 
   const supabase = await createClient();
-  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
-  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam);
-  const equipeIds = usuario.perfil === "gerente" ? vendedores.map((v) => v.id) : null;
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
+  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam, escopo);
+  const equipeIds = idsEquipeVisivel(usuario, vendedores, escopo);
 
   const [{ data: linhasRaw }, { data: origensRaw }, dados] =
     await Promise.all([
@@ -101,6 +105,8 @@ export default async function RelatoriosPage({
         origem: origemParam ?? null,
         isDiretor,
         equipeIds,
+        emitenteId: escopo.emitenteId,
+        emitenteNome: escopo.emitente?.nome ?? null,
       }),
     ]);
 
@@ -126,6 +132,8 @@ export default async function RelatoriosPage({
           linha: linhaParam ?? null,
           origem: origemParam ?? null,
           rotuloPeriodo: periodo.rotulo,
+          emitenteId: escopo.emitenteId,
+          emitenteNome: escopo.emitente?.nome ?? null,
         }}
       />
     </Suspense>

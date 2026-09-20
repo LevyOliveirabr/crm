@@ -35,3 +35,4 @@ insert into config (chave, valor) values
   ('orcamento_prefixo','ORC'),('orcamento_proximo_numero','1');
 
 insert into emitente (id, razao_social) values (1, 'F-Led');  -- completar em Configurações
+-- a migration 0008 converte esta linha em `emitentes` (multi-empresa); 0009 remove a tabela antiga

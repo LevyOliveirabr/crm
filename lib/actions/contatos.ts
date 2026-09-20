@@ -43,7 +43,7 @@ async function podeEditarContatoEmpresa(
   }
 
   const pode =
-    usuario.perfil === "diretor" ||
+    usuario.ehDiretorEmAlguma ||
     empresa.responsavel_id == null ||
     empresa.responsavel_id === usuario.id;
 

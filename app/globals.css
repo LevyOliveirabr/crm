@@ -166,6 +166,11 @@
   color: var(--muted-foreground);
 }
 
+/* URL dos materiais da proposta: só na impressão */
+.proposta-url {
+  display: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -186,6 +191,10 @@
   }
   .print\:hidden {
     display: none !important;
+  }
+  /* links da proposta: mostra a URL por extenso no papel */
+  .proposta-url {
+    display: inline !important;
   }
   @page {
     size: A4;

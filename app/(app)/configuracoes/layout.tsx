@@ -9,7 +9,7 @@ export default async function ConfiguracoesLayout({
   children: React.ReactNode;
 }) {
   const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor") {
+  if (!usuario || !usuario.ehDiretorEmAlguma) {
     redirect("/hoje");
   }
 
@@ -18,7 +18,7 @@ export default async function ConfiguracoesLayout({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Funis, listas, metas, parâmetros, emitente, produtos, usuários e importação.
+          Funis, listas, metas, parâmetros, empresas vendedoras, categorias, produtos, usuários e importação.
         </p>
       </div>
       <ConfiguracoesNav />

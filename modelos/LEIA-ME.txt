@@ -15,4 +15,10 @@ Ordem de importação no sistema (Configurações -> Importar CSV):
 Colunas obrigatórias: empresas.nome · contatos.empresa_nome e nome · negociacoes.empresa_nome · produtos.nome
 Todas as outras podem ficar vazias.
 
+Empresa vendedora (multi-empresa):
+  - negociacoes.empresa_vendedora e produtos.empresa_vendedora recebem o NOME (ou id) da empresa do grupo que vende.
+  - Se ficar vazia, vale a empresa selecionada no seletor do sistema (ou a única empresa em que você é diretor).
+  - Você só importa para empresas em que é diretor.
+  - produtos.categoria cria a categoria na empresa se ainda não existir; link = página do produto no site; catalogo_url = catálogo hospedado (opcional; o arquivo também pode ser anexado na tela de Produtos).
+
 Se o nome do funil ou da etapa não existir, a negociação entra no primeiro funil / primeira etapa e a linha aparece no relatório de importação para você corrigir.

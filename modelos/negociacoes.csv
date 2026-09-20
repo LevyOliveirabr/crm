@@ -1,2 +1,2 @@
-empresa_nome;titulo;valor_estimado;funil_nome;etapa_nome;linha;origem;responsavel_email;status;valor_final;motivo_perda;criado_em;fechado_em;proxima_acao;proxima_acao_data
-Remo Engenharia;[Iluminação pública] Remo Engenharia - Junho/2026;1136700;Prospecção;Proposta enviada;Iluminação pública;Cliente antigo;levy@fled.com.br;aberta;;;18/03/2026;;Acompanhar faturamento;15/09/2026
+empresa_nome;empresa_vendedora;titulo;valor_estimado;funil_nome;etapa_nome;linha;origem;responsavel_email;status;valor_final;motivo_perda;criado_em;fechado_em;proxima_acao;proxima_acao_data
+Remo Engenharia;F-Led;[Iluminação pública] Remo Engenharia - Junho/2026;1136700;Prospecção;Proposta enviada;Iluminação pública;Cliente antigo;levy@fled.com.br;aberta;;;18/03/2026;;Acompanhar faturamento;15/09/2026

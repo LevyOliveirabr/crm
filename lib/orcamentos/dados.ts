@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/database.types";
+import { montarLinksProposta, type LinkProposta } from "@/lib/orcamentos/itens";
 
 type Client = SupabaseClient<Database>;
 
@@ -13,6 +14,15 @@ export type ItemOrcamento = {
   precoUnitario: number;
   descontoPct: number;
   total: number;
+  /** Produto do catálogo (null = item livre), com links para a proposta. */
+  produto: {
+    id: string;
+    nome: string;
+    codigo: string | null;
+    link: string | null;
+    catalogoUrl: string | null;
+    categoria: { nome: string; catalogoUrl: string | null } | null;
+  } | null;
 };
 
 export type OrcamentoCompleto = {
@@ -51,6 +61,8 @@ export type OrcamentoCompleto = {
   };
   contato: { nome: string; email: string | null; whatsapp: string | null } | null;
   emitente: {
+    id: string | null;
+    nome: string;
     razaoSocial: string;
     cnpj: string | null;
     endereco: string | null;
@@ -60,10 +72,52 @@ export type OrcamentoCompleto = {
     logoUrl: string | null;
     rodape: string | null;
   } | null;
+  /** Materiais e links (site, catálogos, páginas de produto), deduplicados. */
+  links: LinkProposta[];
+  /** true quando a negociação está aberta e o orçamento é gerado e ainda "enviado". */
+  editavel: boolean;
+};
+
+type EmitenteDoc = {
+  id: string | null;
+  nome: string;
+  razao_social: string;
+  cnpj: string | null;
+  endereco: string | null;
+  telefone: string | null;
+  email: string | null;
+  site: string | null;
+  logo_path: string | null;
+  rodape: string | null;
 };
 
 /**
- * Carrega o orçamento com itens, negociação, empresa e emitente.
+ * Emitente (empresa vendedora) da negociação. Se a migration 0008 ainda não
+ * estiver aplicada, cai para a tabela antiga `emitente` (linha única).
+ */
+async function carregarEmitente(
+  supabase: Client,
+  emitenteId: string | null,
+): Promise<EmitenteDoc | null> {
+  if (emitenteId) {
+    const { data, error } = await supabase
+      .from("emitentes")
+      .select("id, nome, razao_social, cnpj, endereco, telefone, email, site, logo_path, rodape")
+      .eq("id", emitenteId)
+      .maybeSingle();
+    if (!error && data) return data;
+  }
+  const { data: legado } = await supabase
+    .from("emitente")
+    .select("razao_social, cnpj, endereco, telefone, email, site, logo_path, rodape")
+    .eq("id", 1)
+    .maybeSingle();
+  if (!legado) return null;
+  return { id: null, nome: legado.razao_social, ...legado };
+}
+
+/**
+ * Carrega o orçamento com itens, negociação, empresa e emitente (empresa vendedora).
  * Funciona com o client do usuário (RLS) ou com o admin (página pública).
  */
 export async function carregarOrcamentoCompleto(
@@ -75,7 +129,7 @@ export async function carregarOrcamentoCompleto(
     .select(
       `id, numero, titulo, origem, situacao, valor, subtotal, desconto_geral_pct, enviado_em, validade,
        condicoes_pagamento, prazo_entrega, frete, observacoes, arquivo_path, aceito_em, aceito_por,
-       negociacoes!inner ( id, titulo, status, contato_id, empresa_id,
+       negociacoes!inner ( id, titulo, status, arquivado_em, contato_id, empresa_id, emitente_id,
          empresas ( id, nome, cnpj, cidade, uf ),
          usuarios:responsavel_id ( nome, email ),
          contatos:contato_id ( nome, email, whatsapp ) )`,
@@ -89,6 +143,8 @@ export async function carregarOrcamentoCompleto(
     id: string;
     titulo: string;
     status: string;
+    arquivado_em: string | null;
+    emitente_id: string | null;
     empresas: { id: string; nome: string; cnpj: string | null; cidade: string | null; uf: string | null } | null;
     usuarios: { nome: string; email: string | null } | null;
     contatos: { nome: string; email: string | null; whatsapp: string | null } | null;
@@ -100,14 +156,54 @@ export async function carregarOrcamentoCompleto(
   const resp = Array.isArray(neg.usuarios) ? neg.usuarios[0] : neg.usuarios;
   const cont = Array.isArray(neg.contatos) ? neg.contatos[0] : neg.contatos;
 
-  const [{ data: itens }, { data: emitente }] = await Promise.all([
+  const [{ data: itens }, emitente] = await Promise.all([
     supabase
       .from("orcamento_itens")
-      .select("id, ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total")
+      .select(
+        "id, ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total, produtos ( id, nome, codigo, link, catalogo_url, catalogo_path, categorias_produto ( nome, catalogo_url, catalogo_path ) )",
+      )
       .eq("orcamento_id", o.id)
       .order("ordem"),
-    supabase.from("emitente").select("*").eq("id", 1).maybeSingle(),
+    carregarEmitente(supabase, neg.emitente_id),
   ]);
+
+  const publica = (path: string | null | undefined) =>
+    path ? supabase.storage.from("publico").getPublicUrl(path).data.publicUrl : null;
+  type CatJoin = { nome: string; catalogo_url: string | null; catalogo_path: string | null };
+  type ProdJoin = {
+    id: string;
+    nome: string;
+    codigo: string | null;
+    link: string | null;
+    catalogo_url: string | null;
+    catalogo_path: string | null;
+    categorias_produto: CatJoin | CatJoin[] | null;
+  };
+  const um = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
+  const itensMapeados: ItemOrcamento[] = (itens ?? []).map((i) => {
+    const p = um((i as unknown as { produtos: ProdJoin | ProdJoin[] | null }).produtos);
+    const cat = p ? um(p.categorias_produto) : null;
+    return {
+      id: i.id,
+      ordem: i.ordem,
+      descricao: i.descricao,
+      unidade: i.unidade,
+      quantidade: Number(i.quantidade),
+      precoUnitario: Number(i.preco_unitario),
+      descontoPct: Number(i.desconto_pct),
+      total: Number(i.total),
+      produto: p
+        ? {
+            id: p.id,
+            nome: p.nome,
+            codigo: p.codigo,
+            link: p.link,
+            catalogoUrl: p.catalogo_url ?? publica(p.catalogo_path),
+            categoria: cat ? { nome: cat.nome, catalogoUrl: cat.catalogo_url ?? publica(cat.catalogo_path) } : null,
+          }
+        : null,
+    };
+  });
 
   let arquivoUrl: string | null = null;
   if (o.arquivo_path) {
@@ -142,16 +238,17 @@ export async function carregarOrcamentoCompleto(
     arquivoUrl,
     aceitoEm: o.aceito_em,
     aceitoPor: o.aceito_por,
-    itens: (itens ?? []).map((i) => ({
-      id: i.id,
-      ordem: i.ordem,
-      descricao: i.descricao,
-      unidade: i.unidade,
-      quantidade: Number(i.quantidade),
-      precoUnitario: Number(i.preco_unitario),
-      descontoPct: Number(i.desconto_pct),
-      total: Number(i.total),
-    })),
+    itens: itensMapeados,
+    links: montarLinksProposta(
+      emitente ? { nome: emitente.nome, site: emitente.site } : null,
+      itensMapeados,
+    ),
+    editavel:
+      o.origem === "gerado" &&
+      o.situacao === "enviado" &&
+      !o.aceito_em &&
+      neg.status === "aberta" &&
+      !neg.arquivado_em,
     negociacao: {
       id: neg.id,
       titulo: neg.titulo,
@@ -169,6 +266,8 @@ export async function carregarOrcamentoCompleto(
     contato: cont ? { nome: cont.nome, email: cont.email, whatsapp: cont.whatsapp } : null,
     emitente: emitente
       ? {
+          id: emitente.id,
+          nome: emitente.nome,
           razaoSocial: emitente.razao_social,
           cnpj: emitente.cnpj,
           endereco: emitente.endereco,

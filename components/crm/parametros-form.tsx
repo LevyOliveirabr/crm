@@ -21,7 +21,6 @@ export function ParametrosForm({
     peso_quente: initial.peso_quente ?? "0.8",
     alerta_validade_orcamento_dias:
       initial.alerta_validade_orcamento_dias ?? "3",
-    orcamento_prefixo: initial.orcamento_prefixo ?? "ORC",
   });
 
   const set = (chave: keyof typeof valores, valor: string) =>
@@ -103,15 +102,6 @@ export function ParametrosForm({
             onChange={(e) =>
               set("alerta_validade_orcamento_dias", e.target.value)
             }
-          />
-        </label>
-
-        <label className="block text-sm">
-          Prefixo do orçamento
-          <Input
-            className="mt-1"
-            value={valores.orcamento_prefixo}
-            onChange={(e) => set("orcamento_prefixo", e.target.value)}
           />
         </label>
 

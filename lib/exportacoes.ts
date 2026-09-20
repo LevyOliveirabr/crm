@@ -62,6 +62,21 @@ function labelVendedor(v?: string): string {
   return v ? v : "Todos";
 }
 
+/** Empresa vendedora do escopo (injetada pelo route handler). */
+function emitenteDe(filtros: Filtros): string | undefined {
+  return pick(filtros, "emitente_id");
+}
+
+function labelEmpresa(filtros: Filtros): string {
+  return pick(filtros, "emitente_nome") ?? "Todas";
+}
+
+const COLUNA_EMPRESA_VENDEDORA = {
+  chave: "emitente_nome",
+  titulo: "Empresa vendedora",
+  tipo: "texto",
+} as const;
+
 // ---------- registros ----------
 
 const funilLista: RegistroExportacao = {
@@ -78,8 +93,10 @@ const funilLista: RegistroExportacao = {
     { chave: "proxima_acao_data", titulo: "Data ação", tipo: "data" },
     { chave: "responsavel_nome", titulo: "Responsável", tipo: "texto" },
     { chave: "linha", titulo: "Linha", tipo: "texto" },
+    COLUNA_EMPRESA_VENDEDORA,
   ],
   async query(filtros, supabase) {
+    const emitente = emitenteDe(filtros);
     const funil = pick(filtros, "funil");
     const vendedor = pick(filtros, "vendedor");
     const linha = pick(filtros, "linha");
@@ -102,11 +119,12 @@ const funilLista: RegistroExportacao = {
       let query = supabase
         .from("v_negociacoes")
         .select(
-          "titulo, empresa_nome, etapa_nome, valor_estimado, temperatura, dias_na_etapa, proxima_acao_descricao, proxima_acao_data, responsavel_nome, linha, status, funil_id, responsavel_id",
+          "titulo, empresa_nome, etapa_nome, valor_estimado, temperatura, dias_na_etapa, proxima_acao_descricao, proxima_acao_data, responsavel_nome, linha, status, funil_id, responsavel_id, emitente_nome",
         )
         .eq("status", "aberta")
         .order("atualizado_em", { ascending: false })
         .range(from, to);
+      if (emitente) query = query.eq("emitente_id", emitente);
       if (funilId) query = query.eq("funil_id", funilId);
       if (vendedor) query = query.eq("responsavel_id", vendedor);
       if (linha) query = query.eq("linha", linha);
@@ -136,8 +154,10 @@ const funilLista: RegistroExportacao = {
         proxima_acao_data: r.proxima_acao_data,
         responsavel_nome: r.responsavel_nome,
         linha: r.linha,
+        emitente_nome: r.emitente_nome,
       })),
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Funil: funilId ?? "—",
         Vendedor: labelVendedor(vendedor),
         Linha: linha ?? "Todas",
@@ -164,6 +184,7 @@ const empresas: RegistroExportacao = {
   async query(filtros, supabase) {
     const q = pick(filtros, "q");
     const vendedor = pick(filtros, "vendedor");
+    const emitente = emitenteDe(filtros);
 
     const empresasRows = await fetchAll((from, to) => {
       let query = supabase
@@ -179,13 +200,15 @@ const empresas: RegistroExportacao = {
       return query;
     });
 
-    const neg = await fetchAll((from, to) =>
-      supabase
+    const neg = await fetchAll((from, to) => {
+      let query = supabase
         .from("v_negociacoes")
         .select("empresa_id, valor_estimado, ultima_interacao, status")
         .eq("status", "aberta")
-        .range(from, to),
-    );
+        .range(from, to);
+      if (emitente) query = query.eq("emitente_id", emitente);
+      return query;
+    });
 
     type Agg = {
       qtd: number;
@@ -241,6 +264,7 @@ const empresas: RegistroExportacao = {
     return {
       linhas,
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Busca: q ?? "—",
         Vendedor: labelVendedor(vendedor),
       },
@@ -311,9 +335,11 @@ const acoes: RegistroExportacao = {
     { chave: "data", titulo: "Data", tipo: "data" },
     { chave: "situacao", titulo: "Situação", tipo: "texto" },
     { chave: "negociacao_titulo", titulo: "Negociação", tipo: "texto" },
+    COLUNA_EMPRESA_VENDEDORA,
   ],
   async query(filtros, supabase) {
     const vendedor = pick(filtros, "vendedor");
+    const emitente = emitenteDe(filtros);
     const hoje = hojeISO();
 
     const rows = await fetchAll((from, to) => {
@@ -329,7 +355,9 @@ const acoes: RegistroExportacao = {
             status,
             arquivado_em,
             responsavel_id,
-            empresas ( nome )
+            emitente_id,
+            empresas ( nome ),
+            emitentes ( nome )
           )
         `,
         )
@@ -339,6 +367,7 @@ const acoes: RegistroExportacao = {
         .is("negociacoes.arquivado_em", null)
         .order("data", { ascending: true })
         .range(from, to);
+      if (emitente) query = query.eq("negociacoes.emitente_id", emitente);
       if (vendedor) {
         query = query.eq("negociacoes.responsavel_id", vendedor);
       }
@@ -353,10 +382,12 @@ const acoes: RegistroExportacao = {
         | {
             titulo: string;
             empresas: { nome: string } | { nome: string }[] | null;
+            emitentes: { nome: string } | { nome: string }[] | null;
           }
         | {
             titulo: string;
             empresas: { nome: string } | { nome: string }[] | null;
+            emitentes: { nome: string } | { nome: string }[] | null;
           }[]
         | null;
     };
@@ -369,6 +400,8 @@ const acoes: RegistroExportacao = {
       const empresaNome = Array.isArray(emp)
         ? (emp[0]?.nome ?? "—")
         : (emp?.nome ?? "—");
+      const em = neg?.emitentes;
+      const emitenteNome = Array.isArray(em) ? (em[0]?.nome ?? null) : (em?.nome ?? null);
       return {
         descricao: a.descricao,
         empresa_nome: empresaNome,
@@ -376,12 +409,14 @@ const acoes: RegistroExportacao = {
         data: a.data,
         situacao: a.data < hoje ? "Atrasada" : "Hoje",
         negociacao_titulo: neg?.titulo ?? "—",
+        emitente_nome: emitenteNome,
       };
     });
 
     return {
       linhas,
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Vendedor: labelVendedor(vendedor),
         Até: hoje,
       },
@@ -405,6 +440,7 @@ const relatorioPresidenciaTop: RegistroExportacao = {
     const mes = mesFiltro(filtros);
     const { data, error } = await supabase.rpc("relatorio_presidencia", {
       p_mes: mes,
+      p_emitente: emitenteDe(filtros) ?? null,
     });
     if (error) throw new Error(error.message);
 
@@ -424,6 +460,7 @@ const relatorioPresidenciaTop: RegistroExportacao = {
         responsavel_nome: t.responsavel_nome,
       })),
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Mês: mesPorExtenso(mes),
       },
     };
@@ -442,6 +479,7 @@ const previsao: RegistroExportacao = {
   ],
   async query(filtros, supabase) {
     const vendedor = pick(filtros, "vendedor");
+    const emitente = emitenteDe(filtros);
     const mesInicio = mesFiltro(filtros);
 
     const rows = await fetchAll((from, to) => {
@@ -451,6 +489,7 @@ const previsao: RegistroExportacao = {
         .gte("mes", mesInicio)
         .order("mes", { ascending: true })
         .range(from, to);
+      if (emitente) query = query.eq("emitente_id", emitente);
       if (vendedor) query = query.eq("responsavel_id", vendedor);
       return query;
     });
@@ -489,6 +528,7 @@ const previsao: RegistroExportacao = {
     return {
       linhas,
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         "A partir de": mesPorExtenso(mesInicio),
         Vendedor: labelVendedor(vendedor),
       },
@@ -514,6 +554,7 @@ const ranking: RegistroExportacao = {
     const linha = pick(filtros, "linha");
     const origem = pick(filtros, "origem");
     const vendedor = pick(filtros, "vendedor");
+    const emitente = emitenteDe(filtros);
 
     const [{ data: usuarios }, resultado, abertas, interacoes, acoesAtrasadas] =
       await Promise.all([
@@ -530,6 +571,7 @@ const ranking: RegistroExportacao = {
             )
             .eq("mes", mes)
             .range(from, to);
+          if (emitente) query = query.eq("emitente_id", emitente);
           if (vendedor) query = query.eq("responsavel_id", vendedor);
           return query;
         }),
@@ -539,6 +581,7 @@ const ranking: RegistroExportacao = {
             .select("id, responsavel_id, valor_estimado, sem_acao, linha, origem")
             .eq("status", "aberta")
             .range(from, to);
+          if (emitente) query = query.eq("emitente_id", emitente);
           if (vendedor) query = query.eq("responsavel_id", vendedor);
           if (linha) query = query.eq("linha", linha);
           if (origem) query = query.eq("origem", origem);
@@ -662,6 +705,7 @@ const ranking: RegistroExportacao = {
     return {
       linhas,
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Mês: mesPorExtenso(mes),
         Linha: linha ?? "Todas",
         Origem: origem ?? "Todas",
@@ -683,6 +727,7 @@ const perdas: RegistroExportacao = {
     const mes = mesFiltro(filtros);
     const vendedor = pick(filtros, "vendedor");
     const linha = pick(filtros, "linha");
+    const emitente = emitenteDe(filtros);
 
     const rows = await fetchAll((from, to) => {
       let query = supabase
@@ -690,6 +735,7 @@ const perdas: RegistroExportacao = {
         .select("motivo_perda, qtd, valor, responsavel_id, linha, mes")
         .eq("mes", mes)
         .range(from, to);
+      if (emitente) query = query.eq("emitente_id", emitente);
       if (vendedor) query = query.eq("responsavel_id", vendedor);
       if (linha) query = query.eq("linha", linha);
       return query;
@@ -715,6 +761,7 @@ const perdas: RegistroExportacao = {
     return {
       linhas,
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Mês: mesPorExtenso(mes),
         Vendedor: labelVendedor(vendedor),
         Linha: linha ?? "Todas",
@@ -735,9 +782,11 @@ const carteiraParada: RegistroExportacao = {
     { chave: "ultima_interacao", titulo: "Última interação", tipo: "data" },
     { chave: "etapa_nome", titulo: "Etapa", tipo: "texto" },
     { chave: "responsavel_nome", titulo: "Responsável", tipo: "texto" },
+    COLUNA_EMPRESA_VENDEDORA,
   ],
   async query(filtros, supabase) {
     const vendedor = pick(filtros, "vendedor");
+    const emitente = emitenteDe(filtros);
 
     const { data: cfgNeg } = await supabase
       .from("config")
@@ -750,12 +799,13 @@ const carteiraParada: RegistroExportacao = {
       let query = supabase
         .from("v_negociacoes")
         .select(
-          "empresa_nome, titulo, valor_estimado, dias_sem_interacao, ultima_interacao, etapa_nome, responsavel_nome, responsavel_id, status",
+          "empresa_nome, titulo, valor_estimado, dias_sem_interacao, ultima_interacao, etapa_nome, responsavel_nome, responsavel_id, status, emitente_nome",
         )
         .eq("status", "aberta")
         .gte("dias_sem_interacao", diasParada)
         .order("valor_estimado", { ascending: false })
         .range(from, to);
+      if (emitente) query = query.eq("emitente_id", emitente);
       if (vendedor) query = query.eq("responsavel_id", vendedor);
       return query;
     });
@@ -769,11 +819,13 @@ const carteiraParada: RegistroExportacao = {
       ultima_interacao: n.ultima_interacao,
       etapa_nome: n.etapa_nome,
       responsavel_nome: n.responsavel_nome,
+      emitente_nome: n.emitente_nome,
     }));
 
     return {
       linhas,
       filtrosLabel: {
+        Empresa: labelEmpresa(filtros),
         Vendedor: labelVendedor(vendedor),
         "Dias parada": String(diasParada),
       },
@@ -792,16 +844,44 @@ const produtos: RegistroExportacao = {
     { chave: "unidade", titulo: "Unidade", tipo: "texto" },
     { chave: "preco_base", titulo: "Preço base", tipo: "moeda" },
     { chave: "ativo", titulo: "Ativo", tipo: "texto" },
+    COLUNA_EMPRESA_VENDEDORA,
+    { chave: "categoria", titulo: "Categoria", tipo: "texto" },
+    { chave: "link", titulo: "Link no site", tipo: "texto" },
+    { chave: "catalogo", titulo: "Catálogo", tipo: "texto" },
   ],
   async query(filtros, supabase) {
     const q = (pick(filtros, "q") ?? "").toLowerCase();
-    const rows = await fetchAll((from, to) =>
-      supabase
+    const emitente = emitenteDe(filtros);
+    type ProdutoRow = {
+      codigo: string | null;
+      nome: string;
+      descricao: string | null;
+      linha: string | null;
+      unidade: string;
+      preco_base: number;
+      ativo: boolean;
+      link: string | null;
+      catalogo_path: string | null;
+      catalogo_url: string | null;
+      emitentes: { nome: string } | { nome: string }[] | null;
+      categorias_produto: { nome: string } | { nome: string }[] | null;
+    };
+    const rows = await fetchAll<ProdutoRow>((from, to) => {
+      let query = supabase
         .from("produtos")
-        .select("codigo, nome, descricao, linha, unidade, preco_base, ativo")
+        .select(
+          "codigo, nome, descricao, linha, unidade, preco_base, ativo, link, catalogo_path, catalogo_url, emitentes ( nome ), categorias_produto ( nome )",
+        )
         .order("nome", { ascending: true })
-        .range(from, to),
-    );
+        .range(from, to);
+      if (emitente) query = query.eq("emitente_id", emitente);
+      return query as unknown as PromiseLike<{
+        data: ProdutoRow[] | null;
+        error: { message: string } | null;
+      }>;
+    });
+    const nomeDe = (v: { nome: string } | { nome: string }[] | null) =>
+      Array.isArray(v) ? (v[0]?.nome ?? null) : (v?.nome ?? null);
 
     const filtrados = q
       ? rows.filter(
@@ -820,8 +900,16 @@ const produtos: RegistroExportacao = {
         unidade: p.unidade,
         preco_base: Number(p.preco_base ?? 0),
         ativo: p.ativo ? "Sim" : "Não",
+        emitente_nome: nomeDe(p.emitentes),
+        categoria: nomeDe(p.categorias_produto),
+        link: p.link,
+        catalogo:
+          p.catalogo_url ??
+          (p.catalogo_path
+            ? supabase.storage.from("publico").getPublicUrl(p.catalogo_path).data.publicUrl
+            : null),
       })),
-      filtrosLabel: { Busca: q || "—" },
+      filtrosLabel: { Empresa: labelEmpresa(filtros), Busca: q || "—" },
     };
   },
 };
@@ -838,6 +926,8 @@ const orcamentoItens: RegistroExportacao = {
     { chave: "preco_unitario", titulo: "Preço unit.", tipo: "moeda" },
     { chave: "desconto_pct", titulo: "Desconto %", tipo: "percentual" },
     { chave: "total", titulo: "Total", tipo: "moeda" },
+    { chave: "link", titulo: "Link no site", tipo: "texto" },
+    { chave: "catalogo", titulo: "Catálogo", tipo: "texto" },
   ],
   async query(filtros, supabase) {
     const orcamentoId = pick(filtros, "orcamento_id", "id");
@@ -849,7 +939,7 @@ const orcamentoItens: RegistroExportacao = {
       supabase
         .from("orcamento_itens")
         .select(
-          "ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total, produtos(codigo)",
+          "ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total, produtos(codigo, link, catalogo_url, catalogo_path)",
         )
         .eq("orcamento_id", orcamentoId)
         .order("ordem", { ascending: true })
@@ -858,22 +948,24 @@ const orcamentoItens: RegistroExportacao = {
 
     return {
       linhas: rows.map((r) => {
-        const prod = r.produtos as
-          | { codigo: string | null }
-          | { codigo: string | null }[]
-          | null;
-        const codigo = Array.isArray(prod)
-          ? (prod[0]?.codigo ?? null)
-          : (prod?.codigo ?? null);
+        type Prod = { codigo: string | null; link: string | null; catalogo_url: string | null; catalogo_path: string | null };
+        const prodRaw = r.produtos as unknown as Prod | Prod[] | null;
+        const prod = Array.isArray(prodRaw) ? (prodRaw[0] ?? null) : prodRaw;
         return {
           ordem: Number(r.ordem ?? 0),
-          codigo,
+          codigo: prod?.codigo ?? null,
           descricao: r.descricao,
           unidade: r.unidade,
           quantidade: Number(r.quantidade ?? 0),
           preco_unitario: Number(r.preco_unitario ?? 0),
           desconto_pct: Number(r.desconto_pct ?? 0),
           total: Number(r.total ?? 0),
+          link: prod?.link ?? null,
+          catalogo:
+            prod?.catalogo_url ??
+            (prod?.catalogo_path
+              ? supabase.storage.from("publico").getPublicUrl(prod.catalogo_path).data.publicUrl
+              : null),
         };
       }),
       filtrosLabel: { Orçamento: orcamentoId },

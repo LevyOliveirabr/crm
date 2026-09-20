@@ -1,2 +1,2 @@
-codigo;nome;descricao;linha;unidade;preco_base
-LUM-150;Luminária LED 150W;Luminária pública LED 150W, IP66, 5000K, driver dimerizável;Iluminação pública;un;890,00
+empresa_vendedora;codigo;nome;descricao;linha;unidade;preco_base;categoria;link;catalogo_url
+F-Led;LUM-150;Luminária LED 150W;Luminária pública LED 150W, IP66, 5000K, driver dimerizável;Iluminação pública;un;890,00;Luminárias públicas;https://www.exemplo.com.br/produtos/lum-150;https://www.exemplo.com.br/catalogos/luminarias.pdf

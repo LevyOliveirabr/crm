@@ -35,6 +35,8 @@ export type CartaoNegociacaoData = {
   parada: boolean;
   etapaId: string;
   responsavelNome: string | null;
+  /** Empresa vendedora (só quando o escopo é "Todas"). */
+  emitenteNome?: string | null;
 };
 
 export type EtapaOpcao = {
@@ -127,6 +129,7 @@ export function CartaoNegociacao({
           </p>
           <p className="truncate text-xs text-muted-foreground">
             {negociacao.empresaNome}
+            {negociacao.emitenteNome ? ` · ${negociacao.emitenteNome}` : ""}
           </p>
         </Link>
 

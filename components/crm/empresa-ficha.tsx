@@ -73,6 +73,8 @@ export type NegociacaoEmpresaItem = {
   valorFinal: number | null;
   etapaNome: string | null;
   responsavelNome: string | null;
+  /** Empresa vendedora (só quando o escopo é "Todas"). */
+  emitenteNome?: string | null;
 };
 
 export type ContatoEmpresaItem = {
@@ -578,6 +580,7 @@ export function EmpresaFicha({
                     <p className="text-xs text-muted-foreground">
                       {n.etapaNome ?? "—"}
                       {n.responsavelNome ? ` · ${n.responsavelNome}` : ""}
+                      {n.emitenteNome ? ` · ${n.emitenteNome}` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

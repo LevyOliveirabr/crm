@@ -44,6 +44,9 @@ export function NovaNegociacaoForm({
   const [erro, setErro] = useState<string | null>(null);
 
   const funilDefault = dados.funis[0]?.id ?? "";
+  const [emitenteId, setEmitenteId] = useState<string>(
+    dados.emitenteInicial ?? dados.emitentes[0]?.id ?? "",
+  );
 
   const [empresa, setEmpresa] = useState<EmpresaResumo | null>(
     empresaInicial,
@@ -155,6 +158,10 @@ export function NovaNegociacaoForm({
       setErro("Selecione ou crie uma empresa.");
       return;
     }
+    if (!emitenteId) {
+      setErro("Selecione a empresa vendedora.");
+      return;
+    }
     if (!funilId) {
       setErro("Selecione um funil.");
       return;
@@ -168,6 +175,7 @@ export function NovaNegociacaoForm({
     startTransition(async () => {
       const res = await criarNegociacao({
         empresa_id: empresa.id,
+        emitente_id: emitenteId,
         valor_estimado: valor,
         funil_id: funilId,
         linha: linha || null,
@@ -191,6 +199,29 @@ export function NovaNegociacaoForm({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
+      {/* Empresa vendedora (só quando o usuário participa de mais de uma) */}
+      {dados.emitentes.length > 1 ? (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" htmlFor="neg-emitente">
+            Empresa vendedora *
+          </label>
+          <select
+            id="neg-emitente"
+            value={emitenteId}
+            onChange={(e) => setEmitenteId(e.target.value)}
+            disabled={pending}
+            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <option value="">Selecione…</option>
+            {dados.emitentes.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
       {/* Empresa */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium" htmlFor="neg-empresa">

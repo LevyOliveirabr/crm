@@ -10,9 +10,9 @@ alwaysApply: true
 
 # Banco de dados
 - Supabase / Postgres. O schema está em `supabase/migrations/0001_schema.sql` e o seed em `0002_seed.sql`. Esses arquivos foram validados; não altere tabelas, colunas ou views sem pedir. Novas mudanças vão em novas migrations numeradas (`0003_...sql`).
-- Nomes de tabelas e colunas em português, snake_case, exatamente como na SPEC seção 3: `empresas`, `contatos`, `negociacoes`, `interacoes`, `acoes`, `orcamentos`, `orcamento_itens`, `produtos`, `funis`, `etapas`, `listas`, `config`, `emitente`, `usuarios`, `api_keys`, `mcp_log`.
+- Nomes de tabelas e colunas em português, snake_case, exatamente como na SPEC seção 3: `empresas`, `contatos`, `negociacoes`, `interacoes`, `acoes`, `orcamentos`, `orcamento_itens`, `produtos`, `funis`, `etapas`, `listas`, `config`, `emitentes` (empresas vendedoras), `usuario_emitentes` (perfil por empresa), `categorias_produto`, `usuarios`, `api_keys`, `mcp_log`.
 - RLS está habilitado em todas as tabelas. NUNCA use a service role key em código de tela ou Server Action comum. Ela só é permitida em: convite de usuários (Configurações) e resolução de API key no MCP.
-- Listas leem das views (`v_negociacoes`, `v_resultado_mensal`, `v_previsao`, `v_funil`, `v_motivos_perda`) quando existir uma. O relatório da presidência vem da função SQL `relatorio_presidencia(mes)`.
+- Listas leem das views (`v_negociacoes`, `v_resultado_mensal`, `v_previsao`, `v_funil`, `v_motivos_perda`) quando existir uma. O relatório da presidência vem da função SQL `relatorio_presidencia(mes, emitente)`. As views agregadas têm `emitente_id`: some por etapa/mês quando o escopo for "Todas".
 
 # Código
 - Next.js 15 App Router, TypeScript estrito (sem `any`), Tailwind, shadcn/ui.

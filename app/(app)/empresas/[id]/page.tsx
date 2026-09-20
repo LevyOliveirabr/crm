@@ -7,6 +7,7 @@ import {
   type TimelineEmpresaItem,
 } from "@/components/crm/empresa-ficha";
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
+import { aplicarEscopoEmitente, getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,6 +23,7 @@ export default async function EmpresaDetalhePage({
 
   const { id } = await params;
   const supabase = await createClient();
+  const escopo = await getEscopoEmpresa(usuario);
 
   const [
     { data: viewRow },
@@ -93,18 +95,20 @@ export default async function EmpresaDetalhePage({
   };
 
   const podeEditar =
-    usuario.perfil === "diretor" ||
+    usuario.ehDiretorEmAlguma ||
     empresa.responsavelId == null ||
     empresa.responsavelId === usuario.id;
 
   const [{ data: negociacoesRaw }, { data: contatosRaw }] = await Promise.all([
-    supabase
-      .from("v_negociacoes")
-      .select(
-        "id, titulo, status, valor_estimado, valor_final, etapa_nome, responsavel_nome",
-      )
-      .eq("empresa_id", id)
-      .order("status"),
+    aplicarEscopoEmitente(
+      supabase
+        .from("v_negociacoes")
+        .select(
+          "id, titulo, status, valor_estimado, valor_final, etapa_nome, responsavel_nome, emitente_nome, criado_em, fechado_em, ultima_interacao",
+        )
+        .eq("empresa_id", id),
+      escopo,
+    ).order("status"),
     supabase
       .from("contatos")
       .select("id, nome, whatsapp, email, cargo, decisor")
@@ -112,6 +116,31 @@ export default async function EmpresaDetalhePage({
       .is("arquivado_em", null)
       .order("nome"),
   ]);
+
+  // Com empresa vendedora selecionada, recalcula os indicadores a partir das
+  // negociações dela (v_empresas agrega todas as empresas do grupo).
+  if (escopo.emitenteId) {
+    const rows = negociacoesRaw ?? [];
+    const vendidas = rows.filter((n) => n.status === "vendida");
+    empresa.aberto = rows
+      .filter((n) => n.status === "aberta")
+      .reduce((s, n) => s + Number(n.valor_estimado ?? 0), 0);
+    empresa.vendido = vendidas.reduce((s, n) => s + Number(n.valor_final ?? 0), 0);
+    empresa.perdido = rows
+      .filter((n) => n.status === "perdida")
+      .reduce((s, n) => s + Number(n.valor_estimado ?? 0), 0);
+    empresa.qtdNegociacoes = rows.length;
+    empresa.ticketMedio = vendidas.length > 0 ? empresa.vendido / vendidas.length : null;
+    const ciclos = vendidas
+      .filter((n) => n.fechado_em && n.criado_em)
+      .map((n) => (Date.parse(n.fechado_em!) - Date.parse(n.criado_em!)) / 86_400_000);
+    empresa.cicloMedioDias =
+      ciclos.length > 0 ? ciclos.reduce((s, d) => s + d, 0) / ciclos.length : null;
+    empresa.ultimoContato = rows.reduce<string | null>(
+      (max, n) => (n.ultima_interacao && (!max || n.ultima_interacao > max) ? n.ultima_interacao : max),
+      null,
+    );
+  }
 
   const negociacoes: NegociacaoEmpresaItem[] = (negociacoesRaw ?? []).map(
     (n) => ({
@@ -122,6 +151,7 @@ export default async function EmpresaDetalhePage({
       valorFinal: n.valor_final != null ? Number(n.valor_final) : null,
       etapaNome: n.etapa_nome,
       responsavelNome: n.responsavel_nome,
+      emitenteNome: escopo.emitenteId ? null : (n.emitente_nome ?? null),
     }),
   );
 
@@ -202,7 +232,7 @@ export default async function EmpresaDetalhePage({
   const dadosNova =
     dadosNovaRes.ok
       ? dadosNovaRes.dados
-      : { funis: [], linhas: [], origens: [], segmentos: [] };
+      : { emitentes: [], emitenteInicial: null, funis: [], linhas: [], origens: [], segmentos: [] };
 
   return (
     <div className="p-4 lg:p-6">

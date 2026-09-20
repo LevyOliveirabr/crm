@@ -257,6 +257,7 @@ export type Database = {
           categoria_forecast: Database["public"]["Enums"]["categoria_forecast"] | null;
           previsao_data: string | null;
           responsavel_id: string;
+          emitente_id: string;
           status: Database["public"]["Enums"]["status_negociacao"];
           valor_final: number | null;
           motivo_perda: string | null;
@@ -283,6 +284,8 @@ export type Database = {
           categoria_forecast?: Database["public"]["Enums"]["categoria_forecast"] | null;
           previsao_data?: string | null;
           responsavel_id: string;
+          /** Default no banco = emitente padrão até a migration 0009. */
+          emitente_id?: string;
           status?: Database["public"]["Enums"]["status_negociacao"];
           valor_final?: number | null;
           motivo_perda?: string | null;
@@ -309,6 +312,7 @@ export type Database = {
           categoria_forecast?: Database["public"]["Enums"]["categoria_forecast"] | null;
           previsao_data?: string | null;
           responsavel_id?: string;
+          emitente_id?: string;
           status?: Database["public"]["Enums"]["status_negociacao"];
           valor_final?: number | null;
           motivo_perda?: string | null;
@@ -320,6 +324,13 @@ export type Database = {
           atualizado_em?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "negociacoes_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "negociacoes_empresa_id_fkey";
             columns: ["empresa_id"];
@@ -543,6 +554,11 @@ export type Database = {
           unidade: string;
           preco_base: number;
           ativo: boolean;
+          emitente_id: string;
+          categoria_id: string | null;
+          link: string | null;
+          catalogo_path: string | null;
+          catalogo_url: string | null;
           criado_em: string;
           atualizado_em: string;
         };
@@ -555,6 +571,11 @@ export type Database = {
           unidade?: string;
           preco_base?: number;
           ativo?: boolean;
+          emitente_id?: string;
+          categoria_id?: string | null;
+          link?: string | null;
+          catalogo_path?: string | null;
+          catalogo_url?: string | null;
           criado_em?: string;
           atualizado_em?: string;
         };
@@ -567,10 +588,30 @@ export type Database = {
           unidade?: string;
           preco_base?: number;
           ativo?: boolean;
+          emitente_id?: string;
+          categoria_id?: string | null;
+          link?: string | null;
+          catalogo_path?: string | null;
+          catalogo_url?: string | null;
           criado_em?: string;
           atualizado_em?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "produtos_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "produtos_categoria_id_fkey";
+            columns: ["categoria_id"];
+            isOneToOne: false;
+            referencedRelation: "categorias_produto";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       orcamento_itens: {
         Row: {
@@ -671,10 +712,170 @@ export type Database = {
         };
         Relationships: [];
       };
+      emitentes: {
+        Row: {
+          id: string;
+          nome: string;
+          razao_social: string;
+          cnpj: string | null;
+          endereco: string | null;
+          telefone: string | null;
+          email: string | null;
+          site: string | null;
+          logo_path: string | null;
+          validade_padrao_dias: number;
+          condicoes_pagamento_padrao: string | null;
+          prazo_entrega_padrao: string | null;
+          rodape: string | null;
+          orcamento_prefixo: string;
+          orcamento_proximo_numero: number;
+          ordem: number;
+          ativo: boolean;
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          razao_social: string;
+          cnpj?: string | null;
+          endereco?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          site?: string | null;
+          logo_path?: string | null;
+          validade_padrao_dias?: number;
+          condicoes_pagamento_padrao?: string | null;
+          prazo_entrega_padrao?: string | null;
+          rodape?: string | null;
+          orcamento_prefixo?: string;
+          orcamento_proximo_numero?: number;
+          ordem?: number;
+          ativo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id?: string;
+          nome?: string;
+          razao_social?: string;
+          cnpj?: string | null;
+          endereco?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          site?: string | null;
+          logo_path?: string | null;
+          validade_padrao_dias?: number;
+          condicoes_pagamento_padrao?: string | null;
+          prazo_entrega_padrao?: string | null;
+          rodape?: string | null;
+          orcamento_prefixo?: string;
+          orcamento_proximo_numero?: number;
+          ordem?: number;
+          ativo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [];
+      };
+      usuario_emitentes: {
+        Row: {
+          usuario_id: string;
+          emitente_id: string;
+          perfil: Database["public"]["Enums"]["perfil_usuario"];
+          gerente_id: string | null;
+          criado_em: string;
+        };
+        Insert: {
+          usuario_id: string;
+          emitente_id: string;
+          perfil?: Database["public"]["Enums"]["perfil_usuario"];
+          gerente_id?: string | null;
+          criado_em?: string;
+        };
+        Update: {
+          usuario_id?: string;
+          emitente_id?: string;
+          perfil?: Database["public"]["Enums"]["perfil_usuario"];
+          gerente_id?: string | null;
+          criado_em?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usuario_emitentes_usuario_id_fkey";
+            columns: ["usuario_id"];
+            isOneToOne: false;
+            referencedRelation: "usuarios";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usuario_emitentes_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usuario_emitentes_gerente_id_fkey";
+            columns: ["gerente_id"];
+            isOneToOne: false;
+            referencedRelation: "usuarios";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      categorias_produto: {
+        Row: {
+          id: string;
+          emitente_id: string;
+          nome: string;
+          descricao: string | null;
+          catalogo_path: string | null;
+          catalogo_url: string | null;
+          ordem: number;
+          ativo: boolean;
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id?: string;
+          emitente_id: string;
+          nome: string;
+          descricao?: string | null;
+          catalogo_path?: string | null;
+          catalogo_url?: string | null;
+          ordem?: number;
+          ativo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id?: string;
+          emitente_id?: string;
+          nome?: string;
+          descricao?: string | null;
+          catalogo_path?: string | null;
+          catalogo_url?: string | null;
+          ordem?: number;
+          ativo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "categorias_produto_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       metas: {
         Row: {
           id: string;
           responsavel_id: string;
+          emitente_id: string;
           mes: string;
           valor: number;
           criado_em: string;
@@ -683,6 +884,7 @@ export type Database = {
         Insert: {
           id?: string;
           responsavel_id: string;
+          emitente_id?: string;
           mes: string;
           valor?: number;
           criado_em?: string;
@@ -691,12 +893,20 @@ export type Database = {
         Update: {
           id?: string;
           responsavel_id?: string;
+          emitente_id?: string;
           mes?: string;
           valor?: number;
           criado_em?: string;
           atualizado_em?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "metas_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "metas_responsavel_id_fkey";
             columns: ["responsavel_id"];
@@ -858,6 +1068,8 @@ export type Database = {
           empresa_uf: string | null;
           empresa_tipo_segmento: Database["public"]["Enums"]["tipo_segmento"] | null;
           etapa_probabilidade: number | null;
+          emitente_id: string | null;
+          emitente_nome: string | null;
         };
         Relationships: [];
       };
@@ -865,6 +1077,7 @@ export type Database = {
         Row: {
           mes: string | null;
           responsavel_id: string | null;
+          emitente_id: string | null;
           vendido: number | null;
           qtd_vendida: number | null;
           perdido: number | null;
@@ -878,6 +1091,7 @@ export type Database = {
         Row: {
           mes: string | null;
           responsavel_id: string | null;
+          emitente_id: string | null;
           aberto: number | null;
           realista: number | null;
           otimista: number | null;
@@ -892,6 +1106,7 @@ export type Database = {
           etapa_id: string | null;
           etapa: string | null;
           ordem: number | null;
+          emitente_id: string | null;
           qtd: number | null;
           valor: number | null;
         };
@@ -901,6 +1116,7 @@ export type Database = {
         Row: {
           mes: string | null;
           responsavel_id: string | null;
+          emitente_id: string | null;
           linha: string | null;
           motivo_perda: string | null;
           qtd: number | null;
@@ -936,16 +1152,32 @@ export type Database = {
     };
     Functions: {
       relatorio_presidencia: {
-        Args: { p_mes?: string };
+        Args: { p_mes?: string; p_emitente?: string | null };
         Returns: Json;
       };
       eh_diretor: {
         Args: Record<string, never>;
         Returns: boolean;
       };
-      eh_gerente_de: {
-        Args: { p_usuario: string };
+      eh_diretor_de: {
+        Args: { p_emitente: string };
         Returns: boolean;
+      };
+      eh_membro_de: {
+        Args: { p_emitente: string };
+        Returns: boolean;
+      };
+      eh_gerente_de: {
+        Args: { p_usuario: string; p_emitente: string };
+        Returns: boolean;
+      };
+      minhas_empresas: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      proximo_numero_orcamento: {
+        Args: { p_emitente: string };
+        Returns: string;
       };
       f_unaccent: {
         Args: { "": string };

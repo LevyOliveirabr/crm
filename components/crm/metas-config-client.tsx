@@ -50,6 +50,7 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
     setValores((v) => ({ ...v, [k]: valor > 0 ? formatarMoeda(valor) : "" }));
     startTransition(async () => {
       const res = await salvarMeta({
+        emitente_id: dados.emitenteId,
         responsavel_id: id,
         mes: `${dados.ano}-${String(mes).padStart(2, "0")}-01`,
         valor,
@@ -59,13 +60,31 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
   }
 
   function mudarAno(delta: number) {
-    router.push(`/configuracoes/metas?ano=${dados.ano + delta}`);
+    router.push(`/configuracoes/metas?ano=${dados.ano + delta}&empresa=${dados.emitenteId}`);
+  }
+
+  function mudarEmpresa(id: string) {
+    router.push(`/configuracoes/metas?ano=${dados.ano}&empresa=${id}`);
   }
 
   return (
     <Toaster>
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Empresa</span>
+            <select
+              value={dados.emitenteId}
+              onChange={(e) => mudarEmpresa(e.target.value)}
+              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+            >
+              {dados.emitentes.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nome}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="inline-flex items-center gap-1 rounded-lg border border-border p-0.5">
             <Button type="button" size="sm" variant="ghost" onClick={() => mudarAno(-1)} aria-label="Ano anterior">
               ‹
@@ -98,7 +117,7 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
               disabled={pending || mesReplicar >= 12}
               onClick={() =>
                 startTransition(async () => {
-                  const res = await replicarMetaAno({ ano: dados.ano, mesOrigem: mesReplicar });
+                  const res = await replicarMetaAno({ emitenteId: dados.emitenteId, ano: dados.ano, mesOrigem: mesReplicar });
                   if (!res.ok) {
                     toast.add({ title: res.error, type: "error" });
                     return;
@@ -167,7 +186,7 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
               {dados.vendedores.length === 0 ? (
                 <tr>
                   <td colSpan={13} className="px-3 py-4 text-muted-foreground">
-                    Nenhum usuário ativo.
+                    Nenhum usuário vinculado a esta empresa.
                   </td>
                 </tr>
               ) : null}

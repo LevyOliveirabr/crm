@@ -33,6 +33,15 @@ import type { Database } from "@/lib/database.types";
 
 type Client = SupabaseClient<Database>;
 
+/** Chave em `config` do comentário da presidência: global ou por empresa. */
+export function chaveComentarioPresidencia(
+  mes: string,
+  emitenteId: string | null,
+): string {
+  const ym = mes.slice(0, 7);
+  return emitenteId ? `comentario_${emitenteId}_${ym}` : `comentario_${ym}`;
+}
+
 function num(v: unknown): number {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -43,10 +52,19 @@ function aplicarFiltrosNeg<T extends { eq: (c: string, v: string) => T }>(
   filtros: FiltrosRelatorio,
 ): T {
   let q = query;
+  if (filtros.emitenteId) q = q.eq("emitente_id", filtros.emitenteId);
   if (filtros.vendedorId) q = q.eq("responsavel_id", filtros.vendedorId);
   if (filtros.linha) q = q.eq("linha", filtros.linha);
   if (filtros.origem) q = q.eq("origem", filtros.origem);
   return q;
+}
+
+/** Só o recorte por empresa vendedora (views agregadas e metas). */
+function aplicarEmitente<T extends { eq: (c: string, v: string) => T }>(
+  query: T,
+  filtros: FiltrosRelatorio,
+): T {
+  return filtros.emitenteId ? query.eq("emitente_id", filtros.emitenteId) : query;
 }
 
 function parsePresidenciaJson(
@@ -118,7 +136,7 @@ async function carregarPresidencia(
 ): Promise<DadosPresidencia | null> {
   // Função SQL é mensal; usa o primeiro mês do período.
   const mesRef = filtros.periodo.meses[0] ?? inicioMesISO(hojeISO());
-  const chaveComentario = `comentario_${mesRef.slice(0, 7)}`;
+  const chaveComentario = chaveComentarioPresidencia(mesRef, filtros.emitenteId ?? null);
 
   const temFiltroExtra = Boolean(
     filtros.vendedorId || filtros.linha || filtros.origem,
@@ -128,7 +146,10 @@ async function carregarPresidencia(
     supabase.from("config").select("valor").eq("chave", chaveComentario).maybeSingle(),
     temFiltroExtra
       ? Promise.resolve({ data: null, error: null })
-      : supabase.rpc("relatorio_presidencia", { p_mes: mesRef }),
+      : supabase.rpc("relatorio_presidencia", {
+          p_mes: mesRef,
+          p_emitente: filtros.emitenteId ?? null,
+        }),
   ]);
 
   if (!temFiltroExtra && rpcResult.data != null) {
@@ -387,19 +408,34 @@ async function carregarFunilBase(
 ): Promise<Omit<LinhaFunil, "passaram" | "conversao_pct" | "dias_medios">[]> {
   // v_funil não tem linha/origem/vendedor — recalcula quando há filtro.
   if (!filtros.vendedorId && !filtros.linha && !filtros.origem) {
-    const { data } = await supabase
-      .from("v_funil")
-      .select("funil_id, funil, etapa_id, etapa, ordem, qtd, valor")
-      .order("ordem", { ascending: true });
-    return (data ?? []).map((r) => ({
-      funil_id: r.funil_id ?? "",
-      funil: r.funil ?? "",
-      etapa_id: r.etapa_id ?? "",
-      etapa: r.etapa ?? "",
-      ordem: num(r.ordem),
-      qtd: num(r.qtd),
-      valor: num(r.valor),
-    }));
+    const { data } = await aplicarEmitente(
+      supabase
+        .from("v_funil")
+        .select("funil_id, funil, etapa_id, etapa, ordem, qtd, valor")
+        .order("ordem", { ascending: true }),
+      filtros,
+    );
+    // v_funil tem uma linha por etapa × empresa vendedora: soma por etapa.
+    const porEtapa = new Map<
+      string,
+      Omit<LinhaFunil, "passaram" | "conversao_pct" | "dias_medios">
+    >();
+    for (const r of data ?? []) {
+      const key = r.etapa_id ?? "";
+      const cur = porEtapa.get(key) ?? {
+        funil_id: r.funil_id ?? "",
+        funil: r.funil ?? "",
+        etapa_id: key,
+        etapa: r.etapa ?? "",
+        ordem: num(r.ordem),
+        qtd: 0,
+        valor: 0,
+      };
+      cur.qtd += num(r.qtd);
+      cur.valor += num(r.valor);
+      porEtapa.set(key, cur);
+    }
+    return [...porEtapa.values()];
   }
 
   const [{ data: funis }, { data: etapas }, { data: negs }] = await Promise.all([
@@ -486,11 +522,14 @@ async function carregarPrevisao(
 
   // Também agregar via view quando sem filtros extras (validação cruzada).
   if (!filtros.vendedorId && !filtros.linha && !filtros.origem) {
-    const { data: viewRows } = await supabase
-      .from("v_previsao")
-      .select("mes, aberto, realista, otimista, qtd")
-      .gte("mes", inicio)
-      .lt("mes", fim);
+    const { data: viewRows } = await aplicarEmitente(
+      supabase
+        .from("v_previsao")
+        .select("mes, aberto, realista, otimista, qtd")
+        .gte("mes", inicio)
+        .lt("mes", fim),
+      filtros,
+    );
 
     const byMes = new Map<string, LinhaPrevisao>();
     for (const mes of meses) {
@@ -542,19 +581,25 @@ async function carregarRanking(
         .from("usuarios")
         .select("id, nome, ativo")
         .order("nome"),
-      supabase
-        .from("v_resultado_mensal")
-        .select("responsavel_id, vendido, qtd_vendida, qtd_perdida, mes")
-        .in("mes", periodo.meses.length ? periodo.meses : ["1970-01-01"]),
-      supabase
-        .from("v_resultado_mensal")
-        .select("responsavel_id, vendido, qtd_vendida, qtd_perdida, mes")
-        .in(
-          "mes",
-          periodo.anterior.meses.length
-            ? periodo.anterior.meses
-            : ["1970-01-01"],
-        ),
+      aplicarEmitente(
+        supabase
+          .from("v_resultado_mensal")
+          .select("responsavel_id, vendido, qtd_vendida, qtd_perdida, mes")
+          .in("mes", periodo.meses.length ? periodo.meses : ["1970-01-01"]),
+        filtros,
+      ),
+      aplicarEmitente(
+        supabase
+          .from("v_resultado_mensal")
+          .select("responsavel_id, vendido, qtd_vendida, qtd_perdida, mes")
+          .in(
+            "mes",
+            periodo.anterior.meses.length
+              ? periodo.anterior.meses
+              : ["1970-01-01"],
+          ),
+        filtros,
+      ),
       (() => {
         let q = supabase
           .from("v_negociacoes")
@@ -562,6 +607,7 @@ async function carregarRanking(
             "responsavel_id, valor_estimado, sem_acao, acao_atrasada, linha, origem",
           )
           .eq("status", "aberta");
+        q = aplicarEmitente(q, filtros);
         if (filtros.linha) q = q.eq("linha", filtros.linha);
         if (filtros.origem) q = q.eq("origem", filtros.origem);
         return q;
@@ -578,10 +624,13 @@ async function carregarRanking(
         .neq("tipo", "sistema")
         .gte("criado_em", periodo.anterior.inicio)
         .lt("criado_em", periodo.anterior.fimExclusivo),
-      supabase
-        .from("metas")
-        .select("responsavel_id, valor, mes")
-        .in("mes", periodo.meses.length ? periodo.meses : ["1970-01-01"]),
+      aplicarEmitente(
+        supabase
+          .from("metas")
+          .select("responsavel_id, valor, mes")
+          .in("mes", periodo.meses.length ? periodo.meses : ["1970-01-01"]),
+        filtros,
+      ),
     ]);
 
   const metaPor = new Map<string, number>();
@@ -597,6 +646,7 @@ async function carregarRanking(
         .from("negociacoes")
         .select("id")
         .is("arquivado_em", null);
+      q = aplicarEmitente(q, filtros);
       if (filtros.linha) q = q.eq("linha", filtros.linha);
       if (filtros.origem) q = q.eq("origem", filtros.origem);
       return q;
@@ -759,6 +809,8 @@ async function carregarPerdas(
       periodo.anterior.meses.length ? periodo.anterior.meses : ["1970-01-01"],
     );
 
+  atuaisQ = aplicarEmitente(atuaisQ, filtros);
+  antQ = aplicarEmitente(antQ, filtros);
   if (filtros.vendedorId) {
     atuaisQ = atuaisQ.eq("responsavel_id", filtros.vendedorId);
     antQ = antQ.eq("responsavel_id", filtros.vendedorId);
@@ -777,6 +829,7 @@ async function carregarPerdas(
     .gte("fechado_em", periodo.inicio)
     .lt("fechado_em", periodo.fimExclusivo)
     .order("fechado_em", { ascending: false });
+  detalheQ = aplicarEmitente(detalheQ, filtros);
   if (filtros.vendedorId) detalheQ = detalheQ.eq("responsavel_id", filtros.vendedorId);
   if (filtros.linha) detalheQ = detalheQ.eq("linha", filtros.linha);
   if (filtros.origem) detalheQ = detalheQ.eq("origem", filtros.origem);
@@ -886,6 +939,7 @@ async function carregarCarteira(
     .eq("status", "aberta")
     .eq("parada", true)
     .order("valor_estimado", { ascending: false });
+  negQ = aplicarEmitente(negQ, filtros);
   if (filtros.vendedorId) negQ = negQ.eq("responsavel_id", filtros.vendedorId);
   if (filtros.linha) negQ = negQ.eq("linha", filtros.linha);
   if (filtros.origem) negQ = negQ.eq("origem", filtros.origem);
@@ -896,6 +950,7 @@ async function carregarCarteira(
       "empresa_id, empresa_nome, responsavel_nome, responsavel_id, dias_sem_interacao, ultima_interacao, linha, origem",
     )
     .eq("status", "aberta");
+  todasQ = aplicarEmitente(todasQ, filtros);
   if (filtros.vendedorId) todasQ = todasQ.eq("responsavel_id", filtros.vendedorId);
   if (filtros.linha) todasQ = todasQ.eq("linha", filtros.linha);
   if (filtros.origem) todasQ = todasQ.eq("origem", filtros.origem);
@@ -989,6 +1044,7 @@ export async function carregarDadosRelatorios(
 export function textoWhatsAppPresidencia(
   dados: DadosPresidencia,
   ate: string = hojeISO(),
+  empresaNome: string | null = null,
 ): string {
   const mesNome = mesPorExtenso(dados.mes);
   const mesTitulo = mesNome
@@ -1026,7 +1082,7 @@ export function textoWhatsAppPresidencia(
     .join(", ");
 
   return [
-    `*F-Led · Vendas e previsão*`,
+    `*${empresaNome ?? "Todas as empresas"} · Vendas e previsão*`,
     `${tituloMes} · até ${formatarData(ate)}`,
     ``,
     `*Resultado do mês*`,

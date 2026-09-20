@@ -19,6 +19,11 @@ function montarUrl(
 ): string {
   const params = new URLSearchParams();
   params.set("tela", tela);
+  // override de empresa vendedora vindo da URL da tela (o cookie vai junto no fetch)
+  if (typeof window !== "undefined") {
+    const atual = new URLSearchParams(window.location.search).get("emitente");
+    if (atual) params.set("emitente", atual);
+  }
   if (filtros) {
     for (const [k, v] of Object.entries(filtros)) {
       if (v == null) continue;

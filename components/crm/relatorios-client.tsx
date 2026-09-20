@@ -157,6 +157,9 @@ export function RelatoriosClient({
     linha: string | null;
     origem: string | null;
     rotuloPeriodo: string;
+    /** Empresa vendedora selecionada (null = todas). */
+    emitenteId: string | null;
+    emitenteNome: string | null;
   };
   abaInicial: AbaRelatorio;
 }) {
@@ -257,7 +260,7 @@ export function RelatoriosClient({
             <div>
               <h1 className="text-xl font-semibold tracking-tight">Relatórios</h1>
               <p className="text-sm text-muted-foreground">
-                Período: {filtros.rotuloPeriodo}
+                Período: {filtros.rotuloPeriodo} · Empresa: {filtros.emitenteNome ?? "Todas"}
               </p>
             </div>
           </div>
@@ -435,7 +438,7 @@ export function RelatoriosClient({
                     size="sm"
                     variant="outline"
                     onClick={async () => {
-                      const texto = textoWhatsAppPresidencia(p);
+                      const texto = textoWhatsAppPresidencia(p, undefined, filtros.emitenteNome);
                       try {
                         await navigator.clipboard.writeText(texto);
                         toast.add({
@@ -607,6 +610,7 @@ export function RelatoriosClient({
                               const res = await salvarComentarioPresidencia(
                                 p.mes,
                                 comentario,
+                                filtros.emitenteId,
                               );
                               if (res.error) {
                                 toast.add({

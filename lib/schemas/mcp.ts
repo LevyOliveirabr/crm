@@ -28,7 +28,13 @@ export const criarEmpresaArgsSchema = z.object({
     .nullable(),
 });
 
+/** Empresa vendedora (nome ou id). Omitida = todas (leitura) ou a única do usuário (escrita). */
+export const empresaVendedoraArg = z.string().trim().min(1).optional();
+
+export const listarEmpresasVendedorasArgsSchema = z.object({});
+
 export const listarNegociacoesArgsSchema = z.object({
+  empresa_vendedora: empresaVendedoraArg,
   status: z.enum(["aberta", "vendida", "perdida"]).optional(),
   funil: z.string().trim().optional(),
   etapa: z.string().trim().optional(),
@@ -43,6 +49,7 @@ export const obterNegociacaoArgsSchema = z.object({
 
 export const criarNegociacaoArgsSchema = z
   .object({
+    empresa_vendedora: empresaVendedoraArg,
     empresa_id: z.uuid().optional(),
     empresa_nome: z.string().trim().min(1).optional(),
     valor_estimado: z.coerce.number().nonnegative(),
@@ -115,6 +122,7 @@ export const fecharNegociacaoArgsSchema = z.object({
 });
 
 export const relatorioPresidenciaArgsSchema = z.object({
+  empresa_vendedora: empresaVendedoraArg,
   mes: z
     .string()
     .regex(/^\d{4}-\d{2}$/)
@@ -122,10 +130,12 @@ export const relatorioPresidenciaArgsSchema = z.object({
 });
 
 export const previsaoArgsSchema = z.object({
+  empresa_vendedora: empresaVendedoraArg,
   meses: z.coerce.number().int().min(1).max(12).default(3),
 });
 
 export const buscarProdutoArgsSchema = z.object({
+  empresa_vendedora: empresaVendedoraArg,
   texto: z.string().trim().min(1),
 });
 

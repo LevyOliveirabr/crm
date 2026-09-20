@@ -90,6 +90,7 @@ function aplicarFiltros<
   },
 >(query: T, f: FiltrosDashboard): T {
   let q = query;
+  if (f.emitenteId) q = q.eq("emitente_id", f.emitenteId);
   if (f.vendedorId) q = q.eq("responsavel_id", f.vendedorId);
   if (f.etapaId) q = q.eq("etapa_id", f.etapaId);
   if (f.origem) q = q.eq("origem", f.origem);
@@ -318,6 +319,7 @@ export async function carregarDadosDashboard(
     ),
     (() => {
       let q = supabase.from("metas").select("responsavel_id, valor").eq("mes", mesAtual);
+      if (filtros.emitenteId) q = q.eq("emitente_id", filtros.emitenteId);
       if (filtros.vendedorId) q = q.eq("responsavel_id", filtros.vendedorId);
       else if (filtros.equipeIds && filtros.equipeIds.length > 0) q = q.in("responsavel_id", filtros.equipeIds);
       return q;
