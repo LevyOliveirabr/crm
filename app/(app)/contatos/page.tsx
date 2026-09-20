@@ -36,7 +36,7 @@ export default async function ContatosPage() {
         | null;
       if (!emp || emp.arquivado_em) return null;
       const podeEditar =
-        usuario.perfil === "diretor" ||
+        usuario.ehDiretorEmAlguma ||
         emp.responsavel_id == null ||
         emp.responsavel_id === usuario.id;
       return {
@@ -55,7 +55,7 @@ export default async function ContatosPage() {
 
   const empresasEditaveis = (empresasRaw ?? []).filter(
     (e) =>
-      usuario.perfil === "diretor" ||
+      usuario.ehDiretorEmAlguma ||
       e.responsavel_id == null ||
       e.responsavel_id === usuario.id,
   );

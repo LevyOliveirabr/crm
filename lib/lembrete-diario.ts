@@ -16,6 +16,7 @@ export type AcaoLembrete = {
   negociacaoId: string;
   negociacaoTitulo: string;
   empresaNome: string;
+  emitenteNome: string | null;
   valor: number;
   atrasada: boolean;
 };
@@ -26,7 +27,8 @@ export type ResumoLembrete = {
     id: string;
     nome: string;
     email: string;
-    perfil: string;
+    /** Diretor em alguma empresa vendedora (recebe o resumo da equipe). */
+    diretor: boolean;
     atrasadas: AcaoLembrete[];
     deHoje: AcaoLembrete[];
     semAcao: number;
@@ -52,7 +54,7 @@ export async function montarResumoDiario(
 ): Promise<ResumoLembrete> {
   const hoje = hojeISO();
 
-  const [{ data: usuarios }, { data: acoesRaw }, { data: semAcaoRaw }] =
+  const [{ data: usuarios }, { data: acoesRaw }, { data: semAcaoRaw }, { data: diretoresRaw }] =
     await Promise.all([
       supabase
         .from("usuarios")
@@ -63,7 +65,7 @@ export async function montarResumoDiario(
         .from("acoes")
         .select(
           `id, descricao, tipo, data, responsavel_id, negociacao_id,
-           negociacoes!inner ( id, titulo, status, arquivado_em, valor_estimado, responsavel_id, empresas ( nome ) )`,
+           negociacoes!inner ( id, titulo, status, arquivado_em, valor_estimado, responsavel_id, empresas ( nome ), emitentes ( nome ) )`,
         )
         .is("concluida_em", null)
         .lte("data", hoje)
@@ -75,7 +77,9 @@ export async function montarResumoDiario(
         .select("id, responsavel_id")
         .eq("status", "aberta")
         .eq("sem_acao", true),
+      supabase.from("usuario_emitentes").select("usuario_id").eq("perfil", "diretor"),
     ]);
+  const diretores = new Set((diretoresRaw ?? []).map((d) => d.usuario_id));
 
   type Join = {
     id: string;
@@ -90,12 +94,14 @@ export async function montarResumoDiario(
           valor_estimado: number;
           responsavel_id: string;
           empresas: { nome: string } | { nome: string }[] | null;
+          emitentes: { nome: string } | { nome: string }[] | null;
         }
       | {
           titulo: string;
           valor_estimado: number;
           responsavel_id: string;
           empresas: { nome: string } | { nome: string }[] | null;
+          emitentes: { nome: string } | { nome: string }[] | null;
         }[]
       | null;
   };
@@ -105,6 +111,8 @@ export async function montarResumoDiario(
       const neg = Array.isArray(a.negociacoes) ? a.negociacoes[0] : a.negociacoes;
       const emp = neg?.empresas;
       const empresaNome = Array.isArray(emp) ? emp[0]?.nome : emp?.nome;
+      const em = neg?.emitentes;
+      const emitenteNome = (Array.isArray(em) ? em[0]?.nome : em?.nome) ?? null;
       return {
         id: a.id,
         descricao: a.descricao,
@@ -115,6 +123,7 @@ export async function montarResumoDiario(
         negociacaoId: a.negociacao_id,
         negociacaoTitulo: neg?.titulo ?? "Negociação",
         empresaNome: empresaNome ?? "—",
+        emitenteNome,
         valor: Number(neg?.valor_estimado ?? 0),
         atrasada: a.data < hoje,
       };
@@ -133,7 +142,7 @@ export async function montarResumoDiario(
       id: u.id,
       nome: u.nome,
       email: u.email,
-      perfil: u.perfil,
+      diretor: diretores.has(u.id) || u.perfil === "diretor",
       atrasadas: acoes.filter((a) => a.responsavelId === u.id && a.atrasada),
       deHoje: acoes.filter((a) => a.responsavelId === u.id && !a.atrasada),
       semAcao: semAcaoPor.get(u.id) ?? 0,
@@ -144,7 +153,7 @@ export async function montarResumoDiario(
 function linhaAcao(a: AcaoLembrete, appUrl: string): string {
   return `<li style="margin:0 0 8px 0">
     <a href="${appUrl}/negociacoes/${a.negociacaoId}" style="color:#111;font-weight:600;text-decoration:none">${escaparHtml(a.descricao)}</a>
-    <div style="color:#666;font-size:13px">${escaparHtml(a.empresaNome)} · ${escaparHtml(TIPO_LABEL[a.tipo] ?? a.tipo)} · ${formatarData(a.data)} · ${formatarMoeda(a.valor)}</div>
+    <div style="color:#666;font-size:13px">${escaparHtml(a.emitenteNome ? `${a.empresaNome} · ${a.emitenteNome}` : a.empresaNome)} · ${escaparHtml(TIPO_LABEL[a.tipo] ?? a.tipo)} · ${formatarData(a.data)} · ${formatarMoeda(a.valor)}</div>
   </li>`;
 }
 
@@ -207,7 +216,7 @@ export function htmlResumoDiretor(
   resumo: ResumoLembrete,
 ): { subject: string; html: string; text: string } {
   const appUrl = getAppUrl();
-  const vendedores = resumo.usuarios.filter((u) => u.perfil !== "diretor" || u.atrasadas.length + u.deHoje.length > 0);
+  const vendedores = resumo.usuarios.filter((u) => !u.diretor || u.atrasadas.length + u.deHoje.length > 0);
   const totalAtrasadas = resumo.usuarios.reduce((s, u) => s + u.atrasadas.length, 0);
   const totalHoje = resumo.usuarios.reduce((s, u) => s + u.deHoje.length, 0);
 
@@ -243,7 +252,7 @@ export function htmlResumoDiretor(
              <ul style="padding-left:18px;margin:0">${maioresAtrasadas
                .map(
                  (a) => `<li style="margin:0 0 8px 0"><a href="${appUrl}/negociacoes/${a.negociacaoId}" style="color:#111;font-weight:600;text-decoration:none">${escaparHtml(a.negociacaoTitulo)}</a>
-                 <div style="color:#666;font-size:13px">${escaparHtml(a.empresaNome)} · ${formatarMoeda(a.valor)} · ${escaparHtml(a.nome)} · desde ${formatarData(a.data)}</div></li>`,
+                 <div style="color:#666;font-size:13px">${escaparHtml(a.emitenteNome ? `${a.empresaNome} · ${a.emitenteNome}` : a.empresaNome)} · ${formatarMoeda(a.valor)} · ${escaparHtml(a.nome)} · desde ${formatarData(a.data)}</div></li>`,
                )
                .join("")}</ul>`
           : ""
@@ -289,7 +298,7 @@ export async function executarLembreteDiario(supabase: Client): Promise<{
     else erros.push(`${u.email}: ${r.error}`);
   }
 
-  const diretores = resumo.usuarios.filter((u) => u.perfil === "diretor" && u.email);
+  const diretores = resumo.usuarios.filter((u) => u.diretor && u.email);
   if (diretores.length > 0) {
     const msg = htmlResumoDiretor(resumo);
     for (const d of diretores) {

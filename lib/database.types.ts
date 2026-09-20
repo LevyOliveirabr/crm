@@ -325,6 +325,13 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "negociacoes_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "negociacoes_empresa_id_fkey";
             columns: ["empresa_id"];
             isOneToOne: false;
@@ -893,6 +900,13 @@ export type Database = {
           atualizado_em?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "metas_emitente_id_fkey";
+            columns: ["emitente_id"];
+            isOneToOne: false;
+            referencedRelation: "emitentes";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "metas_responsavel_id_fkey";
             columns: ["responsavel_id"];

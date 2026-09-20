@@ -18,6 +18,8 @@ import {
 
 import { logoutAction } from "@/lib/actions/auth";
 import { BuscaGlobal } from "@/components/crm/busca-global";
+import { SeletorEmpresa } from "@/components/crm/seletor-empresa";
+import type { EscopoEmpresa } from "@/lib/auth/escopo-empresa-core";
 import type { UsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,8 +73,8 @@ const NAV_TODOS = NAV_GRUPOS.flatMap((g) => g.itens);
 const NAV_MOBILE_FIXA = NAV_TODOS.slice(0, 3);
 const NAV_MOBILE_MAIS = NAV_TODOS.slice(3);
 
-function filtrarNav(items: NavItem[], perfil: UsuarioAtual["perfil"]) {
-  return items.filter((item) => !item.diretorOnly || perfil === "diretor");
+function filtrarNav(items: NavItem[], ehDiretor: boolean) {
+  return items.filter((item) => !item.diretorOnly || ehDiretor);
 }
 
 function estaAtivo(pathname: string, href: string) {
@@ -145,15 +147,17 @@ function Marca({ compacta = false }: { compacta?: boolean }) {
 
 export function AppShell({
   usuario,
+  escopo,
   children,
 }: {
   usuario: UsuarioAtual;
+  escopo: Pick<EscopoEmpresa, "emitenteId" | "empresas" | "fixo">;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [maisAberto, setMaisAberto] = useState(false);
-  const mobileFixa = filtrarNav(NAV_MOBILE_FIXA, usuario.perfil);
-  const mobileMais = filtrarNav(NAV_MOBILE_MAIS, usuario.perfil);
+  const mobileFixa = filtrarNav(NAV_MOBILE_FIXA, usuario.ehDiretorEmAlguma);
+  const mobileMais = filtrarNav(NAV_MOBILE_MAIS, usuario.ehDiretorEmAlguma);
 
   return (
     <div className="flex min-h-full bg-background">
@@ -162,12 +166,19 @@ export function AppShell({
           <div className="mb-3 px-2">
             <Marca />
           </div>
+          <div className="mb-1 px-1">
+            <SeletorEmpresa
+              empresas={escopo.empresas}
+              valor={escopo.emitenteId}
+              fixo={escopo.fixo}
+            />
+          </div>
           <div className="mb-2 px-1">
             <BuscaGlobal />
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
             {NAV_GRUPOS.map((grupo) => {
-              const itens = filtrarNav(grupo.itens, usuario.perfil);
+              const itens = filtrarNav(grupo.itens, usuario.ehDiretorEmAlguma);
               if (itens.length === 0) return null;
               return (
                 <div key={grupo.titulo} className="mb-2">
@@ -195,7 +206,7 @@ export function AppShell({
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{usuario.nome}</p>
                 <p className="truncate text-xs text-sidebar-foreground/60 capitalize">
-                  {usuario.perfil}
+                  {usuario.perfilMaximo}
                 </p>
               </div>
             </div>
@@ -217,10 +228,13 @@ export function AppShell({
         <header className="flex items-center justify-between bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
           <Marca compacta />
           <div className="flex items-center gap-2">
+            <SeletorEmpresa
+              empresas={escopo.empresas}
+              valor={escopo.emitenteId}
+              fixo={escopo.fixo}
+              compacto
+            />
             <BuscaGlobal compacta />
-            <p className="max-w-[9rem] truncate text-sm text-sidebar-foreground/70">
-              {usuario.nome}
-            </p>
           </div>
         </header>
 

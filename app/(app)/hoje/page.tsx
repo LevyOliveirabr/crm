@@ -7,6 +7,7 @@ import {
   podeVerEquipe,
   resolverFiltroVendedor,
 } from "@/lib/auth/equipe";
+import { aplicarEscopoEmitente, getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import {
   formatarMoeda,
@@ -26,7 +27,8 @@ import {
 } from "@/components/crm/hoje-interativo";
 import { SeletorVendedor } from "@/components/crm/seletor-vendedor";
 
-type SearchParams = Promise<{ vendedor?: string | string[] }>;
+type SearchParams = Promise<{
+  emitente?: string | string[]; vendedor?: string | string[] }>;
 
 function paramUnico(
   valor: string | string[] | undefined,
@@ -51,8 +53,9 @@ export default async function HojePage({
   const inicioMes = inicioMesAtualISO();
   const fimMes = inicioProximoMesISO(hoje);
 
-  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
-  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam);
+  const escopo = await getEscopoEmpresa(usuario, sp);
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
+  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam, escopo);
 
   const [{ data: configRow }, dadosNova] =
     await Promise.all([
@@ -75,6 +78,7 @@ export default async function HojePage({
     .from("v_negociacoes")
     .select("valor_estimado")
     .eq("status", "aberta");
+  abertoQuery = aplicarEscopoEmitente(abertoQuery, escopo);
   if (filtrarVendedor) {
     abertoQuery = abertoQuery.eq("responsavel_id", filtrarVendedor);
   }
@@ -92,6 +96,7 @@ export default async function HojePage({
     .is("arquivado_em", null)
     .gte("fechado_em", `${inicioMes}T00:00:00-03:00`)
     .lt("fechado_em", `${fimMes}T00:00:00-03:00`);
+  vendidoQuery = aplicarEscopoEmitente(vendidoQuery, escopo);
   if (filtrarVendedor) {
     vendidoQuery = vendidoQuery.eq("responsavel_id", filtrarVendedor);
   }
@@ -108,6 +113,7 @@ export default async function HojePage({
     .is("arquivado_em", null)
     .gte("fechado_em", `${inicioMes}T00:00:00-03:00`)
     .lt("fechado_em", `${fimMes}T00:00:00-03:00`);
+  perdidoQuery = aplicarEscopoEmitente(perdidoQuery, escopo);
   if (filtrarVendedor) {
     perdidoQuery = perdidoQuery.eq("responsavel_id", filtrarVendedor);
   }
@@ -142,6 +148,7 @@ export default async function HojePage({
     .is("negociacoes.arquivado_em", null)
     .order("data", { ascending: true });
 
+  acoesQuery = aplicarEscopoEmitente(acoesQuery, escopo, "negociacoes.emitente_id");
   if (filtrarVendedor) {
     acoesQuery = acoesQuery.eq("negociacoes.responsavel_id", filtrarVendedor);
   }
@@ -203,6 +210,7 @@ export default async function HojePage({
     .eq("status", "aberta")
     .eq("sem_acao", true)
     .order("atualizado_em", { ascending: false });
+  semAcaoQuery = aplicarEscopoEmitente(semAcaoQuery, escopo);
   if (filtrarVendedor) {
     semAcaoQuery = semAcaoQuery.eq("responsavel_id", filtrarVendedor);
   }
@@ -290,7 +298,7 @@ export default async function HojePage({
             filtros={{ vendedor: filtrarVendedor }}
           />
         </div>
-        {podeVerEquipe(usuario) ? (
+        {podeVerEquipe(usuario, escopo) ? (
           <Suspense fallback={null}>
             <SeletorVendedor
               vendedores={vendedores}

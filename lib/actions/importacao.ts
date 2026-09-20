@@ -110,7 +110,7 @@ export async function previaImportacao(
   { ok: true; preview: ImportPreview } | { ok: false; error: string }
 > {
   const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor") {
+  if (!usuario || !usuario.ehDiretorEmAlguma) {
     return { ok: false, error: "Apenas o diretor pode importar." };
   }
 
@@ -167,7 +167,7 @@ export async function confirmarImportacao(input: {
   { ok: true; relatorio: ImportRelatorio } | { ok: false; error: string }
 > {
   const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor") {
+  if (!usuario || !usuario.ehDiretorEmAlguma) {
     return { ok: false, error: "Apenas o diretor pode importar." };
   }
 

@@ -55,11 +55,11 @@ export type EmpresaActionResult =
   | { ok: false; error: string };
 
 function podeEditarEmpresa(
-  usuario: { id: string; perfil: string },
+  usuario: { id: string; ehDiretorEmAlguma: boolean },
   responsavelId: string | null,
 ): boolean {
   return (
-    usuario.perfil === "diretor" ||
+    usuario.ehDiretorEmAlguma ||
     responsavelId == null ||
     responsavelId === usuario.id
   );
@@ -218,7 +218,7 @@ export async function atualizarEmpresa(
   }
 
   const podeAlterarResp =
-    usuario.perfil === "diretor" ||
+    usuario.ehDiretorEmAlguma ||
     atual.responsavel_id == null ||
     atual.responsavel_id === usuario.id;
 

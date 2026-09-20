@@ -8,6 +8,10 @@ export type FiltrosRelatorio = {
   isDiretor: boolean;
   /** Gerente: ids da equipe (limita o ranking). null = todos. */
   equipeIds?: string[] | null;
+  /** Empresa vendedora selecionada; null = todas. */
+  emitenteId?: string | null;
+  /** Nome da empresa selecionada (rótulos). */
+  emitenteNome?: string | null;
 };
 
 export type PresidenciaTop = {

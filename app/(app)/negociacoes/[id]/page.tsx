@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { ehDiretorDe } from "@/lib/auth/permissoes";
 import { createClient } from "@/lib/supabase/server";
 import {
   NegociacaoFicha,
@@ -46,6 +47,8 @@ export default async function NegociacaoPage({
       contato_id,
       arquivado_em,
       atualizado_em,
+      emitente_id,
+      emitentes ( id, nome ),
       empresas ( id, nome ),
       usuarios:responsavel_id ( id, nome )
     `,
@@ -79,7 +82,7 @@ export default async function NegociacaoPage({
     { data: orcamentosRaw },
     { data: contatosRaw },
     { data: listas },
-    { data: vendedores },
+    { data: membrosRaw },
   ] = await Promise.all([
     supabase
       .from("etapas")
@@ -116,14 +119,24 @@ export default async function NegociacaoPage({
       .eq("ativo", true)
       .in("tipo", ["linha", "origem", "motivo_perda"])
       .order("ordem"),
-    usuario.perfil === "diretor"
+    ehDiretorDe(usuario, neg.emitente_id)
       ? supabase
-          .from("usuarios")
-          .select("id, nome")
-          .eq("ativo", true)
-          .order("nome")
-      : Promise.resolve({ data: [] as { id: string; nome: string }[] }),
+          .from("usuario_emitentes")
+          .select("usuario_id, usuarios:usuario_id ( id, nome, ativo )")
+          .eq("emitente_id", neg.emitente_id)
+      : Promise.resolve({ data: null }),
   ]);
+
+  type MembroJoin = {
+    usuario_id: string;
+    usuarios: { id: string; nome: string; ativo: boolean } | { id: string; nome: string; ativo: boolean }[] | null;
+  };
+  const vendedores = ((membrosRaw ?? []) as unknown as MembroJoin[])
+    .map((m) => (Array.isArray(m.usuarios) ? m.usuarios[0] : m.usuarios))
+    .filter((u): u is { id: string; nome: string; ativo: boolean } => Boolean(u && u.ativo))
+    .map((u) => ({ id: u.id, nome: u.nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
 
   const acoesList: AcaoFicha[] = (acoes ?? []).map((a) => ({
     id: a.id,
@@ -186,6 +199,8 @@ export default async function NegociacaoPage({
         titulo: neg.titulo,
         empresaId: neg.empresa_id,
         empresaNome: empresa?.nome ?? "Empresa",
+        emitenteId: neg.emitente_id ?? null,
+        emitenteNome: (Array.isArray(neg.emitentes) ? neg.emitentes[0]?.nome : neg.emitentes?.nome) ?? null,
         valorEstimado: Number(neg.valor_estimado),
         temperatura: neg.temperatura,
         responsavelId: neg.responsavel_id,
@@ -218,8 +233,8 @@ export default async function NegociacaoPage({
       linhas={linhas}
       origens={origens}
       motivosPerda={motivosPerda}
-      vendedores={vendedores ?? []}
-      isDiretor={usuario.perfil === "diretor"}
+      vendedores={vendedores}
+      isDiretor={ehDiretorDe(usuario, neg.emitente_id)}
     />
   );
 }

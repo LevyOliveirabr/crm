@@ -15,7 +15,7 @@ export default async function ApiKeysPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
       <div>
         <div className="mb-2 flex flex-wrap gap-3 text-sm">
-          {usuario.perfil === "diretor" ? (
+          {usuario.ehDiretorEmAlguma ? (
             <Link
               href="/configuracoes/usuarios"
               className="text-muted-foreground hover:text-foreground"

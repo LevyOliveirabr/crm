@@ -9,7 +9,7 @@ export default async function ConfiguracoesLayout({
   children: React.ReactNode;
 }) {
   const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor") {
+  if (!usuario || !usuario.ehDiretorEmAlguma) {
     redirect("/hoje");
   }
 

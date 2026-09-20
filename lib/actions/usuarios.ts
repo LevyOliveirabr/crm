@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getAppUrl } from "@/lib/app-url";
-import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { exigirDiretorEmAlguma } from "@/lib/auth/permissoes-server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
@@ -21,19 +21,12 @@ const convidarSchema = z.object({
   perfil: z.enum(["diretor", "gerente", "vendedor"]),
 });
 
-async function exigirDiretor() {
-  const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor" || !usuario.ativo) {
-    return null;
-  }
-  return usuario;
-}
 
 export async function convidarUsuarioAction(
   _prev: UsuarioActionState,
   formData: FormData,
 ): Promise<UsuarioActionState> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) {
     return { error: "Apenas o diretor pode convidar usuários." };
   }
@@ -71,7 +64,7 @@ export async function alternarUsuarioAtivoAction(
   id: string,
   ativo: boolean,
 ): Promise<UsuarioActionState> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) {
     return { error: "Apenas o diretor pode alterar usuários." };
   }
@@ -99,7 +92,7 @@ export async function definirGerenteAction(
   usuarioId: string,
   gerenteId: string | null,
 ): Promise<UsuarioActionState> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { error: "Apenas o diretor pode alterar usuários." };
   if (!z.uuid().safeParse(usuarioId).success) return { error: "Usuário inválido." };
   if (gerenteId != null && !z.uuid().safeParse(gerenteId).success) {
@@ -131,7 +124,7 @@ export async function definirGerenteAction(
 export type UsuarioLista = Database["public"]["Tables"]["usuarios"]["Row"];
 
 export async function listarUsuarios(): Promise<UsuarioLista[]> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return [];
 
   const supabase = await createClient();

@@ -11,6 +11,7 @@ const acao = (over: Partial<Parameters<typeof htmlLembreteVendedor>[0]["atrasada
   negociacaoId: "n1",
   negociacaoTitulo: "Zopone | PPP",
   empresaNome: "Zopone <Engenharia>",
+  emitenteNome: null,
   valor: 758000,
   atrasada: true,
   ...over,
@@ -23,7 +24,7 @@ describe("lembrete diário", () => {
         id: "u1",
         nome: "Levy Oliveira",
         email: "levy@x.com",
-        perfil: "vendedor",
+        diretor: false,
         atrasadas: [acao()],
         deHoje: [acao({ id: "a2", data: "2026-09-19", atrasada: false })],
         semAcao: 2,
@@ -41,8 +42,8 @@ describe("lembrete diário", () => {
     const msg = htmlResumoDiretor({
       hoje: "2026-09-19",
       usuarios: [
-        { id: "u1", nome: "Ana", email: "a@x.com", perfil: "vendedor", atrasadas: [acao()], deHoje: [], semAcao: 0 },
-        { id: "u2", nome: "Bia", email: "b@x.com", perfil: "vendedor", atrasadas: [], deHoje: [], semAcao: 3 },
+        { id: "u1", nome: "Ana", email: "a@x.com", diretor: false, atrasadas: [acao()], deHoje: [], semAcao: 0 },
+        { id: "u2", nome: "Bia", email: "b@x.com", diretor: false, atrasadas: [], deHoje: [], semAcao: 3 },
       ],
     });
     expect(msg.subject).toContain("1 atrasada(s)");

@@ -1,9 +1,10 @@
 import { BotaoExportar } from "@/components/crm/botao-exportar";
 import { EmpresasLista } from "@/components/crm/empresas-lista";
+import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
-type SearchParams = Promise<{ q?: string | string[] }>;
+type SearchParams = Promise<{ q?: string | string[]; emitente?: string | string[] }>;
 
 function paramUnico(valor: string | string[] | undefined): string | undefined {
   if (Array.isArray(valor)) return valor[0];
@@ -22,6 +23,7 @@ export default async function EmpresasPage({
   const q = paramUnico(sp.q)?.trim() ?? "";
 
   const supabase = await createClient();
+  const escopo = await getEscopoEmpresa(usuario, sp);
 
   let query = supabase
     .from("v_empresas")
@@ -44,6 +46,25 @@ export default async function EmpresasPage({
       .order("ordem"),
   ]);
 
+  // Com uma empresa vendedora selecionada, os indicadores vêm só das
+  // negociações dela (v_empresas agrega todas as empresas do grupo).
+  const porEmpresa = new Map<string, { qtdAbertas: number; ultimoContato: string | null }>();
+  if (escopo.emitenteId) {
+    const { data: negs } = await supabase
+      .from("v_negociacoes")
+      .select("empresa_id, status, ultima_interacao")
+      .eq("emitente_id", escopo.emitenteId);
+    for (const n of negs ?? []) {
+      if (!n.empresa_id) continue;
+      const cur = porEmpresa.get(n.empresa_id) ?? { qtdAbertas: 0, ultimoContato: null };
+      if (n.status === "aberta") cur.qtdAbertas += 1;
+      if (n.ultima_interacao && (!cur.ultimoContato || n.ultima_interacao > cur.ultimoContato)) {
+        cur.ultimoContato = n.ultima_interacao;
+      }
+      porEmpresa.set(n.empresa_id, cur);
+    }
+  }
+
   let listaFinal =
     !erroView && rows
       ? rows
@@ -56,9 +77,22 @@ export default async function EmpresasPage({
             cidade: r.cidade,
             segmento: r.segmento,
             responsavelNome: r.responsavel_nome,
-            qtdAbertas: Number(r.qtd_abertas ?? 0),
-            ultimoContato: r.ultimo_contato,
+            qtdAbertas: escopo.emitenteId
+              ? (porEmpresa.get(r.id)?.qtdAbertas ?? 0)
+              : Number(r.qtd_abertas ?? 0),
+            ultimoContato: escopo.emitenteId
+              ? (porEmpresa.get(r.id)?.ultimoContato ?? null)
+              : r.ultimo_contato,
           }))
+          .sort((a, b) => {
+            if (!escopo.emitenteId) return 0;
+            const ad = a.ultimoContato ?? "";
+            const bd = b.ultimoContato ?? "";
+            if (ad === bd) return a.nome.localeCompare(b.nome, "pt-BR");
+            if (!ad) return -1;
+            if (!bd) return 1;
+            return ad < bd ? -1 : 1;
+          })
       : [];
 
   // Fallback se a view ainda não foi aplicada no projeto remoto

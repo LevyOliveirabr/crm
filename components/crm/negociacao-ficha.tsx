@@ -70,6 +70,8 @@ export type NegociacaoFichaData = {
   titulo: string;
   empresaId: string;
   empresaNome: string;
+  emitenteId: string | null;
+  emitenteNome: string | null;
   valorEstimado: number;
   temperatura: number;
   responsavelId: string;
@@ -391,6 +393,9 @@ export function NegociacaoFicha({
             >
               {n.empresaNome}
             </Link>
+            {n.emitenteNome ? (
+              <span className="text-muted-foreground"> · vendido por {n.emitenteNome}</span>
+            ) : null}
           </p>
 
           <div className="flex flex-wrap items-end gap-3">

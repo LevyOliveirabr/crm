@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/crm/app-shell";
+import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 
 export default async function AppLayout({
@@ -16,5 +17,14 @@ export default async function AppLayout({
     redirect("/login?erro=inativo");
   }
 
-  return <AppShell usuario={usuario}>{children}</AppShell>;
+  const escopo = await getEscopoEmpresa(usuario);
+
+  return (
+    <AppShell
+      usuario={usuario}
+      escopo={{ emitenteId: escopo.emitenteId, empresas: escopo.empresas, fixo: escopo.fixo }}
+    >
+      {children}
+    </AppShell>
+  );
 }

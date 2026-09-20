@@ -10,9 +10,11 @@ import {
   podeVerEquipe,
   resolverFiltroVendedor,
 } from "@/lib/auth/equipe";
+import { aplicarEscopoEmitente, getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = Promise<{
+  emitente?: string | string[];
   funil?: string | string[];
   vendedor?: string | string[];
   linha?: string | string[];
@@ -46,8 +48,9 @@ export default async function FunilPage({
   const vista = vistaParam === "lista" ? "lista" : "kanban";
 
   const supabase = await createClient();
-  const vendedores = await listarVendedoresVisiveis(supabase, usuario);
-  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam);
+  const escopo = await getEscopoEmpresa(usuario, sp);
+  const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
+  const filtrarVendedor = resolverFiltroVendedor(usuario, vendedores, vendedorParam, escopo);
 
   const [{ data: funisRaw }, { data: linhasRaw }] =
     await Promise.all([
@@ -87,10 +90,13 @@ export default async function FunilPage({
         .eq("funil_id", funilId)
         .eq("ativo", true)
         .order("ordem", { ascending: true }),
-      supabase
-        .from("v_funil")
-        .select("etapa_id, qtd, valor")
-        .eq("funil_id", funilId),
+      aplicarEscopoEmitente(
+        supabase
+          .from("v_funil")
+          .select("etapa_id, qtd, valor")
+          .eq("funil_id", funilId),
+        escopo,
+      ),
       (() => {
         let query = supabase
           .from("v_negociacoes")
@@ -111,13 +117,15 @@ export default async function FunilPage({
             etapa_nome,
             responsavel_nome,
             responsavel_id,
-            linha
+            linha,
+            emitente_nome
           `,
           )
           .eq("status", "aberta")
           .eq("funil_id", funilId)
           .order("atualizado_em", { ascending: false });
 
+        query = aplicarEscopoEmitente(query, escopo);
         if (filtrarVendedor) {
           query = query.eq("responsavel_id", filtrarVendedor);
         }
@@ -159,6 +167,7 @@ export default async function FunilPage({
       parada: Boolean(n.parada),
       etapaId: n.etapa_id!,
       responsavelNome: n.responsavel_nome,
+      emitenteNome: escopo.emitenteId ? null : (n.emitente_nome ?? null),
     }));
 
   if (qParam) {
@@ -211,7 +220,7 @@ export default async function FunilPage({
         linhas={linhas}
         linhasOpcoes={(linhasRaw ?? []).map((l) => l.valor)}
         vendedores={vendedores}
-        isDiretor={podeVerEquipe(usuario)}
+        isDiretor={podeVerEquipe(usuario, escopo)}
         filtros={{
           vendedor: filtrarVendedor,
           linha: linhaParam ?? null,

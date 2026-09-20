@@ -33,6 +33,8 @@ export type FiltrosDashboard = {
   isDiretor: boolean;
   /** Ids visíveis (gerente: equipe; vendedor: ele mesmo). null = todos. */
   equipeIds?: string[] | null;
+  /** Empresa vendedora selecionada; null = todas. */
+  emitenteId?: string | null;
 };
 
 export type OpcoesDashboard = {

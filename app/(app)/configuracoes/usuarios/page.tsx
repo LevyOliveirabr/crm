@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function UsuariosPage() {
   const atual = await getUsuarioAtual();
-  if (!atual || atual.perfil !== "diretor") {
+  if (!atual || !atual.ehDiretorEmAlguma) {
     redirect("/hoje");
   }
 

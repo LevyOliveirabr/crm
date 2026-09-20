@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { exigirDiretorEmAlguma } from "@/lib/auth/permissoes-server";
 import { createClient } from "@/lib/supabase/server";
 
 export type MetaRow = {
@@ -18,14 +18,9 @@ export type MetasAno = {
   metas: MetaRow[];
 };
 
-async function exigirDiretor() {
-  const usuario = await getUsuarioAtual();
-  if (!usuario || usuario.perfil !== "diretor" || !usuario.ativo) return null;
-  return usuario;
-}
 
 export async function listarMetasAno(ano: number): Promise<MetasAno | null> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return null;
 
   const supabase = await createClient();
@@ -61,7 +56,7 @@ const salvarSchema = z.object({
 export async function salvarMeta(
   input: z.input<typeof salvarSchema>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode definir metas." };
 
   const parsed = salvarSchema.safeParse(input);
@@ -93,7 +88,7 @@ export async function replicarMetaAno(input: {
   ano: number;
   mesOrigem: number;
 }): Promise<{ ok: true; copiadas: number } | { ok: false; error: string }> {
-  const diretor = await exigirDiretor();
+  const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas o diretor pode definir metas." };
 
   const ano = Math.round(Number(input.ano));
