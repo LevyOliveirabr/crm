@@ -34,7 +34,10 @@ import {
   moverEtapa,
   reabrir,
 } from "@/lib/actions/negociacoes";
-import { criarOrcamentoGerado, criarOrcamentoUpload } from "@/lib/actions/orcamentos";
+import {
+  criarOrcamentoGerado,
+  criarOrcamentoUpload,
+} from "@/lib/actions/orcamentos";
 import {
   formatarData,
   formatarDataHora,
@@ -46,6 +49,12 @@ import {
 } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 import { MiniFormProximaAcao } from "@/components/crm/mini-form-proxima-acao";
+import {
+  EstadoVazio,
+  Pagina,
+  PaginaCabecalho,
+  Secao,
+} from "@/components/crm/pagina";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -249,9 +258,7 @@ export function NegociacaoFicha({
   const [contatoNovoOpen, setContatoNovoOpen] = useState(false);
   const [miniOpen, setMiniOpen] = useState(false);
 
-  const [vendaValor, setVendaValor] = useState(
-    String(inicial.valorEstimado),
-  );
+  const [vendaValor, setVendaValor] = useState(String(inicial.valorEstimado));
   const [vendaMes, setVendaMes] = useState(() =>
     inicioMesAtualISO().slice(0, 7),
   );
@@ -363,18 +370,20 @@ export function NegociacaoFicha({
     }));
   }
 
+  const etapaAtualNome = etapas.find((et) => et.id === n.etapaId)?.nome ?? "—";
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:flex-row lg:items-start">
-      <div className="min-w-0 flex-1 space-y-5">
-        {/* Cabeçalho */}
-        <header className="space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+    <Pagina largura="media" className="pb-20">
+      <PaginaCabecalho
+        voltar={{ href: "/funil", label: "Funil" }}
+        titulo={
+          <span className="flex flex-wrap items-center gap-2">
             <Input
               value={tituloLocal}
               onChange={(e) => setTituloLocal(e.target.value)}
               onBlur={onBlurTitulo}
               disabled={pending || !aberta}
-              className="h-auto border-transparent bg-transparent px-0 text-xl font-semibold tracking-tight shadow-none focus-visible:border-input focus-visible:bg-background focus-visible:px-2.5"
+              className="h-auto min-w-[14rem] border-transparent bg-transparent px-0 font-heading text-2xl font-semibold tracking-tight shadow-none focus-visible:border-input focus-visible:bg-card focus-visible:px-2.5 sm:text-3xl"
               aria-label="Título"
             />
             {!aberta ? (
@@ -384,679 +393,703 @@ export function NegociacaoFicha({
                 {n.status === "vendida" ? "Vendida" : "Perdida"}
               </Badge>
             ) : null}
-          </div>
-
-          <p className="text-sm">
+          </span>
+        }
+        descricao={
+          <span className="flex flex-wrap items-center gap-x-1.5">
             <Link
               href={`/empresas/${n.empresaId}`}
-              className="font-medium text-primary underline-offset-4 hover:underline"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
             >
               {n.empresaNome}
             </Link>
             {n.emitenteNome ? (
-              <span className="text-muted-foreground"> · vendido por {n.emitenteNome}</span>
+              <span>· vendido por {n.emitenteNome}</span>
             ) : null}
-          </p>
-
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Valor</span>
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-muted-foreground">R$</span>
-                <Input
-                  value={valorLocal}
-                  onChange={(e) => setValorLocal(e.target.value)}
-                  onBlur={onBlurValor}
-                  disabled={pending || !aberta}
-                  className="h-8 w-36 tabular-nums"
-                  inputMode="decimal"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Temperatura</span>
-              <div className="flex gap-1">
-                {([1, 2, 3] as const).map((t) => (
-                  <Button
-                    key={t}
-                    type="button"
-                    size="xs"
-                    variant={n.temperatura === t ? "default" : "outline"}
-                    disabled={pending || !aberta}
-                    onClick={() =>
-                      salvarCampo("temperatura", t, (p) => ({
-                        ...p,
-                        temperatura: t,
-                      }))
-                    }
-                  >
-                    {TEMP_LABEL[t]}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Responsável</span>
-              {isDiretor && aberta ? (
-                <select
-                  value={n.responsavelId}
-                  disabled={pending}
-                  onChange={(e) =>
-                    salvarCampo("responsavel_id", e.target.value, (p) => ({
-                      ...p,
-                      responsavelId: e.target.value,
-                      responsavelNome:
-                        vendedores.find((v) => v.id === e.target.value)
-                          ?.nome ?? p.responsavelNome,
-                    }))
-                  }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                >
-                  {vendedores.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-sm">{n.responsavelNome}</span>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Linha</span>
-              <select
-                value={n.linha ?? ""}
-                disabled={pending || !aberta}
-                onChange={(e) =>
-                  salvarCampo("linha", e.target.value || null, (p) => ({
-                    ...p,
-                    linha: e.target.value || null,
-                  }))
-                }
-                className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-              >
-                <option value="">—</option>
-                {linhas.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Origem</span>
-              <select
-                value={n.origem ?? ""}
-                disabled={pending || !aberta}
-                onChange={(e) =>
-                  salvarCampo("origem", e.target.value || null, (p) => ({
-                    ...p,
-                    origem: e.target.value || null,
-                  }))
-                }
-                className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-              >
-                <option value="">—</option>
-                {origens.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">
-                Fechamento previsto
-                {!n.previsaoData && n.previsaoMes ? (
-                  <span className="ml-1 opacity-70">
-                    ({mesPorExtenso(n.previsaoMes)})
-                  </span>
-                ) : null}
-              </span>
-              <Input
-                type="date"
-                value={n.previsaoData ?? ""}
-                disabled={pending || !aberta}
-                onChange={(e) => {
-                  const v = e.target.value || null;
-                  salvarCampo("previsao_data", v, (p) => ({
-                    ...p,
-                    previsaoData: v,
-                    previsaoMes: v ? `${v.slice(0, 7)}-01` : p.previsaoMes,
-                  }));
-                }}
-                className="h-8 w-40"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Forecast</span>
-              <select
-                value={n.categoriaForecast ?? ""}
-                disabled={pending || !aberta}
-                onChange={(e) => {
-                  const v = (e.target.value || null) as
-                    | "compromisso"
-                    | "provavel"
-                    | "possivel"
-                    | null;
-                  salvarCampo("categoria_forecast", v, (p) => ({
-                    ...p,
-                    categoriaForecast: v,
-                  }));
-                }}
-                className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-              >
-                <option value="">—</option>
-                <option value="compromisso">Compromisso</option>
-                <option value="provavel">Provável</option>
-                <option value="possivel">Possível</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Faturamento</span>
-              <Input
-                type="date"
-                value={n.dataFaturamento ?? ""}
-                disabled={pending || !aberta}
-                onChange={(e) => {
-                  const v = e.target.value || null;
-                  salvarCampo("data_faturamento", v, (p) => ({
-                    ...p,
-                    dataFaturamento: v,
-                  }));
-                }}
-                className="h-8 w-40"
-              />
-            </div>
-          </div>
-
-          {/* Barra de etapas */}
-          <nav
-            aria-label="Etapas do funil"
-            className="flex gap-1 overflow-x-auto pb-1"
-          >
-            {etapas.map((et, idx) => {
-              const ativa = et.id === n.etapaId;
-              return (
-                <button
-                  key={et.id}
+            <span>· etapa {etapaAtualNome}</span>
+            <span>· {n.responsavelNome}</span>
+          </span>
+        }
+        acoes={
+          <>
+            {aberta ? (
+              <>
+                <Button
                   type="button"
-                  disabled={pending || !aberta}
+                  size="lg"
+                  className="rounded-full px-4 font-semibold"
+                  disabled={pending}
                   onClick={() => {
-                    if (et.id === n.etapaId) return;
-                    run(async () => {
-                      const res = await moverEtapa(n.id, et.id);
-                      if (!res.ok) {
-                        setErro(res.error);
-                        return;
-                      }
-                      setN((p) => ({ ...p, etapaId: et.id }));
-                      if (res.precisaProximaAcao) setMiniOpen(true);
-                    });
+                    setVendaValor(String(n.valorEstimado));
+                    setVendaMes(inicioMesAtualISO().slice(0, 7));
+                    setVendaOpen(true);
                   }}
-                  className={cn(
-                    "shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                    ativa
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
                 >
-                  <span className="mr-1 opacity-60">{idx + 1}.</span>
-                  {et.nome}
-                </button>
-              );
-            })}
-          </nav>
-        </header>
-
-        {/* Venda / Perda / Reabrir */}
-        <div className="flex flex-wrap gap-2">
-          {aberta ? (
-            <>
+                  Marcar venda
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="destructive"
+                  className="rounded-full px-4 font-semibold"
+                  disabled={pending}
+                  onClick={() => {
+                    setPerdaMotivo("");
+                    setPerdaAnotacao("");
+                    setPerdaOpen(true);
+                  }}
+                >
+                  Marcar perda
+                </Button>
+              </>
+            ) : (
               <Button
                 type="button"
                 size="lg"
-                className="flex-1 sm:flex-none"
+                variant="outline"
+                className="rounded-full border-foreground/80 bg-card px-4 font-semibold"
                 disabled={pending}
-                onClick={() => {
-                  setVendaValor(String(n.valorEstimado));
-                  setVendaMes(inicioMesAtualISO().slice(0, 7));
-                  setVendaOpen(true);
-                }}
+                onClick={() =>
+                  run(async () => {
+                    const res = await reabrir(n.id);
+                    if (!res.ok) setErro(res.error);
+                    else
+                      setN((p) => ({
+                        ...p,
+                        status: "aberta",
+                        fechadoEm: null,
+                      }));
+                  })
+                }
               >
-                Marcar venda
+                Reabrir
               </Button>
-              <Button
-                type="button"
-                size="lg"
-                variant="destructive"
-                className="flex-1 sm:flex-none"
-                disabled={pending}
-                onClick={() => {
-                  setPerdaMotivo("");
-                  setPerdaAnotacao("");
-                  setPerdaOpen(true);
-                }}
-              >
-                Marcar perda
-              </Button>
-            </>
-          ) : (
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  const res = await reabrir(n.id);
-                  if (!res.ok) setErro(res.error);
-                  else setN((p) => ({ ...p, status: "aberta", fechadoEm: null }));
-                })
-              }
-            >
-              Reabrir
-            </Button>
-          )}
-          <Button
-            type="button"
-            size="lg"
-            variant="ghost"
-            disabled={pending}
-            onClick={() =>
-              run(async () => {
-                const res = await arquivar(n.id);
-                if (!res.ok) setErro(res.error);
-                else router.push("/funil");
-              })
-            }
-          >
-            <Archive className="size-4" />
-            Arquivar
-          </Button>
-          {isDiretor ? (
+            )}
             <Button
               type="button"
               size="lg"
               variant="ghost"
-              className="text-destructive hover:text-destructive"
               disabled={pending}
-              onClick={() => setExcluirOpen(true)}
+              onClick={() =>
+                run(async () => {
+                  const res = await arquivar(n.id);
+                  if (!res.ok) setErro(res.error);
+                  else router.push("/funil");
+                })
+              }
             >
-              <Trash2 className="size-4" />
-              Excluir
+              <Archive className="size-4" />
+              Arquivar
             </Button>
-          ) : null}
-        </div>
-
-        {!aberta && n.status === "perdida" && n.motivoPerda ? (
-          <p className="text-sm text-muted-foreground">
-            Motivo: {n.motivoPerda}
-            {n.anotacaoFechamento ? ` — ${n.anotacaoFechamento}` : ""}
-          </p>
-        ) : null}
-        {!aberta && n.status === "vendida" ? (
-          <p className="text-sm text-muted-foreground">
-            Valor final {formatarMoeda(n.valorFinal)}
-            {n.fechadoEm ? ` · ${formatarDataHora(n.fechadoEm)}` : ""}
-            {n.previsaoMes
-              ? ` · ${mesPorExtenso(n.previsaoMes)}`
-              : ""}
-          </p>
-        ) : null}
-
-        {/* Próxima ação */}
-        <section className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Próxima ação</h2>
-            {aberta ? (
+            {isDiretor ? (
               <Button
                 type="button"
-                size="xs"
-                variant="outline"
+                size="lg"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
                 disabled={pending}
-                onClick={() => setNovaAcaoOpen(true)}
+                onClick={() => setExcluirOpen(true)}
               >
-                <Plus className="size-3.5" />
-                Ação
+                <Trash2 className="size-4" />
+                Excluir
               </Button>
             ) : null}
-          </div>
-          {proximaAcao ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{proximaAcao.descricao}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatarData(proximaAcao.data)}
-                {proximaAcao.data < hojeISO() ? (
-                  <span className="ml-1.5 text-destructive">atrasada</span>
+          </>
+        }
+      />
+
+      {/* Etapas do funil */}
+      <Secao titulo="Etapa" meta="clique para mover">
+        <nav
+          aria-label="Etapas do funil"
+          className="flex gap-1 overflow-x-auto pb-1"
+        >
+          {etapas.map((et, idx) => {
+            const ativa = et.id === n.etapaId;
+            return (
+              <button
+                key={et.id}
+                type="button"
+                disabled={pending || !aberta}
+                onClick={() => {
+                  if (et.id === n.etapaId) return;
+                  run(async () => {
+                    const res = await moverEtapa(n.id, et.id);
+                    if (!res.ok) {
+                      setErro(res.error);
+                      return;
+                    }
+                    setN((p) => ({ ...p, etapaId: et.id }));
+                    if (res.precisaProximaAcao) setMiniOpen(true);
+                  });
+                }}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  ativa
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <span className="mr-1 opacity-60">{idx + 1}.</span>
+                {et.nome}
+              </button>
+            );
+          })}
+        </nav>
+      </Secao>
+
+      {!aberta && n.status === "perdida" && n.motivoPerda ? (
+        <p className="text-sm text-muted-foreground">
+          Motivo: {n.motivoPerda}
+          {n.anotacaoFechamento ? ` — ${n.anotacaoFechamento}` : ""}
+        </p>
+      ) : null}
+      {!aberta && n.status === "vendida" ? (
+        <p className="text-sm text-muted-foreground">
+          Valor final {formatarMoeda(n.valorFinal)}
+          {n.fechadoEm ? ` · ${formatarDataHora(n.fechadoEm)}` : ""}
+          {n.previsaoMes ? ` · ${mesPorExtenso(n.previsaoMes)}` : ""}
+        </p>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Próxima ação */}
+          <Secao
+            titulo="Próxima ação"
+            destaque={Boolean(proximaAcao && proximaAcao.data < hojeISO())}
+            acoes={
+              aberta ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => setNovaAcaoOpen(true)}
+                >
+                  <Plus className="size-3.5" />
+                  Nova ação
+                </Button>
+              ) : undefined
+            }
+          >
+            {proximaAcao ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{proximaAcao.descricao}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatarData(proximaAcao.data)}
+                  {proximaAcao.data < hojeISO() ? (
+                    <span className="ml-1.5 text-destructive">atrasada</span>
+                  ) : null}
+                </p>
+                {aberta ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() =>
+                        run(async () => {
+                          const res = await concluirAcao(proximaAcao.id);
+                          if (!res.ok) {
+                            setErro(res.error);
+                            return;
+                          }
+                          if (res.precisaProximaAcao) setMiniOpen(true);
+                        })
+                      }
+                    >
+                      <Check className="size-3.5" />
+                      Concluir
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={() =>
+                        run(async () => {
+                          const res = await adiarAcao(proximaAcao.id, 1);
+                          if (!res.ok) setErro(res.error);
+                        })
+                      }
+                    >
+                      Adiar
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending}
+                      onClick={() => {
+                        setAcaoEdit({
+                          descricao: proximaAcao.descricao,
+                          data: proximaAcao.data,
+                        });
+                        setEditarAcaoOpen(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  </div>
                 ) : null}
-              </p>
-              {aberta ? (
-                <div className="flex flex-wrap gap-1.5">
+              </div>
+            ) : (
+              <EstadoVazio
+                texto="Nenhuma ação pendente. Toda negociação aberta deveria ter um próximo passo."
+                compacto
+              />
+            )}
+          </Secao>
+
+          {/* Registro rápido */}
+          {aberta ? (
+            <Secao
+              titulo="Registrar interação"
+              meta="um toque para gravar na linha do tempo"
+            >
+              <div className="flex flex-wrap gap-1.5">
+                {INTERACAO_BTN.map(({ tipo, label, icon: Icon }) => (
                   <Button
+                    key={tipo}
                     type="button"
                     size="sm"
+                    variant={rapidoTipo === tipo ? "default" : "outline"}
+                    disabled={pending}
+                    onClick={() =>
+                      setRapidoTipo((t) => (t === tipo ? null : tipo))
+                    }
+                  >
+                    <Icon className="size-3.5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              {rapidoTipo ? (
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <Textarea
+                    value={rapidoTexto}
+                    onChange={(e) => setRapidoTexto(e.target.value)}
+                    placeholder="Texto opcional…"
+                    rows={2}
+                    className="flex-1"
+                    disabled={pending}
+                  />
+                  <Button
+                    type="button"
                     disabled={pending}
                     onClick={() =>
                       run(async () => {
-                        const res = await concluirAcao(proximaAcao.id);
+                        const res = await registrarInteracao(
+                          n.id,
+                          rapidoTipo,
+                          rapidoTexto.trim() || null,
+                        );
                         if (!res.ok) {
                           setErro(res.error);
                           return;
                         }
-                        if (res.precisaProximaAcao) setMiniOpen(true);
+                        setRapidoTipo(null);
+                        setRapidoTexto("");
                       })
                     }
                   >
-                    <Check className="size-3.5" />
-                    Concluir
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() =>
-                      run(async () => {
-                        const res = await adiarAcao(proximaAcao.id, 1);
-                        if (!res.ok) setErro(res.error);
-                      })
-                    }
-                  >
-                    Adiar
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => {
-                      setAcaoEdit({
-                        descricao: proximaAcao.descricao,
-                        data: proximaAcao.data,
-                      });
-                      setEditarAcaoOpen(true);
-                    }}
-                  >
-                    Editar
+                    Salvar
                   </Button>
                 </div>
               ) : null}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma ação pendente.
-            </p>
-          )}
-        </section>
-
-        {/* Registro rápido */}
-        {aberta ? (
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold">Registrar contato</h2>
-            <div className="flex flex-wrap gap-1.5">
-              {INTERACAO_BTN.map(({ tipo, label, icon: Icon }) => (
-                <Button
-                  key={tipo}
-                  type="button"
-                  size="sm"
-                  variant={rapidoTipo === tipo ? "default" : "outline"}
-                  disabled={pending}
-                  onClick={() =>
-                    setRapidoTipo((t) => (t === tipo ? null : tipo))
-                  }
-                >
-                  <Icon className="size-3.5" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-            {rapidoTipo ? (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <Textarea
-                  value={rapidoTexto}
-                  onChange={(e) => setRapidoTexto(e.target.value)}
-                  placeholder="Texto opcional…"
-                  rows={2}
-                  className="flex-1"
-                  disabled={pending}
-                />
-                <Button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    run(async () => {
-                      const res = await registrarInteracao(
-                        n.id,
-                        rapidoTipo,
-                        rapidoTexto.trim() || null,
-                      );
-                      if (!res.ok) {
-                        setErro(res.error);
-                        return;
-                      }
-                      setRapidoTipo(null);
-                      setRapidoTexto("");
-                    })
-                  }
-                >
-                  Salvar
-                </Button>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {/* Timeline */}
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Timeline</h2>
-          {timeline.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nada registrado ainda.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {timeline.map((item) => {
-                const Icon = iconeTimeline(item);
-                return (
-                  <li
-                    key={`${item.kind}-${item.id}`}
-                    className="flex gap-3 px-3 py-2.5"
-                  >
-                    <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      {item.kind === "interacao" ? (
-                        <>
-                          <p className="text-sm font-medium capitalize">
-                            {item.tipo}
-                            {item.usuarioNome
-                              ? ` · ${item.usuarioNome}`
-                              : ""}
-                          </p>
-                          {item.texto ? (
-                            <p className="text-sm text-muted-foreground">
-                              {item.texto}
-                            </p>
-                          ) : null}
-                        </>
-                      ) : null}
-                      {item.kind === "acao" ? (
-                        <p className="text-sm">
-                          <span className="font-medium">Ação concluída:</span>{" "}
-                          {item.descricao}
-                          <span className="text-muted-foreground">
-                            {" "}
-                            ({formatarData(item.data)})
-                          </span>
-                        </p>
-                      ) : null}
-                      {item.kind === "orcamento" ? (
-                        <p className="text-sm">
-                          <span className="font-medium">
-                            Orçamento
-                            {item.numero ? ` ${item.numero}` : ""}
-                          </span>
-                          {" · "}
-                          {formatarMoeda(item.valor)}
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · {item.situacao}
-                          </span>
-                        </p>
-                      ) : null}
-                      <p className="text-[11px] text-muted-foreground">
-                        {formatarDataHora(item.em)}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {erro ? (
-          <p className="text-sm text-destructive" role="alert">
-            {erro}
-          </p>
-        ) : null}
-      </div>
-
-      {/* Lateral */}
-      <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-4 lg:w-72">
-        <section className="rounded-lg border border-border p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Contato</h2>
-            {aberta ? (
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                disabled={pending}
-                onClick={() => setContatoNovoOpen(true)}
-              >
-                <Plus className="size-3.5" />
-                Contato
-              </Button>
-            ) : null}
-          </div>
-          {contato ? (
-            <div className="space-y-1.5">
-              <p className="text-sm font-medium">{contato.nome}</p>
-              {contato.cargo ? (
-                <p className="text-xs text-muted-foreground">{contato.cargo}</p>
-              ) : null}
-              {contato.whatsapp ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  title="Abre a conversa e registra a interação na timeline"
-                  onClick={() => {
-                    const url = `https://wa.me/${contato.whatsapp}`;
-                    const janela = window.open(url, "_blank", "noopener,noreferrer");
-                    if (!janela) window.location.href = url;
-                    if (!aberta) return;
-                    run(async () => {
-                      const res = await registrarInteracao(
-                        n.id,
-                        "whatsapp",
-                        `Conversa pelo WhatsApp com ${contato.nome}`,
-                      );
-                      if (!res.ok) setErro(res.error);
-                    });
-                  }}
-                  className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
-                >
-                  <MessageCircle className="size-3.5" />
-                  WhatsApp
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Sem contato.</p>
-          )}
-          {aberta && contatos.length > 0 ? (
-            <select
-              className="mt-2 h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-              value={n.contatoId ?? ""}
-              disabled={pending}
-              onChange={(e) =>
-                salvarCampo("contato_id", e.target.value || null, (p) => ({
-                  ...p,
-                  contatoId: e.target.value || null,
-                }))
-              }
-            >
-              <option value="">— Selecionar —</option>
-              {contatos.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+            </Secao>
           ) : null}
-        </section>
 
-        <section className="rounded-lg border border-border p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Orçamentos</h2>
-            {aberta ? (
-              <Button
-                type="button"
-                size="xs"
-                variant="outline"
-                disabled={pending}
-                onClick={() => {
-                  setOrcValor(String(n.valorEstimado));
-                  setOrcEnvio(hojeISO());
-                  setOrcValidade("");
-                  setOrcArquivo(null);
-                  setOrcAtualizarValor(true);
-                  setOrcOpen(true);
-                }}
-              >
-                <Plus className="size-3.5" />
-                Orçamento
-              </Button>
-            ) : null}
-          </div>
-          {orcamentos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum orçamento.</p>
-          ) : (
-            <ul className="space-y-2">
-              {orcamentos.map((o) => (
-                <li key={o.id} className="text-sm">
-                  <Link
-                    href={`/orcamentos/${o.id}`}
-                    className="font-medium hover:underline"
+          {/* Timeline */}
+          <Secao titulo="Linha do tempo" meta={`${timeline.length} registros`}>
+            {timeline.length === 0 ? (
+              <EstadoVazio texto="Nada registrado ainda." compacto />
+            ) : (
+              <ul className="divide-y divide-border">
+                {timeline.map((item) => {
+                  const Icon = iconeTimeline(item);
+                  return (
+                    <li
+                      key={`${item.kind}-${item.id}`}
+                      className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        {item.kind === "interacao" ? (
+                          <>
+                            <p className="text-sm font-medium capitalize">
+                              {item.tipo}
+                              {item.usuarioNome ? ` · ${item.usuarioNome}` : ""}
+                            </p>
+                            {item.texto ? (
+                              <p className="text-sm text-muted-foreground">
+                                {item.texto}
+                              </p>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {item.kind === "acao" ? (
+                          <p className="text-sm">
+                            <span className="font-medium">Ação concluída:</span>{" "}
+                            {item.descricao}
+                            <span className="text-muted-foreground">
+                              {" "}
+                              ({formatarData(item.data)})
+                            </span>
+                          </p>
+                        ) : null}
+                        {item.kind === "orcamento" ? (
+                          <p className="text-sm">
+                            <span className="font-medium">
+                              Orçamento
+                              {item.numero ? ` ${item.numero}` : ""}
+                            </span>
+                            {" · "}
+                            {formatarMoeda(item.valor)}
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {item.situacao}
+                            </span>
+                          </p>
+                        ) : null}
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatarDataHora(item.em)}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Secao>
+
+          {erro ? (
+            <p className="text-sm text-destructive" role="alert">
+              {erro}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Lateral */}
+        <aside className="flex w-full flex-col gap-4 lg:sticky lg:top-4">
+          <Secao titulo="Dados">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Valor</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground">R$</span>
+                  <Input
+                    value={valorLocal}
+                    onChange={(e) => setValorLocal(e.target.value)}
+                    onBlur={onBlurValor}
+                    disabled={pending || !aberta}
+                    className="h-8 w-36 tabular-nums"
+                    inputMode="decimal"
+                  />
+                </div>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Temperatura</span>
+                <div className="flex gap-1">
+                  {([1, 2, 3] as const).map((t) => (
+                    <Button
+                      key={t}
+                      type="button"
+                      size="xs"
+                      variant={n.temperatura === t ? "default" : "outline"}
+                      disabled={pending || !aberta}
+                      onClick={() =>
+                        salvarCampo("temperatura", t, (p) => ({
+                          ...p,
+                          temperatura: t,
+                        }))
+                      }
+                    >
+                      {TEMP_LABEL[t]}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Responsável</span>
+                {isDiretor && aberta ? (
+                  <select
+                    value={n.responsavelId}
+                    disabled={pending}
+                    onChange={(e) =>
+                      salvarCampo("responsavel_id", e.target.value, (p) => ({
+                        ...p,
+                        responsavelId: e.target.value,
+                        responsavelNome:
+                          vendedores.find((v) => v.id === e.target.value)
+                            ?.nome ?? p.responsavelNome,
+                      }))
+                    }
+                    className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
                   >
-                    {o.numero ? `Orçamento ${o.numero}` : "Orçamento"} ·{" "}
-                    {formatarMoeda(o.valor)}
-                  </Link>
+                    {vendedores.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.nome}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-sm">{n.responsavelNome}</span>
+                )}
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Linha</span>
+                <select
+                  value={n.linha ?? ""}
+                  disabled={pending || !aberta}
+                  onChange={(e) =>
+                    salvarCampo("linha", e.target.value || null, (p) => ({
+                      ...p,
+                      linha: e.target.value || null,
+                    }))
+                  }
+                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                >
+                  <option value="">—</option>
+                  {linhas.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Origem</span>
+                <select
+                  value={n.origem ?? ""}
+                  disabled={pending || !aberta}
+                  onChange={(e) =>
+                    salvarCampo("origem", e.target.value || null, (p) => ({
+                      ...p,
+                      origem: e.target.value || null,
+                    }))
+                  }
+                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                >
+                  <option value="">—</option>
+                  {origens.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">
+                  Fechamento previsto
+                  {!n.previsaoData && n.previsaoMes ? (
+                    <span className="ml-1 opacity-70">
+                      ({mesPorExtenso(n.previsaoMes)})
+                    </span>
+                  ) : null}
+                </span>
+                <Input
+                  type="date"
+                  value={n.previsaoData ?? ""}
+                  disabled={pending || !aberta}
+                  onChange={(e) => {
+                    const v = e.target.value || null;
+                    salvarCampo("previsao_data", v, (p) => ({
+                      ...p,
+                      previsaoData: v,
+                      previsaoMes: v ? `${v.slice(0, 7)}-01` : p.previsaoMes,
+                    }));
+                  }}
+                  className="h-8 w-40"
+                />
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Forecast</span>
+                <select
+                  value={n.categoriaForecast ?? ""}
+                  disabled={pending || !aberta}
+                  onChange={(e) => {
+                    const v = (e.target.value || null) as
+                      | "compromisso"
+                      | "provavel"
+                      | "possivel"
+                      | null;
+                    salvarCampo("categoria_forecast", v, (p) => ({
+                      ...p,
+                      categoriaForecast: v,
+                    }));
+                  }}
+                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                >
+                  <option value="">—</option>
+                  <option value="compromisso">Compromisso</option>
+                  <option value="provavel">Provável</option>
+                  <option value="possivel">Possível</option>
+                </select>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Faturamento</span>
+                <Input
+                  type="date"
+                  value={n.dataFaturamento ?? ""}
+                  disabled={pending || !aberta}
+                  onChange={(e) => {
+                    const v = e.target.value || null;
+                    salvarCampo("data_faturamento", v, (p) => ({
+                      ...p,
+                      dataFaturamento: v,
+                    }));
+                  }}
+                  className="h-8 w-40"
+                />
+              </div>
+            </div>
+          </Secao>
+
+          <Secao
+            titulo="Contato"
+            acoes={
+              aberta ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => setContatoNovoOpen(true)}
+                >
+                  <Plus className="size-3.5" />
+                  Contato
+                </Button>
+              ) : undefined
+            }
+          >
+            {contato ? (
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">{contato.nome}</p>
+                {contato.cargo ? (
                   <p className="text-xs text-muted-foreground">
-                    {formatarData(o.enviadoEm)} · {o.situacao}
-                    {o.validade
-                      ? ` · val. ${formatarData(o.validade)}`
-                      : ""}
-                    {o.aceitoEm ? (
-                      <span className="ml-1 font-semibold text-success">
-                        · aceito pelo cliente
-                      </span>
-                    ) : null}
+                    {contato.cargo}
                   </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </aside>
+                ) : null}
+                {contato.whatsapp ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    title="Abre a conversa e registra a interação na timeline"
+                    onClick={() => {
+                      const url = `https://wa.me/${contato.whatsapp}`;
+                      const janela = window.open(
+                        url,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                      if (!janela) window.location.href = url;
+                      if (!aberta) return;
+                      run(async () => {
+                        const res = await registrarInteracao(
+                          n.id,
+                          "whatsapp",
+                          `Conversa pelo WhatsApp com ${contato.nome}`,
+                        );
+                        if (!res.ok) setErro(res.error);
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
+                  >
+                    <MessageCircle className="size-3.5" />
+                    WhatsApp
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Sem contato vinculado.
+              </p>
+            )}
+            {aberta && contatos.length > 0 ? (
+              <select
+                className="mt-2 h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                value={n.contatoId ?? ""}
+                disabled={pending}
+                onChange={(e) =>
+                  salvarCampo("contato_id", e.target.value || null, (p) => ({
+                    ...p,
+                    contatoId: e.target.value || null,
+                  }))
+                }
+              >
+                <option value="">— Selecionar —</option>
+                {contatos.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </Secao>
+
+          <Secao
+            titulo="Orçamentos"
+            meta={orcamentos.length > 0 ? `${orcamentos.length}` : undefined}
+            acoes={
+              aberta ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => {
+                    setOrcValor(String(n.valorEstimado));
+                    setOrcEnvio(hojeISO());
+                    setOrcValidade("");
+                    setOrcArquivo(null);
+                    setOrcAtualizarValor(true);
+                    setOrcOpen(true);
+                  }}
+                >
+                  <Plus className="size-3.5" />
+                  Orçamento
+                </Button>
+              ) : undefined
+            }
+          >
+            {orcamentos.length === 0 ? (
+              <EstadoVazio texto="Nenhum orçamento." compacto />
+            ) : (
+              <ul className="space-y-2">
+                {orcamentos.map((o) => (
+                  <li key={o.id} className="text-sm">
+                    <Link
+                      href={`/orcamentos/${o.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {o.numero ? `Orçamento ${o.numero}` : "Orçamento"} ·{" "}
+                      {formatarMoeda(o.valor)}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {formatarData(o.enviadoEm)} · {o.situacao}
+                      {o.validade ? ` · val. ${formatarData(o.validade)}` : ""}
+                      {o.aceitoEm ? (
+                        <span className="ml-1 font-semibold text-success">
+                          · aceito pelo cliente
+                        </span>
+                      ) : null}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Secao>
+        </aside>
+      </div>
 
       {/* Dialogs */}
       <Dialog open={vendaOpen} onOpenChange={setVendaOpen}>
@@ -1096,11 +1129,7 @@ export function NegociacaoFicha({
                     setErro("Valor final inválido.");
                     return;
                   }
-                  const res = await marcarVenda(
-                    n.id,
-                    v,
-                    `${vendaMes}-01`,
-                  );
+                  const res = await marcarVenda(n.id, v, `${vendaMes}-01`);
                   if (!res.ok) {
                     setErro(res.error);
                     return;
@@ -1125,9 +1154,7 @@ export function NegociacaoFicha({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Marcar perda</DialogTitle>
-            <DialogDescription>
-              O motivo é obrigatório.
-            </DialogDescription>
+            <DialogDescription>O motivo é obrigatório.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
@@ -1197,8 +1224,8 @@ export function NegociacaoFicha({
             <DialogTitle>Excluir negociação</DialogTitle>
             <DialogDescription>
               Isso apaga definitivamente &ldquo;{n.titulo}&rdquo;, junto com
-              interações, ações e orçamentos. Não dá para desfazer. Se a ideia
-              é só tirar da tela, prefira <strong>Arquivar</strong>.
+              interações, ações e orçamentos. Não dá para desfazer. Se a ideia é
+              só tirar da tela, prefira <strong>Arquivar</strong>.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1238,7 +1265,8 @@ export function NegociacaoFicha({
           <DialogHeader>
             <DialogTitle>Novo orçamento</DialogTitle>
             <DialogDescription>
-              Anexe um PDF pronto ou monte o orçamento com itens do catálogo da empresa vendedora.
+              Anexe um PDF pronto ou monte o orçamento com itens do catálogo da
+              empresa vendedora.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
@@ -1314,9 +1342,7 @@ export function NegociacaoFicha({
                   setOrcOpen(false);
                   if (orcAtualizarValor) {
                     setN((p) => ({ ...p, valorEstimado: v }));
-                    setValorLocal(
-                      formatarMoeda(v).replace(/^R\$\s?/, ""),
-                    );
+                    setValorLocal(formatarMoeda(v).replace(/^R\$\s?/, ""));
                   }
                 })
               }
@@ -1337,15 +1363,17 @@ export function NegociacaoFicha({
                       return;
                     }
                     setOrcOpen(false);
-                    if (res.orcamentoId) router.push(`/orcamentos/${res.orcamentoId}`);
+                    if (res.orcamentoId)
+                      router.push(`/orcamentos/${res.orcamentoId}`);
                   })
                 }
               >
                 Montar orçamento
               </Button>
               <p className="mt-1 text-xs text-muted-foreground">
-                Cria um orçamento numerado com os dados da empresa vendedora; os itens são
-                escolhidos na próxima tela. Substitui o orçamento enviado anterior.
+                Cria um orçamento numerado com os dados da empresa vendedora; os
+                itens são escolhidos na próxima tela. Substitui o orçamento
+                enviado anterior.
               </p>
             </div>
           </div>
@@ -1512,6 +1540,6 @@ export function NegociacaoFicha({
         onOpenChange={setMiniOpen}
         negociacaoId={n.id}
       />
-    </div>
+    </Pagina>
   );
 }

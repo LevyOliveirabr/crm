@@ -10,6 +10,13 @@ import {
   atualizarContato,
   criarContato,
 } from "@/lib/actions/contatos";
+import {
+  BarraFiltros,
+  CampoFiltro,
+  EstadoVazio,
+  Secao,
+  campoClass,
+} from "@/components/crm/pagina";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -124,123 +131,138 @@ export function ContatosLista({ contatos, empresas }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar nome, empresa, cargo…"
-            className="pl-9"
-            aria-label="Buscar contatos"
-          />
-        </div>
-        <Button
-          type="button"
-          onClick={abrirNovo}
-          disabled={empresas.length === 0}
+    <div className="flex flex-col gap-4">
+      <BarraFiltros
+        acoes={
+          <Button
+            type="button"
+            className="rounded-full px-4 font-semibold"
+            onClick={abrirNovo}
+            disabled={empresas.length === 0}
+          >
+            <Plus className="size-4" />
+            Novo contato
+          </Button>
+        }
+      >
+        <CampoFiltro
+          id="busca-contatos"
+          label="Busca"
+          className="col-span-2 sm:col-span-2"
         >
-          <Plus className="size-4" />
-          Contato
-        </Button>
-      </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="busca-contatos"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar nome, empresa, cargo…"
+              className={`${campoClass} pl-9`}
+              aria-label="Buscar contatos"
+            />
+          </div>
+        </CampoFiltro>
+      </BarraFiltros>
 
-      {filtrados.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhum contato encontrado.
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead className="hidden sm:table-cell">Cargo</TableHead>
-                <TableHead>WhatsApp</TableHead>
-                <TableHead className="w-16 text-center">Decisor</TableHead>
-                <TableHead className="w-20" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtrados.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.nome}</TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/empresas/${c.empresaId}`}
-                      className="hover:underline"
-                    >
-                      {c.empresaNome}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {c.cargo ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    {c.whatsapp ? (
-                      <a
-                        href={`https://wa.me/${c.whatsapp}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm underline-offset-2 hover:underline"
-                      >
-                        {c.whatsapp}
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {c.decisor ? (
-                      <Check
-                        className="mx-auto size-4 text-green-600"
-                        aria-label="Sim"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {c.podeEditar ? (
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant="ghost"
-                          onClick={() => abrirEditar(c)}
-                          aria-label="Editar"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={pending}
-                          onClick={() =>
-                            startTransition(async () => {
-                              const res = await arquivarContato(c.id);
-                              if (!res.ok) {
-                                setErro(res.error);
-                                return;
-                              }
-                              router.refresh();
-                            })
-                          }
-                        >
-                          Arquivar
-                        </Button>
-                      </div>
-                    ) : null}
-                  </TableCell>
+      <Secao
+        titulo="Contatos"
+        meta={`${filtrados.length} ${filtrados.length === 1 ? "pessoa" : "pessoas"}`}
+        semPadding
+      >
+        {filtrados.length === 0 ? (
+          <EstadoVazio texto="Nenhum contato encontrado." />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead className="hidden sm:table-cell">Cargo</TableHead>
+                  <TableHead>WhatsApp</TableHead>
+                  <TableHead className="w-16 text-center">Decisor</TableHead>
+                  <TableHead className="w-20" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              </TableHeader>
+              <TableBody>
+                {filtrados.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.nome}</TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/empresas/${c.empresaId}`}
+                        className="hover:underline"
+                      >
+                        {c.empresaNome}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground sm:table-cell">
+                      {c.cargo ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      {c.whatsapp ? (
+                        <a
+                          href={`https://wa.me/${c.whatsapp}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm underline-offset-2 hover:underline"
+                        >
+                          {c.whatsapp}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {c.decisor ? (
+                        <Check
+                          className="mx-auto size-4 text-success"
+                          aria-label="Sim"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {c.podeEditar ? (
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            onClick={() => abrirEditar(c)}
+                            aria-label="Editar"
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={pending}
+                            onClick={() =>
+                              startTransition(async () => {
+                                const res = await arquivarContato(c.id);
+                                if (!res.ok) {
+                                  setErro(res.error);
+                                  return;
+                                }
+                                router.refresh();
+                              })
+                            }
+                          >
+                            Arquivar
+                          </Button>
+                        </div>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Secao>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
@@ -251,7 +273,9 @@ export function ContatosLista({ contatos, empresas }: Props) {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-sm font-medium">Empresa *</label>
+              <label className="mb-1 block text-sm font-medium">
+                Empresa *
+              </label>
               <select
                 className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none"
                 value={form.empresa_id}
@@ -335,9 +359,7 @@ export function ContatosLista({ contatos, empresas }: Props) {
               </Button>
               <Button
                 type="button"
-                disabled={
-                  pending || !form.nome.trim() || !form.empresa_id
-                }
+                disabled={pending || !form.nome.trim() || !form.empresa_id}
                 onClick={salvar}
               >
                 Salvar

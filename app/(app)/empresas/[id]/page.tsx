@@ -7,7 +7,10 @@ import {
   type TimelineEmpresaItem,
 } from "@/components/crm/empresa-ficha";
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
-import { aplicarEscopoEmitente, getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
+import {
+  aplicarEscopoEmitente,
+  getEscopoEmpresa,
+} from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
@@ -70,17 +73,17 @@ export default async function EmpresaDetalhePage({
     cidade: (viewRow?.cidade ?? empresaRow!.cidade) as string | null,
     uf: (viewRow?.uf ?? empresaRow!.uf) as string | null,
     segmento: (viewRow?.segmento ?? empresaRow!.segmento) as string | null,
-    tipoSegmento: (viewRow?.tipo_segmento ?? empresaRow?.tipo_segmento ?? null) as
-      | "publico"
-      | "privado"
-      | "ppp"
-      | null,
+    tipoSegmento: (viewRow?.tipo_segmento ??
+      empresaRow?.tipo_segmento ??
+      null) as "publico" | "privado" | "ppp" | null,
     cnpj: (viewRow?.cnpj ?? empresaRow!.cnpj) as string | null,
-    responsavelId: (viewRow?.responsavel_id ??
-      empresaRow!.responsavel_id) as string | null,
+    responsavelId: (viewRow?.responsavel_id ?? empresaRow!.responsavel_id) as
+      | string
+      | null,
     responsavelNome,
-    observacoes: (viewRow?.observacoes ??
-      empresaRow!.observacoes) as string | null,
+    observacoes: (viewRow?.observacoes ?? empresaRow!.observacoes) as
+      | string
+      | null,
     aberto: Number(viewRow?.aberto ?? 0),
     vendido: Number(viewRow?.vendido ?? 0),
     perdido: Number(viewRow?.perdido ?? 0),
@@ -125,19 +128,31 @@ export default async function EmpresaDetalhePage({
     empresa.aberto = rows
       .filter((n) => n.status === "aberta")
       .reduce((s, n) => s + Number(n.valor_estimado ?? 0), 0);
-    empresa.vendido = vendidas.reduce((s, n) => s + Number(n.valor_final ?? 0), 0);
+    empresa.vendido = vendidas.reduce(
+      (s, n) => s + Number(n.valor_final ?? 0),
+      0,
+    );
     empresa.perdido = rows
       .filter((n) => n.status === "perdida")
       .reduce((s, n) => s + Number(n.valor_estimado ?? 0), 0);
     empresa.qtdNegociacoes = rows.length;
-    empresa.ticketMedio = vendidas.length > 0 ? empresa.vendido / vendidas.length : null;
+    empresa.ticketMedio =
+      vendidas.length > 0 ? empresa.vendido / vendidas.length : null;
     const ciclos = vendidas
       .filter((n) => n.fechado_em && n.criado_em)
-      .map((n) => (Date.parse(n.fechado_em!) - Date.parse(n.criado_em!)) / 86_400_000);
+      .map(
+        (n) =>
+          (Date.parse(n.fechado_em!) - Date.parse(n.criado_em!)) / 86_400_000,
+      );
     empresa.cicloMedioDias =
-      ciclos.length > 0 ? ciclos.reduce((s, d) => s + d, 0) / ciclos.length : null;
+      ciclos.length > 0
+        ? ciclos.reduce((s, d) => s + d, 0) / ciclos.length
+        : null;
     empresa.ultimoContato = rows.reduce<string | null>(
-      (max, n) => (n.ultima_interacao && (!max || n.ultima_interacao > max) ? n.ultima_interacao : max),
+      (max, n) =>
+        n.ultima_interacao && (!max || n.ultima_interacao > max)
+          ? n.ultima_interacao
+          : max,
       null,
     );
   }
@@ -229,23 +244,27 @@ export default async function EmpresaDetalhePage({
     timeline = items;
   }
 
-  const dadosNova =
-    dadosNovaRes.ok
-      ? dadosNovaRes.dados
-      : { emitentes: [], emitenteInicial: null, funis: [], linhas: [], origens: [], segmentos: [] };
+  const dadosNova = dadosNovaRes.ok
+    ? dadosNovaRes.dados
+    : {
+        emitentes: [],
+        emitenteInicial: null,
+        funis: [],
+        linhas: [],
+        origens: [],
+        segmentos: [],
+      };
 
   return (
-    <div className="p-4 lg:p-6">
-      <EmpresaFicha
-        empresa={empresa}
-        negociacoes={negociacoes}
-        contatos={contatos}
-        timeline={timeline}
-        segmentos={(listas ?? []).map((l) => l.valor)}
-        vendedores={vendedores ?? []}
-        podeEditar={podeEditar}
-        dadosNova={dadosNova}
-      />
-    </div>
+    <EmpresaFicha
+      empresa={empresa}
+      negociacoes={negociacoes}
+      contatos={contatos}
+      timeline={timeline}
+      segmentos={(listas ?? []).map((l) => l.valor)}
+      vendedores={vendedores ?? []}
+      podeEditar={podeEditar}
+      dadosNova={dadosNova}
+    />
   );
 }
