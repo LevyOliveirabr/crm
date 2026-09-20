@@ -391,15 +391,27 @@ async function carregarFunilBase(
       .from("v_funil")
       .select("funil_id, funil, etapa_id, etapa, ordem, qtd, valor")
       .order("ordem", { ascending: true });
-    return (data ?? []).map((r) => ({
-      funil_id: r.funil_id ?? "",
-      funil: r.funil ?? "",
-      etapa_id: r.etapa_id ?? "",
-      etapa: r.etapa ?? "",
-      ordem: num(r.ordem),
-      qtd: num(r.qtd),
-      valor: num(r.valor),
-    }));
+    // v_funil tem uma linha por etapa × empresa vendedora: soma por etapa.
+    const porEtapa = new Map<
+      string,
+      Omit<LinhaFunil, "passaram" | "conversao_pct" | "dias_medios">
+    >();
+    for (const r of data ?? []) {
+      const key = r.etapa_id ?? "";
+      const cur = porEtapa.get(key) ?? {
+        funil_id: r.funil_id ?? "",
+        funil: r.funil ?? "",
+        etapa_id: key,
+        etapa: r.etapa ?? "",
+        ordem: num(r.ordem),
+        qtd: 0,
+        valor: 0,
+      };
+      cur.qtd += num(r.qtd);
+      cur.valor += num(r.valor);
+      porEtapa.set(key, cur);
+    }
+    return [...porEtapa.values()];
   }
 
   const [{ data: funis }, { data: etapas }, { data: negs }] = await Promise.all([

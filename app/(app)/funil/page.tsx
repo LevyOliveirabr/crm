@@ -131,12 +131,15 @@ export default async function FunilPage({
       })(),
     ]);
 
-  const aggByEtapa = new Map(
-    (funilAgg ?? []).map((r) => [
-      r.etapa_id!,
-      { qtd: Number(r.qtd ?? 0), valor: Number(r.valor ?? 0) },
-    ]),
-  );
+  // v_funil tem uma linha por etapa × empresa vendedora: soma por etapa.
+  const aggByEtapa = new Map<string, { qtd: number; valor: number }>();
+  for (const r of funilAgg ?? []) {
+    if (!r.etapa_id) continue;
+    const cur = aggByEtapa.get(r.etapa_id) ?? { qtd: 0, valor: 0 };
+    cur.qtd += Number(r.qtd ?? 0);
+    cur.valor += Number(r.valor ?? 0);
+    aggByEtapa.set(r.etapa_id, cur);
+  }
 
   // Com filtros de UI, recalcula soma da coluna a partir dos cartões filtrados
   // (sem filtro, bate com v_funil; com filtro, reflete o recorte).

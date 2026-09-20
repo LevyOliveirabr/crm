@@ -78,7 +78,7 @@ export async function salvarMeta(
         mes: parsed.data.mes,
         valor: parsed.data.valor,
       },
-      { onConflict: "responsavel_id,mes" },
+      { onConflict: "responsavel_id,emitente_id,mes" },
     );
   if (error) return { ok: false, error: error.message };
 
@@ -123,7 +123,7 @@ export async function replicarMetaAno(input: {
 
   const { error } = await supabase
     .from("metas")
-    .upsert(linhas, { onConflict: "responsavel_id,mes" });
+    .upsert(linhas, { onConflict: "responsavel_id,emitente_id,mes" });
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/configuracoes/metas");

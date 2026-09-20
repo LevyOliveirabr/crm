@@ -51,6 +51,8 @@ export type OrcamentoCompleto = {
   };
   contato: { nome: string; email: string | null; whatsapp: string | null } | null;
   emitente: {
+    id: string | null;
+    nome: string;
     razaoSocial: string;
     cnpj: string | null;
     endereco: string | null;
@@ -62,8 +64,46 @@ export type OrcamentoCompleto = {
   } | null;
 };
 
+type EmitenteDoc = {
+  id: string | null;
+  nome: string;
+  razao_social: string;
+  cnpj: string | null;
+  endereco: string | null;
+  telefone: string | null;
+  email: string | null;
+  site: string | null;
+  logo_path: string | null;
+  rodape: string | null;
+};
+
 /**
- * Carrega o orçamento com itens, negociação, empresa e emitente.
+ * Emitente (empresa vendedora) da negociação. Se a migration 0008 ainda não
+ * estiver aplicada, cai para a tabela antiga `emitente` (linha única).
+ */
+async function carregarEmitente(
+  supabase: Client,
+  emitenteId: string | null,
+): Promise<EmitenteDoc | null> {
+  if (emitenteId) {
+    const { data, error } = await supabase
+      .from("emitentes")
+      .select("id, nome, razao_social, cnpj, endereco, telefone, email, site, logo_path, rodape")
+      .eq("id", emitenteId)
+      .maybeSingle();
+    if (!error && data) return data;
+  }
+  const { data: legado } = await supabase
+    .from("emitente")
+    .select("razao_social, cnpj, endereco, telefone, email, site, logo_path, rodape")
+    .eq("id", 1)
+    .maybeSingle();
+  if (!legado) return null;
+  return { id: null, nome: legado.razao_social, ...legado };
+}
+
+/**
+ * Carrega o orçamento com itens, negociação, empresa e emitente (empresa vendedora).
  * Funciona com o client do usuário (RLS) ou com o admin (página pública).
  */
 export async function carregarOrcamentoCompleto(
@@ -75,7 +115,7 @@ export async function carregarOrcamentoCompleto(
     .select(
       `id, numero, titulo, origem, situacao, valor, subtotal, desconto_geral_pct, enviado_em, validade,
        condicoes_pagamento, prazo_entrega, frete, observacoes, arquivo_path, aceito_em, aceito_por,
-       negociacoes!inner ( id, titulo, status, contato_id, empresa_id,
+       negociacoes!inner ( id, titulo, status, contato_id, empresa_id, emitente_id,
          empresas ( id, nome, cnpj, cidade, uf ),
          usuarios:responsavel_id ( nome, email ),
          contatos:contato_id ( nome, email, whatsapp ) )`,
@@ -89,6 +129,7 @@ export async function carregarOrcamentoCompleto(
     id: string;
     titulo: string;
     status: string;
+    emitente_id: string | null;
     empresas: { id: string; nome: string; cnpj: string | null; cidade: string | null; uf: string | null } | null;
     usuarios: { nome: string; email: string | null } | null;
     contatos: { nome: string; email: string | null; whatsapp: string | null } | null;
@@ -100,13 +141,13 @@ export async function carregarOrcamentoCompleto(
   const resp = Array.isArray(neg.usuarios) ? neg.usuarios[0] : neg.usuarios;
   const cont = Array.isArray(neg.contatos) ? neg.contatos[0] : neg.contatos;
 
-  const [{ data: itens }, { data: emitente }] = await Promise.all([
+  const [{ data: itens }, emitente] = await Promise.all([
     supabase
       .from("orcamento_itens")
       .select("id, ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total")
       .eq("orcamento_id", o.id)
       .order("ordem"),
-    supabase.from("emitente").select("*").eq("id", 1).maybeSingle(),
+    carregarEmitente(supabase, neg.emitente_id),
   ]);
 
   let arquivoUrl: string | null = null;
@@ -169,6 +210,8 @@ export async function carregarOrcamentoCompleto(
     contato: cont ? { nome: cont.nome, email: cont.email, whatsapp: cont.whatsapp } : null,
     emitente: emitente
       ? {
+          id: emitente.id,
+          nome: emitente.nome,
           razaoSocial: emitente.razao_social,
           cnpj: emitente.cnpj,
           endereco: emitente.endereco,

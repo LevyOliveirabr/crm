@@ -757,10 +757,22 @@ export function registrarToolsEResources(server: McpServer) {
           if (mesesUnicos.length >= args.meses) break;
         }
         const permitidos = new Set(mesesUnicos.slice(0, args.meses));
-        const filtrado = (data ?? []).filter((r) =>
-          permitidos.has(r.mes?.slice(0, 7) ?? ""),
-        );
-        return jsonText(filtrado);
+        // v_previsao tem uma linha por mês × responsável × empresa vendedora: soma por mês.
+        const porMes = new Map<
+          string,
+          { mes: string; aberto: number; realista: number; otimista: number; qtd: number }
+        >();
+        for (const r of data ?? []) {
+          const mes = r.mes ?? "";
+          if (!permitidos.has(mes.slice(0, 7))) continue;
+          const cur = porMes.get(mes) ?? { mes, aberto: 0, realista: 0, otimista: 0, qtd: 0 };
+          cur.aberto += Number(r.aberto ?? 0);
+          cur.realista += Number(r.realista ?? 0);
+          cur.otimista += Number(r.otimista ?? 0);
+          cur.qtd += Number(r.qtd ?? 0);
+          porMes.set(mes, cur);
+        }
+        return jsonText([...porMes.values()]);
       }),
   );
 
