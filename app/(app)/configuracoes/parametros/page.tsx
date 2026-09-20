@@ -9,8 +9,8 @@ export default async function ParametrosPage() {
       <div>
         <h2 className="text-lg font-medium">Parâmetros</h2>
         <p className="text-sm text-muted-foreground">
-          Dias de parada, pesos da previsão, alerta de validade e prefixo do
-          orçamento.
+          Dias de parada, pesos da previsão e alerta de validade. O prefixo e a
+          numeração do orçamento ficam em Empresas vendedoras.
         </p>
       </div>
       <ParametrosForm initial={params} />

@@ -132,6 +132,8 @@ export default async function RelatoriosPage({
           linha: linhaParam ?? null,
           origem: origemParam ?? null,
           rotuloPeriodo: periodo.rotulo,
+          emitenteId: escopo.emitenteId,
+          emitenteNome: escopo.emitente?.nome ?? null,
         }}
       />
     </Suspense>

@@ -3,10 +3,17 @@ import { createHash, randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SignJWT } from "jose";
 
+import type { EmpresaDoUsuario } from "@/lib/auth/get-usuario-atual";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type UsuarioMcp = Database["public"]["Tables"]["usuarios"]["Row"];
+export type UsuarioMcp = Omit<
+  Database["public"]["Tables"]["usuarios"]["Row"],
+  "perfil" | "gerente_id"
+> & {
+  /** Empresas vendedoras em que o dono da key participa (perfil por empresa). */
+  empresas: EmpresaDoUsuario[];
+};
 
 export type McpAuthContext = {
   supabase: SupabaseClient<Database>;
@@ -126,12 +133,40 @@ export async function clientForApiKey(
     throw new McpAuthError("Usuário inativo.");
   }
 
+  type VinculoJoin = {
+    emitente_id: string;
+    perfil: EmpresaDoUsuario["perfil"];
+    gerente_id: string | null;
+    emitentes: { nome: string; ativo: boolean } | { nome: string; ativo: boolean }[] | null;
+  };
+  const { data: vinculos } = await admin
+    .from("usuario_emitentes")
+    .select("emitente_id, perfil, gerente_id, emitentes ( nome, ativo )")
+    .eq("usuario_id", usuario.id);
+  const empresas: EmpresaDoUsuario[] = ((vinculos ?? []) as unknown as VinculoJoin[])
+    .map((v) => {
+      const em = Array.isArray(v.emitentes) ? v.emitentes[0] : v.emitentes;
+      return {
+        id: v.emitente_id,
+        nome: em?.nome ?? "—",
+        perfil: v.perfil,
+        gerenteId: v.gerente_id,
+        ativo: em?.ativo ?? true,
+      };
+    })
+    .filter((e) => e.ativo)
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
   const jwt = await assinarJwtUsuario(usuario.id);
   const supabase = clientAnonComJwt(jwt);
 
+  const { perfil: _perfil, gerente_id: _gerente, ...resto } = usuario;
+  void _perfil;
+  void _gerente;
+
   return {
     supabase,
-    usuario,
+    usuario: { ...resto, empresas },
     keyId: keyRow.id,
     keyNome: keyRow.nome,
   };

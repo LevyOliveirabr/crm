@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
-import { ehDiretorDe } from "@/lib/auth/permissoes";
+import { ehDiretorDe, ehMembroDe } from "@/lib/auth/permissoes";
 import {
   inicioMesAtualISO,
   inicioProximoMesISO,
@@ -29,6 +29,7 @@ const moverEtapaSchema = z.object({
 
 const criarNegociacaoSchema = z.object({
   empresa_id: z.uuid("Empresa é obrigatória"),
+  emitente_id: z.uuid("Empresa vendedora é obrigatória"),
   valor_estimado: z.coerce.number().nonnegative().default(0),
   funil_id: z.uuid("Funil é obrigatório"),
   linha: z.string().trim().optional().nullable(),
@@ -206,6 +207,10 @@ export async function criarNegociacao(
   const supabase = await createClient();
   const data = parsed.data;
 
+  if (!ehMembroDe(usuario, data.emitente_id)) {
+    return { ok: false, error: "Você não participa desta empresa vendedora." };
+  }
+
   const { data: empresa, error: erroEmp } = await supabase
     .from("empresas")
     .select("id, nome")
@@ -246,6 +251,7 @@ export async function criarNegociacao(
     .from("negociacoes")
     .insert({
       empresa_id: empresa.id,
+      emitente_id: data.emitente_id,
       contato_id: data.contato_id ?? null,
       funil_id: data.funil_id,
       etapa_id: etapa.id,
@@ -323,6 +329,18 @@ export async function atualizarCampo(
     !ehDiretorDe(usuario, negociacao.emitente_id)
   ) {
     return { ok: false, error: "Só o diretor da empresa pode transferir responsável." };
+  }
+  if (parsed.data.campo === "responsavel_id") {
+    const novoId = String(parsed.data.valor ?? "");
+    const { data: vinculo } = await supabase
+      .from("usuario_emitentes")
+      .select("usuario_id")
+      .eq("usuario_id", novoId)
+      .eq("emitente_id", negociacao.emitente_id)
+      .maybeSingle();
+    if (!vinculo) {
+      return { ok: false, error: "O novo responsável não participa desta empresa vendedora." };
+    }
   }
 
   const patch: Database["public"]["Tables"]["negociacoes"]["Update"] = {};

@@ -1044,6 +1044,7 @@ export async function carregarDadosRelatorios(
 export function textoWhatsAppPresidencia(
   dados: DadosPresidencia,
   ate: string = hojeISO(),
+  empresaNome: string | null = null,
 ): string {
   const mesNome = mesPorExtenso(dados.mes);
   const mesTitulo = mesNome
@@ -1081,7 +1082,7 @@ export function textoWhatsAppPresidencia(
     .join(", ");
 
   return [
-    `*F-Led · Vendas e previsão*`,
+    `*${empresaNome ?? "Todas as empresas"} · Vendas e previsão*`,
     `${tituloMes} · até ${formatarData(ate)}`,
     ``,
     `*Resultado do mês*`,

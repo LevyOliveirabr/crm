@@ -1,9 +1,14 @@
 "use server";
 
+import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { createClient } from "@/lib/supabase/server";
 
 export type DadosFormNegociacao = {
+  /** Empresas vendedoras em que o usuário participa. */
+  emitentes: { id: string; nome: string }[];
+  /** Empresa vendedora do escopo atual (pré-seleção). */
+  emitenteInicial: string | null;
   funis: { id: string; nome: string; ordem: number }[];
   linhas: string[];
   origens: string[];
@@ -18,6 +23,7 @@ export async function carregarDadosFormNegociacao(): Promise<
   if (!usuario) return { ok: false, error: "Não autenticado." };
 
   const supabase = await createClient();
+  const escopo = await getEscopoEmpresa(usuario);
 
   const [{ data: funis }, { data: listas }] = await Promise.all([
     supabase
@@ -45,6 +51,8 @@ export async function carregarDadosFormNegociacao(): Promise<
   return {
     ok: true,
     dados: {
+      emitentes: usuario.empresas.map((e) => ({ id: e.id, nome: e.nome })),
+      emitenteInicial: escopo.emitenteId ?? (usuario.empresas.length === 1 ? usuario.empresas[0]!.id : null),
       funis: funis ?? [],
       linhas,
       origens,

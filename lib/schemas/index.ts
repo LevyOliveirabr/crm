@@ -18,4 +18,10 @@ export {
   type OrcamentoInput,
 } from "./orcamento";
 export { produtoSchema, type ProdutoInput } from "./produto";
+export {
+  emitenteSchema,
+  categoriaProdutoSchema,
+  type EmitenteInput,
+  type CategoriaProdutoInput,
+} from "./emitente";
 export * from "./mcp";

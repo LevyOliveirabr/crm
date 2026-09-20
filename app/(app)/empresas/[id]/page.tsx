@@ -232,7 +232,7 @@ export default async function EmpresaDetalhePage({
   const dadosNova =
     dadosNovaRes.ok
       ? dadosNovaRes.dados
-      : { funis: [], linhas: [], origens: [], segmentos: [] };
+      : { emitentes: [], emitenteInicial: null, funis: [], linhas: [], origens: [], segmentos: [] };
 
   return (
     <div className="p-4 lg:p-6">

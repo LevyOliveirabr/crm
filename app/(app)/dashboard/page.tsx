@@ -136,7 +136,7 @@ export default async function DashboardPage({
     <div className="mx-auto w-full max-w-[1400px]">
       <DashboardCabecalho
         titulo="Sua carteira"
-        subtitulo={mesPorExtenso(hoje)}
+        subtitulo={`${mesPorExtenso(hoje)} · ${escopo.emitente?.nome ?? "Todas as empresas"}`}
         descricao={
           isDiretor && !filtros.vendedorId
             ? "Visão consolidada das negociações abertas de toda a equipe."

@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { encontrarEmpresa } from "@/lib/auth/escopo-empresa-core";
+import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
+import { getUsuarioAtual, type EmpresaDoUsuario } from "@/lib/auth/get-usuario-atual";
 import {
   mapearLinha,
   parseCsvBytes,
@@ -57,6 +59,7 @@ const COLUNAS: Record<TipoImportacao, string[]> = {
   contatos: ["empresa_nome", "nome", "whatsapp", "email", "cargo"],
   negociacoes: [
     "empresa_nome",
+    "empresa_vendedora",
     "titulo",
     "valor_estimado",
     "funil_nome",
@@ -72,7 +75,18 @@ const COLUNAS: Record<TipoImportacao, string[]> = {
     "proxima_acao",
     "proxima_acao_data",
   ],
-  produtos: ["codigo", "nome", "descricao", "linha", "unidade", "preco_base"],
+  produtos: [
+    "empresa_vendedora",
+    "codigo",
+    "nome",
+    "descricao",
+    "linha",
+    "unidade",
+    "preco_base",
+    "categoria",
+    "link",
+    "catalogo_url",
+  ],
 };
 
 function exigirColunas(
@@ -186,6 +200,14 @@ export async function confirmarImportacao(input: {
   if (!check.ok) return check;
 
   const supabase = await createClient();
+  const escopo = await getEscopoEmpresa(usuario);
+  const opcoes = usuario.empresas.filter((e) => e.perfil === "diretor");
+  const ctxEmitente: ContextoEmitente = {
+    opcoes,
+    padrao:
+      (escopo.emitenteId ? opcoes.find((e) => e.id === escopo.emitenteId) : null) ??
+      (opcoes.length === 1 ? opcoes[0]! : null),
+  };
   let relatorio: ImportRelatorio;
 
   try {
@@ -194,9 +216,9 @@ export async function confirmarImportacao(input: {
     } else if (tipo === "contatos") {
       relatorio = await importarContatos(supabase, parsed);
     } else if (tipo === "negociacoes") {
-      relatorio = await importarNegociacoes(supabase, parsed, usuario.id);
+      relatorio = await importarNegociacoes(supabase, parsed, usuario.id, ctxEmitente);
     } else {
-      relatorio = await importarProdutos(supabase, parsed);
+      relatorio = await importarProdutos(supabase, parsed, ctxEmitente);
     }
   } catch (e) {
     return {
@@ -224,6 +246,33 @@ async function carregarUsuariosPorEmail(supabase: Sb) {
     map.set(u.email.trim().toLowerCase(), u.id);
   }
   return map;
+}
+
+/**
+ * Empresas vendedoras em que o usuário é diretor, e a padrão para linhas sem
+ * `empresa_vendedora` (escopo atual ou a única empresa).
+ */
+type ContextoEmitente = { opcoes: EmpresaDoUsuario[]; padrao: EmpresaDoUsuario | null };
+
+function resolverEmitenteLinha(
+  ctx: ContextoEmitente,
+  texto: string,
+): { ok: true; emitente: EmpresaDoUsuario } | { ok: false; motivo: string } {
+  if (texto) {
+    const hit = encontrarEmpresa(ctx.opcoes, texto);
+    if (!hit) {
+      return {
+        ok: false,
+        motivo: `empresa_vendedora não encontrada ou sem permissão: ${texto}`,
+      };
+    }
+    return { ok: true, emitente: hit };
+  }
+  if (ctx.padrao) return { ok: true, emitente: ctx.padrao };
+  return {
+    ok: false,
+    motivo: `empresa_vendedora obrigatória (opções: ${ctx.opcoes.map((e) => e.nome).join(", ")})`,
+  };
 }
 
 async function carregarEmpresasPorNome(supabase: Sb) {
@@ -402,6 +451,7 @@ async function importarNegociacoes(
   supabase: Sb,
   parsed: CsvParseResult,
   usuarioId: string,
+  ctxEmitente: ContextoEmitente,
 ): Promise<ImportRelatorio> {
   const erros: ImportErro[] = [];
   const empresas = await carregarEmpresasPorNome(supabase);
@@ -463,6 +513,12 @@ async function importarNegociacoes(
         continue;
       }
 
+      const vendedora = resolverEmitenteLinha(ctxEmitente, get("empresa_vendedora"));
+      if (!vendedora.ok) {
+        erros.push({ linha, motivo: vendedora.motivo, nivel: "erro" });
+        continue;
+      }
+
       const funilNome = get("funil_nome");
       const etapaNome = get("etapa_nome");
       let funil = funilNome
@@ -516,6 +572,7 @@ async function importarNegociacoes(
         .from("negociacoes")
         .insert({
           empresa_id: emp.id,
+          emitente_id: vendedora.emitente.id,
           funil_id: funil.id,
           etapa_id: etapa.id,
           titulo,
@@ -574,27 +631,59 @@ async function importarNegociacoes(
 async function importarProdutos(
   supabase: Sb,
   parsed: CsvParseResult,
+  ctxEmitente: ContextoEmitente,
 ): Promise<ImportRelatorio> {
   const erros: ImportErro[] = [];
   const criadas: string[] = [];
+  const categoriasCriadas: string[] = [];
   let importadas = 0;
   let reutilizadas = 0;
 
+  // código é único por empresa vendedora
   const { data: existentes } = await supabase
     .from("produtos")
-    .select("id, codigo, nome");
+    .select("id, codigo, nome, emitente_id");
   const porCodigo = new Map<string, string>();
+  const chaveCodigo = (emitenteId: string, codigo: string) =>
+    `${emitenteId}|${codigo.trim().toLowerCase()}`;
   for (const p of existentes ?? []) {
-    if (p.codigo) porCodigo.set(p.codigo.trim().toLowerCase(), p.id);
+    if (p.codigo) porCodigo.set(chaveCodigo(p.emitente_id, p.codigo), p.id);
+  }
+
+  const { data: categoriasRaw } = await supabase
+    .from("categorias_produto")
+    .select("id, nome, emitente_id");
+  const categorias = new Map<string, string>();
+  for (const c of categoriasRaw ?? []) {
+    categorias.set(`${c.emitente_id}|${normalizarNome(c.nome)}`, c.id);
+  }
+
+  async function categoriaId(emitenteId: string, nome: string): Promise<string> {
+    const k = `${emitenteId}|${normalizarNome(nome)}`;
+    const existente = categorias.get(k);
+    if (existente) return existente;
+    const { data, error } = await supabase
+      .from("categorias_produto")
+      .insert({ emitente_id: emitenteId, nome: nome.trim() })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(`categoria "${nome}": ${error?.message ?? "falha"}`);
+    categorias.set(k, data.id);
+    categoriasCriadas.push(data.id);
+    return data.id;
   }
 
   const novas: {
+    emitente_id: string;
     codigo: string | null;
     nome: string;
     descricao: string | null;
     linha: string | null;
     unidade: string;
     preco_base: number;
+    categoria_id: string | null;
+    link: string | null;
+    catalogo_url: string | null;
   }[] = [];
 
   try {
@@ -614,22 +703,34 @@ async function importarProdutos(
         continue;
       }
 
+      const vendedora = resolverEmitenteLinha(ctxEmitente, get("empresa_vendedora"));
+      if (!vendedora.ok) {
+        erros.push({ linha, motivo: vendedora.motivo, nivel: "erro" });
+        continue;
+      }
+      const emitenteId = vendedora.emitente.id;
+
       const codigo = get("codigo") || null;
-      if (codigo && porCodigo.has(codigo.toLowerCase())) {
+      if (codigo && porCodigo.has(chaveCodigo(emitenteId, codigo))) {
         reutilizadas++;
         continue;
       }
 
+      const nomeCategoria = get("categoria");
       const preco = parseValorCsv(get("preco_base")) ?? 0;
       novas.push({
+        emitente_id: emitenteId,
         codigo,
         nome,
         descricao: get("descricao") || null,
         linha: get("linha") || null,
         unidade: get("unidade") || "un",
         preco_base: preco,
+        categoria_id: nomeCategoria ? await categoriaId(emitenteId, nomeCategoria) : null,
+        link: get("link") || null,
+        catalogo_url: get("catalogo_url") || null,
       });
-      if (codigo) porCodigo.set(codigo.toLowerCase(), "pending");
+      if (codigo) porCodigo.set(chaveCodigo(emitenteId, codigo), "pending");
     }
 
     if (novas.length > 0) {
@@ -644,6 +745,9 @@ async function importarProdutos(
   } catch (e) {
     if (criadas.length) {
       await supabase.from("produtos").delete().in("id", criadas);
+    }
+    if (categoriasCriadas.length) {
+      await supabase.from("categorias_produto").delete().in("id", categoriasCriadas);
     }
     throw e;
   }

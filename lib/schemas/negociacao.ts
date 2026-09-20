@@ -5,6 +5,7 @@ export const statusNegociacaoSchema = z.enum(["aberta", "vendida", "perdida"]);
 /** Cadastro/edição de negociação — SPEC 3.2 `negociacoes`. */
 export const negociacaoSchema = z.object({
   empresa_id: z.uuid("Empresa é obrigatória"),
+  emitente_id: z.uuid("Empresa vendedora é obrigatória"),
   contato_id: z.uuid().optional().nullable(),
   funil_id: z.uuid("Funil é obrigatório"),
   etapa_id: z.uuid("Etapa é obrigatória"),
