@@ -666,7 +666,7 @@ $$;
 | R11 | Empresa: nome único (case/acento-insensitive). Ao digitar no cadastro, autocomplete busca por trigram; se já existir, seleciona em vez de criar. | Índice + UI |
 | R12 | Vendedor só vê/edita negociações onde `responsavel_id = auth.uid()`. Diretor vê tudo e pode transferir (`responsavel_id`). | RLS |
 | R13 | Toda escrita via MCP grava `interacoes.origem_agente = true` e prefixa `texto` com `[agente]`. | MCP |
-| R14 | Excluir: só arquivar (`arquivado_em`). Diretor pode arquivar qualquer coisa; vendedor só o que é seu. Arquivados somem de todas as telas e views. | Server Actions |
+| R14 | Excluir: o padrão é arquivar (`arquivado_em`). Diretor pode arquivar qualquer coisa; vendedor só o que é seu. Arquivados somem de todas as telas e views. Exclusão definitiva (delete físico, com cascade em interações, ações, orçamentos e arquivos do Storage) só pelo diretor, com confirmação na ficha. | Server Actions |
 
 ---
 
