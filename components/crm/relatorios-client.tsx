@@ -3,7 +3,14 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, Copy, Download, Printer } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Copy,
+  Download,
+  Printer,
+} from "lucide-react";
 
 import { salvarComentarioPresidencia } from "@/lib/actions/config";
 import { baixarCsv } from "@/lib/relatorios/csv";
@@ -22,8 +29,17 @@ import {
   inicioMesISO,
   mesPorExtenso,
 } from "@/lib/format";
+import {
+  BarraFiltros,
+  CampoFiltro,
+  EstadoVazio,
+  Pagina,
+  PaginaCabecalho,
+  Pilulas,
+  Secao,
+  campoClass,
+} from "@/components/crm/pagina";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -46,17 +62,22 @@ export type AbaRelatorio =
 
 type VendedorOption = { id: string; nome: string };
 
-const selectClass =
-  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 function DeltaBadge({ atual, anterior }: { atual: number; anterior: number }) {
   const d = deltaPct(atual, anterior);
   if (d == null) {
     return <span className="text-xs text-muted-foreground">Δ —</span>;
   }
   const cor =
-    d > 0 ? "text-emerald-700" : d < 0 ? "text-destructive" : "text-muted-foreground";
-  return <span className={`text-xs font-medium ${cor}`}>Δ {formatarDeltaPct(d)}</span>;
+    d > 0
+      ? "text-success"
+      : d < 0
+        ? "text-destructive"
+        : "text-muted-foreground";
+  return (
+    <span className={`text-xs font-medium ${cor}`}>
+      Δ {formatarDeltaPct(d)}
+    </span>
+  );
 }
 
 function Barra({
@@ -227,7 +248,10 @@ export function RelatoriosClient({
 
   const p = dados.presidencia;
   const maxFunil = Math.max(1, ...dados.funil.map((f) => f.valor));
-  const maxPrev = Math.max(1, ...dados.previsao.map((f) => f.otimista || f.aberto));
+  const maxPrev = Math.max(
+    1,
+    ...dados.previsao.map((f) => f.otimista || f.aberto),
+  );
   const maxPerda = Math.max(1, ...dados.perdas.map((f) => f.valor));
   const totalPrev = dados.previsao.reduce(
     (acc, r) => ({
@@ -254,176 +278,158 @@ export function RelatoriosClient({
 
   return (
     <Toaster>
-      <div className="flex flex-col gap-4">
-        <header className="flex flex-col gap-3 print:hidden">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Relatórios</h1>
-              <p className="text-sm text-muted-foreground">
-                Período: {filtros.rotuloPeriodo} · Empresa: {filtros.emitenteNome ?? "Todas"}
-              </p>
-            </div>
-          </div>
+      <Pagina className="print:max-w-none">
+        <PaginaCabecalho
+          titulo="Relatórios"
+          subtitulo={filtros.emitenteNome ?? "Todas as empresas"}
+          descricao={`Período: ${filtros.rotuloPeriodo}`}
+          acoes={
+            <Pilulas
+              ariaLabel="Relatório"
+              valor={aba}
+              onChange={onAbaChange}
+              opcoes={abas
+                .filter((a) => !a.hide)
+                .map((a) => ({ id: a.id, label: a.label }))}
+            />
+          }
+        />
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filtro-periodo" className="text-sm font-medium">
-                Período
-              </label>
-              <select
-                id="filtro-periodo"
-                className={selectClass}
-                value={filtros.periodo}
-                onChange={(e) =>
-                  setParams({
-                    periodo: e.target.value === "mes" ? null : e.target.value,
-                  })
-                }
-              >
-                <option value="mes">Mês</option>
-                <option value="trimestre">Trimestre</option>
-                <option value="personalizado">Personalizado</option>
-              </select>
-            </div>
+        <BarraFiltros>
+          <CampoFiltro id="filtro-periodo" label="Período">
+            <select
+              id="filtro-periodo"
+              className={campoClass}
+              value={filtros.periodo}
+              onChange={(e) =>
+                setParams({
+                  periodo: e.target.value === "mes" ? null : e.target.value,
+                })
+              }
+            >
+              <option value="mes">Mês</option>
+              <option value="trimestre">Trimestre</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+          </CampoFiltro>
 
-            {filtros.periodo !== "personalizado" ? (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="filtro-mes" className="text-sm font-medium">
-                  {filtros.periodo === "trimestre" ? "Referência" : "Mês"}
-                </label>
-                <input
-                  id="filtro-mes"
-                  type="month"
-                  className={selectClass}
-                  value={filtros.mes.slice(0, 7)}
-                  onChange={(e) =>
-                    setParam("mes", e.target.value ? `${e.target.value}-01` : null)
-                  }
-                />
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="filtro-de" className="text-sm font-medium">
-                    De
-                  </label>
-                  <input
-                    id="filtro-de"
-                    type="date"
-                    className={selectClass}
-                    value={filtros.de}
-                    onChange={(e) => setParam("de", e.target.value || null)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="filtro-ate" className="text-sm font-medium">
-                    Até
-                  </label>
-                  <input
-                    id="filtro-ate"
-                    type="date"
-                    className={selectClass}
-                    value={filtros.ate}
-                    onChange={(e) => setParam("ate", e.target.value || null)}
-                  />
-                </div>
-              </>
-            )}
-
-            {isDiretor ? (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="filtro-vendedor" className="text-sm font-medium">
-                  Vendedor
-                </label>
-                <select
-                  id="filtro-vendedor"
-                  className={selectClass}
-                  value={filtros.vendedor ?? "todos"}
-                  onChange={(e) =>
-                    setParam(
-                      "vendedor",
-                      e.target.value === "todos" ? null : e.target.value,
-                    )
-                  }
-                >
-                  <option value="todos">Todos</option>
-                  {vendedores.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filtro-linha" className="text-sm font-medium">
-                Linha
-              </label>
-              <select
-                id="filtro-linha"
-                className={selectClass}
-                value={filtros.linha ?? "todas"}
-                onChange={(e) =>
-                  setParam("linha", e.target.value === "todas" ? null : e.target.value)
-                }
-              >
-                <option value="todas">Todas</option>
-                {linhasOpcoes.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filtro-origem" className="text-sm font-medium">
-                Origem
-              </label>
-              <select
-                id="filtro-origem"
-                className={selectClass}
-                value={filtros.origem ?? "todas"}
+          {filtros.periodo !== "personalizado" ? (
+            <CampoFiltro
+              id="filtro-mes"
+              label={filtros.periodo === "trimestre" ? "Referência" : "Mês"}
+            >
+              <input
+                id="filtro-mes"
+                type="month"
+                className={campoClass}
+                value={filtros.mes.slice(0, 7)}
                 onChange={(e) =>
                   setParam(
-                    "origem",
-                    e.target.value === "todas" ? null : e.target.value,
+                    "mes",
+                    e.target.value ? `${e.target.value}-01` : null,
+                  )
+                }
+              />
+            </CampoFiltro>
+          ) : (
+            <>
+              <CampoFiltro id="filtro-de" label="De">
+                <input
+                  id="filtro-de"
+                  type="date"
+                  className={campoClass}
+                  value={filtros.de}
+                  onChange={(e) => setParam("de", e.target.value || null)}
+                />
+              </CampoFiltro>
+              <CampoFiltro id="filtro-ate" label="Até">
+                <input
+                  id="filtro-ate"
+                  type="date"
+                  className={campoClass}
+                  value={filtros.ate}
+                  onChange={(e) => setParam("ate", e.target.value || null)}
+                />
+              </CampoFiltro>
+            </>
+          )}
+
+          {isDiretor ? (
+            <CampoFiltro id="filtro-vendedor" label="Vendedor">
+              <select
+                id="filtro-vendedor"
+                className={campoClass}
+                value={filtros.vendedor ?? "todos"}
+                onChange={(e) =>
+                  setParam(
+                    "vendedor",
+                    e.target.value === "todos" ? null : e.target.value,
                   )
                 }
               >
-                <option value="todas">Todas</option>
-                {origensOpcoes.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
+                <option value="todos">Todos</option>
+                {vendedores.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nome}
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-        </header>
+            </CampoFiltro>
+          ) : null}
 
-        <Tabs value={aba} onValueChange={onAbaChange}>
-          <TabsList
-            variant="line"
-            className="print:hidden h-auto w-full flex-wrap justify-start gap-1"
-          >
-            {abas
-              .filter((a) => !a.hide)
-              .map((a) => (
-                <TabsTrigger key={a.id} value={a.id} className="px-3">
-                  {a.label}
-                </TabsTrigger>
+          <CampoFiltro id="filtro-linha" label="Linha">
+            <select
+              id="filtro-linha"
+              className={campoClass}
+              value={filtros.linha ?? "todas"}
+              onChange={(e) =>
+                setParam(
+                  "linha",
+                  e.target.value === "todas" ? null : e.target.value,
+                )
+              }
+            >
+              <option value="todas">Todas</option>
+              {linhasOpcoes.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
               ))}
-          </TabsList>
+            </select>
+          </CampoFiltro>
 
-          {/* ——— Presidência ——— */}
-          <TabsContent value="presidencia" className="mt-4">
+          <CampoFiltro id="filtro-origem" label="Origem">
+            <select
+              id="filtro-origem"
+              className={campoClass}
+              value={filtros.origem ?? "todas"}
+              onChange={(e) =>
+                setParam(
+                  "origem",
+                  e.target.value === "todas" ? null : e.target.value,
+                )
+              }
+            >
+              <option value="todas">Todas</option>
+              {origensOpcoes.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </CampoFiltro>
+        </BarraFiltros>
+
+        {/* ——— Presidência ——— */}
+        {aba === "presidencia" ? (
+          <div className="flex flex-col gap-4">
             {!p ? (
-              <p className="text-sm text-muted-foreground">Sem dados.</p>
+              <Secao titulo="Relatório da presidência">
+                <EstadoVazio texto="Sem dados para o período." compacto />
+              </Secao>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2 print:hidden">
+                <div className="flex flex-wrap justify-end gap-2 print:hidden">
                   <Button
                     type="button"
                     size="sm"
@@ -438,7 +444,11 @@ export function RelatoriosClient({
                     size="sm"
                     variant="outline"
                     onClick={async () => {
-                      const texto = textoWhatsAppPresidencia(p, undefined, filtros.emitenteNome);
+                      const texto = textoWhatsAppPresidencia(
+                        p,
+                        undefined,
+                        filtros.emitenteNome,
+                      );
                       try {
                         await navigator.clipboard.writeText(texto);
                         toast.add({
@@ -475,12 +485,10 @@ export function RelatoriosClient({
                   />
                 </div>
 
-                <article className="relatorio-print mx-auto w-full max-w-[210mm] space-y-6 rounded-lg border border-border bg-background p-4 sm:p-6 print:border-0 print:p-0">
-                  <header className="space-y-1 border-b border-border pb-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      F-Led · Relatório da Presidência
-                    </p>
-                    <h2 className="text-2xl font-semibold capitalize">
+                <article className="relatorio-print card-surface mx-auto w-full max-w-[210mm] space-y-6 p-4 sm:p-6 print:border-0 print:p-0 print:shadow-none">
+                  <header className="space-y-1 border-b border-input pb-4">
+                    <p className="eyebrow">F-Led · Relatório da Presidência</p>
+                    <h2 className="font-heading text-2xl font-semibold capitalize">
                       {mesPorExtenso(p.mes)}
                     </h2>
                     <p className="text-sm text-muted-foreground">
@@ -489,13 +497,11 @@ export function RelatoriosClient({
                   </header>
 
                   <section className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Resultado do mês
-                    </h3>
+                    <h3 className="eyebrow">Resultado do mês</h3>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <p className="text-xs text-muted-foreground">Vendido</p>
-                        <p className="text-xl font-semibold">
+                        <p className="eyebrow">Vendido</p>
+                        <p className="font-heading text-2xl font-semibold tabular-nums">
                           {formatarMoeda(p.vendido)}
                         </p>
                         <DeltaBadge
@@ -504,16 +510,14 @@ export function RelatoriosClient({
                         />
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">
-                          Negócios / ticket
-                        </p>
-                        <p className="text-xl font-semibold">
+                        <p className="eyebrow">Negócios / ticket</p>
+                        <p className="font-heading text-2xl font-semibold tabular-nums">
                           {p.qtd_vendida} · {formatarMoedaCurta(p.ticket_medio)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Perdido</p>
-                        <p className="text-lg font-medium">
+                        <p className="eyebrow">Perdido</p>
+                        <p className="font-heading text-xl font-semibold tabular-nums">
                           {formatarMoeda(p.perdido)}{" "}
                           <span className="text-sm text-muted-foreground">
                             ({p.qtd_perdida})
@@ -521,18 +525,18 @@ export function RelatoriosClient({
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Conversão</p>
-                        <p className="text-lg font-medium">
-                          {p.conversao_pct != null ? `${p.conversao_pct}%` : "—"}
+                        <p className="eyebrow">Conversão</p>
+                        <p className="font-heading text-xl font-semibold tabular-nums">
+                          {p.conversao_pct != null
+                            ? `${p.conversao_pct}%`
+                            : "—"}
                         </p>
                       </div>
                     </div>
                   </section>
 
                   <section className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Previsão de fechamento
-                    </h3>
+                    <h3 className="eyebrow">Previsão de fechamento</h3>
                     <ul className="space-y-1 text-sm">
                       {p.previsao.map((prev, idx) => (
                         <li key={prev.mes} className="flex flex-wrap gap-x-2">
@@ -550,7 +554,7 @@ export function RelatoriosClient({
                   </section>
 
                   <section className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    <h3 className="eyebrow">
                       Maiores negociações em andamento
                     </h3>
                     <ul className="space-y-2 text-sm">
@@ -571,15 +575,15 @@ export function RelatoriosClient({
                         </li>
                       ))}
                       {p.top_negociacoes.length === 0 ? (
-                        <li className="text-muted-foreground">Nenhuma aberta.</li>
+                        <li className="text-muted-foreground">
+                          Nenhuma aberta.
+                        </li>
                       ) : null}
                     </ul>
                   </section>
 
                   <section className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Perdas do mês
-                    </h3>
+                    <h3 className="eyebrow">Perdas do mês</h3>
                     <p className="text-sm">
                       {p.perdas.length
                         ? p.perdas
@@ -590,9 +594,7 @@ export function RelatoriosClient({
                   </section>
 
                   <section className="space-y-2 print:break-inside-avoid">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Comentário do diretor
-                    </h3>
+                    <h3 className="eyebrow">Comentário do diretor</h3>
                     {isDiretor ? (
                       <div className="space-y-2 print:hidden">
                         <Textarea
@@ -637,154 +639,182 @@ export function RelatoriosClient({
                 </article>
               </div>
             )}
-          </TabsContent>
+          </div>
+        ) : null}
 
-          {/* ——— Funil ——— */}
-          <TabsContent value="funil" className="mt-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-sm text-muted-foreground">
-                Total: {dados.totais.funilQtd} neg. ·{" "}
-                {formatarMoeda(dados.totais.funilValor)}
+        {/* ——— Funil ——— */}
+        {aba === "funil" ? (
+          <div className="flex flex-col gap-4">
+            <Secao
+              titulo="Funil por etapa"
+              meta={`${dados.totais.funilQtd} neg. · ${formatarMoeda(dados.totais.funilValor)}`}
+              acoes={
+                <ExportarCsvButton
+                  nome="funil"
+                  colunas={[
+                    { chave: "funil", titulo: "Funil" },
+                    { chave: "etapa", titulo: "Etapa" },
+                    { chave: "qtd", titulo: "Qtd" },
+                    { chave: "valor", titulo: "Valor" },
+                    { chave: "passaram", titulo: "Passaram (período)" },
+                    {
+                      chave: "conversao_pct",
+                      titulo: "Conversão p/ próxima %",
+                    },
+                    { chave: "dias_medios", titulo: "Dias médios" },
+                  ]}
+                  linhas={dados.funil}
+                />
+              }
+            >
+              <div className="flex flex-col gap-5">
+                {[...new Set(dados.funil.map((f) => f.funil))].map(
+                  (funilNome) => {
+                    const etapas = dados.funil
+                      .filter((f) => f.funil === funilNome)
+                      .sort((a, b) => a.ordem - b.ordem);
+                    return (
+                      <section key={funilNome} className="space-y-2">
+                        <h3 className="font-heading text-sm font-semibold">
+                          {funilNome}
+                        </h3>
+                        <ul className="space-y-2">
+                          {etapas.map((et) => (
+                            <li key={et.etapa_id} className="space-y-1">
+                              <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                                <span className="font-medium">{et.etapa}</span>
+                                <span className="text-muted-foreground">
+                                  {et.qtd} · {formatarMoeda(et.valor)}
+                                </span>
+                              </div>
+                              <Barra valor={et.valor} max={maxFunil} />
+                              <p className="text-xs text-muted-foreground">
+                                {et.passaram} passaram no período
+                                <span className="mx-1 opacity-50">·</span>
+                                {et.conversao_pct != null
+                                  ? `${et.conversao_pct}% avançam`
+                                  : "última etapa"}
+                                <span className="mx-1 opacity-50">·</span>
+                                {et.dias_medios != null
+                                  ? `${et.dias_medios} dias em média`
+                                  : "sem histórico"}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    );
+                  },
+                )}
+                {dados.funil.length === 0 ? (
+                  <EstadoVazio
+                    texto="Nenhuma etapa com negociações no período."
+                    compacto
+                  />
+                ) : null}
               </div>
-              <ExportarCsvButton
-                nome="funil"
-                colunas={[
-                  { chave: "funil", titulo: "Funil" },
-                  { chave: "etapa", titulo: "Etapa" },
-                  { chave: "qtd", titulo: "Qtd" },
-                  { chave: "valor", titulo: "Valor" },
-                  { chave: "passaram", titulo: "Passaram (período)" },
-                  { chave: "conversao_pct", titulo: "Conversão p/ próxima %" },
-                  { chave: "dias_medios", titulo: "Dias médios" },
-                ]}
-                linhas={dados.funil}
-              />
-            </div>
-            {[...new Set(dados.funil.map((f) => f.funil))].map((funilNome) => {
-              const etapas = dados.funil
-                .filter((f) => f.funil === funilNome)
-                .sort((a, b) => a.ordem - b.ordem);
-              return (
-                <section key={funilNome} className="space-y-2">
-                  <h2 className="text-base font-semibold">{funilNome}</h2>
-                  <ul className="space-y-2">
-                    {etapas.map((et) => (
-                      <li key={et.etapa_id} className="space-y-1">
-                        <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                          <span className="font-medium">{et.etapa}</span>
-                          <span className="text-muted-foreground">
-                            {et.qtd} · {formatarMoeda(et.valor)}
-                          </span>
-                        </div>
-                        <Barra valor={et.valor} max={maxFunil} />
-                        <p className="text-xs text-muted-foreground">
-                          {et.passaram} passaram no período
-                          <span className="mx-1 opacity-50">·</span>
-                          {et.conversao_pct != null
-                            ? `${et.conversao_pct}% avançam`
-                            : "última etapa"}
-                          <span className="mx-1 opacity-50">·</span>
-                          {et.dias_medios != null
-                            ? `${et.dias_medios} dias em média`
-                            : "sem histórico"}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              );
-            })}
-            {dados.funil.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma etapa.</p>
-            ) : null}
-          </TabsContent>
+            </Secao>
+          </div>
+        ) : null}
 
-          {/* ——— Previsão ——— */}
-          <TabsContent value="previsao" className="mt-4 space-y-3">
-            <div className="flex justify-end">
-              <ExportarCsvButton
-                nome="previsao"
-                colunas={[
-                  { chave: "mes", titulo: "Mês" },
-                  { chave: "aberto", titulo: "Aberto" },
-                  { chave: "realista", titulo: "Realista" },
-                  { chave: "otimista", titulo: "Otimista" },
-                  { chave: "qtd", titulo: "Qtd" },
-                ]}
-                linhas={dados.previsao.map((r) => ({
-                  ...r,
-                  mes: rotuloMesCurto(r.mes),
-                }))}
-              />
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mês</TableHead>
-                  <TableHead className="text-right">Aberto</TableHead>
-                  <TableHead className="text-right">Realista</TableHead>
-                  <TableHead className="text-right">Otimista</TableHead>
-                  <TableHead className="text-right">Qtd</TableHead>
-                  <TableHead className="min-w-[8rem]">Barras</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dados.previsao.map((r) => (
-                  <TableRow key={r.mes}>
-                    <TableCell className="font-medium">
-                      {rotuloMesCurto(r.mes)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatarMoeda(r.aberto)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatarMoeda(r.realista)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatarMoeda(r.otimista)}
-                    </TableCell>
-                    <TableCell className="text-right">{r.qtd}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Barra
-                          valor={r.realista}
-                          max={maxPrev}
-                          className="bg-foreground/70"
-                        />
-                        <Barra
-                          valor={r.otimista}
-                          max={maxPrev}
-                          className="bg-foreground/30"
-                        />
-                      </div>
-                    </TableCell>
+        {/* ——— Previsão ——— */}
+        {aba === "previsao" ? (
+          <div className="flex flex-col gap-4">
+            <Secao
+              titulo="Previsão de fechamento"
+              meta="por mês previsto"
+              acoes={
+                <ExportarCsvButton
+                  nome="previsao"
+                  colunas={[
+                    { chave: "mes", titulo: "Mês" },
+                    { chave: "aberto", titulo: "Aberto" },
+                    { chave: "realista", titulo: "Realista" },
+                    { chave: "otimista", titulo: "Otimista" },
+                    { chave: "qtd", titulo: "Qtd" },
+                  ]}
+                  linhas={dados.previsao.map((r) => ({
+                    ...r,
+                    mes: rotuloMesCurto(r.mes),
+                  }))}
+                />
+              }
+              semPadding
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mês</TableHead>
+                    <TableHead className="text-right">Aberto</TableHead>
+                    <TableHead className="text-right">Realista</TableHead>
+                    <TableHead className="text-right">Otimista</TableHead>
+                    <TableHead className="text-right">Qtd</TableHead>
+                    <TableHead className="min-w-[8rem]">Barras</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right">
-                    {formatarMoeda(totalPrev.aberto)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatarMoeda(totalPrev.realista)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatarMoeda(totalPrev.otimista)}
-                  </TableCell>
-                  <TableCell className="text-right">{totalPrev.qtd}</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableFooter>
-            </Table>
-          </TabsContent>
+                </TableHeader>
+                <TableBody>
+                  {dados.previsao.map((r) => (
+                    <TableRow key={r.mes}>
+                      <TableCell className="font-medium">
+                        {rotuloMesCurto(r.mes)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatarMoeda(r.aberto)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatarMoeda(r.realista)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatarMoeda(r.otimista)}
+                      </TableCell>
+                      <TableCell className="text-right">{r.qtd}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Barra
+                            valor={r.realista}
+                            max={maxPrev}
+                            className="bg-foreground/70"
+                          />
+                          <Barra
+                            valor={r.otimista}
+                            max={maxPrev}
+                            className="bg-foreground/30"
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell>Total</TableCell>
+                    <TableCell className="text-right">
+                      {formatarMoeda(totalPrev.aberto)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatarMoeda(totalPrev.realista)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatarMoeda(totalPrev.otimista)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {totalPrev.qtd}
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </Secao>
+          </div>
+        ) : null}
 
-          {/* ——— Ranking ——— */}
-          {isDiretor ? (
-            <TabsContent value="ranking" className="mt-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
+        {/* ——— Ranking ——— */}
+        {isDiretor && aba === "ranking" ? (
+          <div className="flex flex-col gap-4">
+            <Secao
+              titulo="Ranking de vendedores"
+              meta={
+                <>
                   Vendido total:{" "}
                   {formatarMoeda(
                     rankingSorted.reduce((s, r) => s + r.vendido, 0),
@@ -796,7 +826,9 @@ export function RelatoriosClient({
                       0,
                     )}
                   />
-                </p>
+                </>
+              }
+              acoes={
                 <ExportarCsvButton
                   nome="ranking"
                   colunas={[
@@ -813,11 +845,18 @@ export function RelatoriosClient({
                   ]}
                   linhas={rankingSorted}
                 />
-              </div>
+              }
+              semPadding
+            >
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <SortHead id="nome" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                    <SortHead
+                      id="nome"
+                      sortKey={sortKey}
+                      sortDir={sortDir}
+                      onToggle={toggleSort}
+                    >
                       Vendedor
                     </SortHead>
                     <SortHead
@@ -898,7 +937,11 @@ export function RelatoriosClient({
                   {rankingSorted.map((r) => (
                     <TableRow
                       key={r.responsavel_id}
-                      className={!r.ativo ? "text-muted-foreground opacity-60" : undefined}
+                      className={
+                        !r.ativo
+                          ? "text-muted-foreground opacity-60"
+                          : undefined
+                      }
                     >
                       <TableCell className="font-medium">
                         {r.nome}
@@ -909,7 +952,10 @@ export function RelatoriosClient({
                       <TableCell className="text-right">
                         <div className="flex flex-col items-end gap-0.5">
                           {formatarMoeda(r.vendido)}
-                          <DeltaBadge atual={r.vendido} anterior={r.vendido_ant} />
+                          <DeltaBadge
+                            atual={r.vendido}
+                            anterior={r.vendido_ant}
+                          />
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -918,7 +964,7 @@ export function RelatoriosClient({
                             <span
                               className={
                                 (r.atingimento_pct ?? 0) >= 100
-                                  ? "font-semibold text-emerald-700"
+                                  ? "font-semibold text-success"
                                   : undefined
                               }
                             >
@@ -958,82 +1004,95 @@ export function RelatoriosClient({
                   ))}
                 </TableBody>
               </Table>
-            </TabsContent>
-          ) : null}
+            </Secao>
+          </div>
+        ) : null}
 
-          {/* ——— Perdas ——— */}
-          <TabsContent value="perdas" className="mt-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-muted-foreground">
-                {dados.totais.perdasQtd} perdas ·{" "}
-                {formatarMoeda(dados.totais.perdasValor)}{" "}
-                <DeltaBadge
-                  atual={dados.totais.perdasValor}
-                  anterior={dados.totais.perdasValorAnt}
+        {/* ——— Perdas ——— */}
+        {aba === "perdas" ? (
+          <div className="flex flex-col gap-4">
+            <Secao
+              titulo="Motivos de perda"
+              meta={
+                <>
+                  {dados.totais.perdasQtd} perdas ·{" "}
+                  {formatarMoeda(dados.totais.perdasValor)}{" "}
+                  <DeltaBadge
+                    atual={dados.totais.perdasValor}
+                    anterior={dados.totais.perdasValorAnt}
+                  />
+                </>
+              }
+              acoes={
+                <ExportarCsvButton
+                  nome="perdas"
+                  colunas={[
+                    { chave: "motivo", titulo: "Motivo" },
+                    { chave: "qtd", titulo: "Qtd" },
+                    { chave: "valor", titulo: "Valor" },
+                    { chave: "pct", titulo: "%" },
+                  ]}
+                  linhas={dados.perdas}
                 />
-              </p>
-              <ExportarCsvButton
-                nome="perdas"
-                colunas={[
-                  { chave: "motivo", titulo: "Motivo" },
-                  { chave: "qtd", titulo: "Qtd" },
-                  { chave: "valor", titulo: "Valor" },
-                  { chave: "pct", titulo: "%" },
-                ]}
-                linhas={dados.perdas}
-              />
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead className="text-right">Qtd</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">%</TableHead>
-                  <TableHead className="min-w-[6rem]">Barra</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dados.perdas.map((r) => (
-                  <TableRow
-                    key={r.motivo}
-                    className="cursor-pointer"
-                    data-active={motivoAberto === r.motivo || undefined}
-                    onClick={() =>
-                      setMotivoAberto((m) => (m === r.motivo ? null : r.motivo))
-                    }
-                  >
-                    <TableCell className="font-medium">{r.motivo}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end gap-0.5">
-                        {r.qtd}
-                        <DeltaBadge atual={r.qtd} anterior={r.qtd_ant} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end gap-0.5">
-                        {formatarMoeda(r.valor)}
-                        <DeltaBadge atual={r.valor} anterior={r.valor_ant} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{r.pct}%</TableCell>
-                    <TableCell>
-                      <Barra valor={r.valor} max={maxPerda} />
-                    </TableCell>
+              }
+              semPadding
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead className="text-right">Qtd</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                    <TableHead className="min-w-[6rem]">Barra</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dados.perdas.map((r) => (
+                    <TableRow
+                      key={r.motivo}
+                      className="cursor-pointer"
+                      data-active={motivoAberto === r.motivo || undefined}
+                      onClick={() =>
+                        setMotivoAberto((m) =>
+                          m === r.motivo ? null : r.motivo,
+                        )
+                      }
+                    >
+                      <TableCell className="font-medium">{r.motivo}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          {r.qtd}
+                          <DeltaBadge atual={r.qtd} anterior={r.qtd_ant} />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          {formatarMoeda(r.valor)}
+                          <DeltaBadge atual={r.valor} anterior={r.valor_ant} />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{r.pct}%</TableCell>
+                      <TableCell>
+                        <Barra valor={r.valor} max={maxPerda} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {dados.perdas.length === 0 ? (
+                <EstadoVazio texto="Nenhuma perda no período." compacto />
+              ) : null}
+            </Secao>
 
             {motivoAberto ? (
-              <section className="space-y-2 rounded-lg border border-border p-3">
-                <h3 className="text-sm font-semibold">
-                  Negociações — {motivoAberto}
-                </h3>
+              <Secao
+                titulo={`Negociações — ${motivoAberto}`}
+                meta="clique no motivo para fechar"
+                destaque
+              >
                 {perdasDoMotivo.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma no período.
-                  </p>
+                  <EstadoVazio texto="Nenhuma no período." compacto />
                 ) : (
                   <ul className="space-y-3">
                     {perdasDoMotivo.map((n) => (
@@ -1046,8 +1105,11 @@ export function RelatoriosClient({
                         </Link>
                         <span className="text-muted-foreground">
                           {" "}
-                          · {formatarMoeda(n.valor_estimado)} · {n.responsavel_nome}
-                          {n.fechado_em ? ` · ${formatarData(n.fechado_em)}` : ""}
+                          · {formatarMoeda(n.valor_estimado)} ·{" "}
+                          {n.responsavel_nome}
+                          {n.fechado_em
+                            ? ` · ${formatarData(n.fechado_em)}`
+                            : ""}
                         </span>
                         {n.anotacao_fechamento ? (
                           <p className="mt-1 text-muted-foreground">
@@ -1062,28 +1124,23 @@ export function RelatoriosClient({
                     ))}
                   </ul>
                 )}
-              </section>
+              </Secao>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="px-1 text-xs text-muted-foreground">
                 Clique em um motivo para ver as negociações e a anotação de
                 fechamento.
               </p>
             )}
-          </TabsContent>
+          </div>
+        ) : null}
 
-          {/* ——— Carteira parada ——— */}
-          <TabsContent value="carteira" className="mt-4 space-y-6">
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-semibold">
-                    Negociações paradas
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {dados.totais.carteiraQtd} ·{" "}
-                    {formatarMoeda(dados.totais.carteiraValor)}
-                  </p>
-                </div>
+        {/* ——— Carteira parada ——— */}
+        {aba === "carteira" ? (
+          <div className="flex flex-col gap-4">
+            <Secao
+              titulo="Negociações paradas"
+              meta={`${dados.totais.carteiraQtd} · ${formatarMoeda(dados.totais.carteiraValor)}`}
+              acoes={
                 <ExportarCsvButton
                   nome="carteira-parada"
                   colunas={[
@@ -1095,7 +1152,9 @@ export function RelatoriosClient({
                   ]}
                   linhas={dados.carteiraParada}
                 />
-              </div>
+              }
+              semPadding
+            >
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1115,7 +1174,9 @@ export function RelatoriosClient({
                         >
                           {n.empresa_nome}
                         </Link>
-                        <p className="text-xs text-muted-foreground">{n.titulo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {n.titulo}
+                        </p>
                       </TableCell>
                       <TableCell>{n.responsavel_nome}</TableCell>
                       <TableCell className="text-right">
@@ -1129,22 +1190,19 @@ export function RelatoriosClient({
                 </TableBody>
               </Table>
               {dados.carteiraParada.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma negociação parada.
-                </p>
+                <EstadoVazio texto="Nenhuma negociação parada." compacto />
               ) : null}
-            </section>
+            </Secao>
 
-            <section className="space-y-3">
-              <h2 className="text-base font-semibold">
-                Empresas sem contato
-              </h2>
+            <Secao titulo="Empresas sem contato" semPadding>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
                     <TableHead>Responsável</TableHead>
-                    <TableHead className="text-right">Dias sem contato</TableHead>
+                    <TableHead className="text-right">
+                      Dias sem contato
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1167,14 +1225,15 @@ export function RelatoriosClient({
                 </TableBody>
               </Table>
               {dados.empresasParadas.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma empresa acima do limite.
-                </p>
+                <EstadoVazio
+                  texto="Nenhuma empresa acima do limite."
+                  compacto
+                />
               ) : null}
-            </section>
-          </TabsContent>
-        </Tabs>
-      </div>
+            </Secao>
+          </div>
+        ) : null}
+      </Pagina>
     </Toaster>
   );
 }
