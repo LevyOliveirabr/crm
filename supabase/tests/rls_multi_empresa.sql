@@ -41,6 +41,13 @@ rollback to savepoint sp;
 set local request.jwt.claim.sub = :'ger';
 select titulo from v_negociacoes where titulo like 'RLS:%';
 
+\echo '--- DIR cria empresa nova: sem RETURNING (o trigger que o torna diretor roda depois do RETURNING); depois enxerga e é diretor'
+set local request.jwt.claim.sub = :'dir';
+insert into emitentes (nome, razao_social) values ('RLS: Empresa nova', 'RLS Nova Ltda');
+select nome from emitentes where nome = 'RLS: Empresa nova';
+select perfil as perfil_esperado_diretor from usuario_emitentes
+  where usuario_id = :'dir' and emitente_id = (select id from emitentes where nome = 'RLS: Empresa nova');
+
 \echo '--- V2 (diretor da B): DEVE ver "RLS: só da B" e "Produto só da B"; presidência da B vendido = 0'
 set local request.jwt.claim.sub = :'v2';
 select titulo, emitente_nome from v_negociacoes where titulo like 'RLS:%';
