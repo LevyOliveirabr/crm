@@ -648,6 +648,19 @@ $$;
 
 ---
 
+### 3.7 Multi-empresa (empresas vendedoras) — migration 0008
+
+O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
+
+- `emitentes` (evolução da antiga `emitente` singleton): `id uuid`, `nome`, `razao_social`, `cnpj`, `endereco`, `telefone`, `email`, `site`, `logo_path`, `validade_padrao_dias`, `condicoes_pagamento_padrao`, `prazo_entrega_padrao`, `rodape`, `orcamento_prefixo`, `orcamento_proximo_numero`, `ordem`, `ativo`. Numeração de orçamento por empresa: `proximo_numero_orcamento(p_emitente uuid)`.
+- `usuario_emitentes (usuario_id, emitente_id, perfil perfil_usuario, gerente_id)`: **o perfil é por empresa**. `usuarios.perfil` vira só o padrão do convite. Helpers `security definer`: `eh_membro_de(uuid)`, `eh_diretor_de(uuid)`, `eh_gerente_de(usuario, emitente)`, `minhas_empresas()`; `eh_diretor()` passa a significar "diretor em alguma empresa" (recursos globais: funis, etapas, listas, config, usuários, clientes).
+- `negociacoes.emitente_id`, `produtos.emitente_id`, `metas.emitente_id` (not null). `produtos.codigo` único por empresa. `metas` únicas por (responsável, empresa, mês).
+- `categorias_produto (emitente_id, nome, descricao, catalogo_path, catalogo_url, ordem, ativo)`; `produtos.categoria_id`, `produtos.link` (página no site), `produtos.catalogo_path` / `catalogo_url`. Catálogos e logos ficam no bucket público `publico` em `emitentes/<id>/...` (escrita só pelo diretor da empresa).
+- RLS: negociações e dependentes = diretor da empresa, responsável ou gerente do responsável naquela empresa; `with check` exige que o responsável seja membro da empresa. Produtos, categorias e metas: membros leem, diretor da empresa escreve. `api_keys`/`mcp_log`: diretor vê só das pessoas das empresas que dirige. Clientes e contatos continuam globais.
+- Views `v_negociacoes` (+`emitente_id`, `emitente_nome`), `v_resultado_mensal`, `v_previsao`, `v_funil`, `v_motivos_perda` ganham `emitente_id` (uma linha por empresa; o app soma quando o escopo é "Todas"). `relatorio_presidencia(p_mes, p_emitente default null)`.
+- Escopo na UI: cookie `crm_emitente` ("todas" ou id) com override `?emitente=`; um núcleo puro (`lib/auth/escopo-empresa-core.ts`) serve páginas, `/api/exportar` e MCP (argumento `empresa_vendedora`).
+- Migration `0009` (após o deploy): remove `emitente`, os defaults de `emitente_id`, `usuarios.gerente_id` e as chaves `config.orcamento_*`.
+
 ## 4. Regras de negócio
 
 | # | Regra | Onde implementar |
@@ -666,6 +679,10 @@ $$;
 | R11 | Empresa: nome único (case/acento-insensitive). Ao digitar no cadastro, autocomplete busca por trigram; se já existir, seleciona em vez de criar. | Índice + UI |
 | R12 | Vendedor só vê/edita negociações onde `responsavel_id = auth.uid()`. Diretor vê tudo e pode transferir (`responsavel_id`). | RLS |
 | R13 | Toda escrita via MCP grava `interacoes.origem_agente = true` e prefixa `texto` com `[agente]`. | MCP |
+| R15 | Toda negociação pertence a uma **empresa vendedora** (`emitente_id`), escolhida na criação (pré-selecionada pelo escopo); só membros da empresa criam nela e o responsável precisa ser membro. Não se troca a empresa de uma negociação (cria-se outra). | Server Action `criarNegociacao`, MCP, RLS |
+| R16 | Produto, categoria e meta pertencem a uma empresa vendedora; o orçamento só aceita produtos do catálogo da empresa da negociação (item livre continua permitido). | `criarOrcamentoGerado`, `adicionarItemOrcamento` |
+| R17 | Perfil por empresa: diretor de A não tem poder em B. Recursos globais (funis, listas, parâmetros, usuários, clientes, importação) exigem ser diretor em alguma empresa; recursos da empresa exigem ser diretor dela. | `perfilEm`, `exigirDiretorDe`, RLS |
+| R18 | Todo relatório, dashboard, listagem, exportação e tool MCP respeita o escopo (uma empresa ou todas). "Todas" = sem filtro (a RLS limita às empresas do usuário). | `getEscopoEmpresa`, `aplicarEscopoEmitente` |
 | R14 | Excluir: o padrão é arquivar (`arquivado_em`). Diretor pode arquivar qualquer coisa; vendedor só o que é seu. Arquivados somem de todas as telas e views. Exclusão definitiva (delete físico, com cascade em interações, ações, orçamentos e arquivos do Storage) só pelo diretor, com confirmação na ficha. | Server Actions |
 
 ---

@@ -91,4 +91,6 @@ API xAI (tool remota): `type: "mcp"`, `server_url` = endpoint acima, `authorizat
 
 Guia completo (prompts de agenda, fluxo do bot): **`docs/manual-utilizacao.md`** seção 6.
 
+Multi-empresa: as tools aceitam `empresa_vendedora` (nome ou id); `listar_empresas_vendedoras` e o resource `crm://empresas-vendedoras` listam as opções. Detalhes em `docs/manual-agente-mcp.md` §6.
+
 Variável obrigatória no servidor: `SUPABASE_JWT_SECRET` (Settings → API → JWT Secret do projeto Supabase).

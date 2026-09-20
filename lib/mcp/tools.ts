@@ -12,6 +12,7 @@ import { encontrarEmpresa } from "@/lib/auth/escopo-empresa-core";
 import type { McpAuthContext } from "@/lib/mcp-auth";
 import { clientForApiKey, McpAuthError } from "@/lib/mcp-auth";
 import { registrarMcpLog } from "@/lib/mcp-log";
+import { criarOrcamentoGerado } from "@/lib/orcamentos/gerado";
 import { checarRateLimit } from "@/lib/mcp-rate-limit";
 import {
   buscarEmpresaArgsSchema,
@@ -882,13 +883,37 @@ export function registrarToolsEResources(server: McpServer) {
     "montar_orcamento",
     {
       title: "Montar orçamento",
-      description: "Disponível na entrega 3 (stub).",
+      description:
+        "Cria um orçamento numerado com itens (produtos do catálogo da empresa vendedora da negociação, via produto_id de buscar_produto, ou itens livres por descrição). Preço omitido = preço base do produto. O vendedor revisa e imprime na tela.",
       inputSchema: montarOrcamentoArgsSchema,
     },
     async (args, ctx) =>
-      comLog("montar_orcamento", args, ctx, async () =>
-        texto("montar_orcamento disponível na entrega 3"),
-      ),
+      comLog("montar_orcamento", args, ctx, async (auth) => {
+        const res = await criarOrcamentoGerado(auth.supabase, {
+          negociacaoId: args.negociacao_id,
+          itens: args.itens,
+          cabecalho: {
+            condicoes_pagamento: args.condicoes_pagamento ?? undefined,
+            prazo_entrega: args.prazo_entrega ?? undefined,
+            observacoes: args.observacoes ?? undefined,
+          },
+        });
+        if (!res.ok) return texto(res.error, true);
+
+        await auth.supabase.from("interacoes").insert({
+          negociacao_id: args.negociacao_id,
+          tipo: "anotacao",
+          texto: prefixoAgente(`Orçamento ${res.numero} montado: ${formatarMoeda(res.total)}`),
+          usuario_id: auth.usuario.id,
+          origem_agente: true,
+        });
+
+        return texto(
+          `Orçamento ${res.numero} criado com ${args.itens.length} item(ns), total ${formatarMoeda(res.total)}` +
+            (res.moveuEtapa ? `; negociação movida para "${res.etapaNome}"` : "") +
+            `. id=${res.orcamentoId}. Revise em /orcamentos/${res.orcamentoId}.`,
+        );
+      }),
   );
 
   server.registerResource(

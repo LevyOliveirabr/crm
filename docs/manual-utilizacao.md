@@ -17,12 +17,27 @@ Sistema de CRM para a equipe comercial da F-Led: acompanhar empresas, negociçõ
 
 Primeiro acesso por convite: o diretor convida em **Configurações → Usuários**; o convidado define a senha em `/auth/definir-senha`.
 
-### Perfis
+### Perfis (por empresa vendedora)
 
-| Perfil | O que vê / faz |
+O CRM atende **várias empresas do grupo** (empresas vendedoras). Cada
+negociação, produto e meta pertence a uma delas; clientes e contatos são
+compartilhados. O perfil é definido **por empresa**: a mesma pessoa pode ser
+diretor de uma e vendedor (ou sem acesso) de outra.
+
+| Perfil na empresa | O que vê / faz naquela empresa |
 |---|---|
-| **Diretor** | Tudo: carteira de todos, Configurações, importação CSV, relatório da presidência completo |
+| **Diretor** | Tudo da empresa: carteira de todos, produtos, categorias, metas, usuários vinculados, relatório da presidência completo. Quem é diretor em alguma empresa acessa Configurações (funis, listas, parâmetros e clientes são compartilhados) |
+| **Gerente** | Negociações da equipe dele (vendedores cujo gerente é ele) mais as próprias |
 | **Vendedor** | Só a própria carteira de negociações/ações; vê empresas e contatos de todos; **sem** telas de admin |
+
+### Seletor de empresa
+
+No topo do menu (e no cabeçalho no celular) há o seletor **Todas as empresas /
+Empresa X**. Ele vale para dashboard, Meu dia, funil, empresas, relatórios,
+busca global e exportações. "Todas" soma as empresas em que você participa.
+Quem participa de uma única empresa não vê o seletor. Um link com
+`?emitente=<id>` (ou `?emitente=todas`) força a empresa daquela tela, útil para
+compartilhar relatórios.
 
 ---
 
@@ -98,6 +113,20 @@ Na ficha você:
 
 Botão flutuante **+** (quando visível) abre nova negocição.
 
+### Proposta comercial (orçamento)
+
+Na ficha da negociação, **+ Orçamento** oferece dois caminhos: **Anexar PDF**
+(proposta feita fora) ou **Montar orçamento**, que cria um orçamento numerado
+(`PREFIXO-AAAA-0001`, numeração da empresa vendedora) e abre o editor em
+`/orcamentos/[id]`: busca de produtos do catálogo da empresa, item livre,
+quantidade/preço/desconto editáveis, condições de pagamento, prazo, frete,
+observações e desconto geral. O documento traz o cabeçalho e o logo da empresa
+vendedora, o site clicável, os links **ver no site** e **catálogo** de cada
+item e a seção **Materiais e links** (site, catálogos das categorias e dos
+produtos). O mesmo documento aparece na página pública de aceite; na
+impressão as URLs saem por extenso. Um orçamento novo substitui o anterior
+"enviado" e move a negociação para a primeira etapa que conta como proposta.
+
 ### Relatórios (`/relatorios`)
 
 Na aba Funil, cada etapa mostra quantas negociações (criadas no período) passaram por ela, a conversão para a etapa seguinte e os dias médios de permanência.
@@ -106,16 +135,18 @@ Na aba Funil, cada etapa mostra quantas negociações (criadas no período) pass
 - Aba **Funil** e demais análises (conforme liberado).
 - Exportação Excel/CSV quando o botão de exportar aparecer.
 
-### Configurações (`/configuracoes`) — só diretor
+### Configurações (`/configuracoes`) — só quem é diretor de alguma empresa
 
 | Subpágina | Uso |
 |---|---|
 | Funis | Funis e etapas parametrizáveis |
 | Listas | Segmentos, origens, motivos de perda, etc. |
-| Parâmetros | Ajustes gerais |
-| Produtos | Catálogo para orçamento |
-| Emitente | Dados da empresa nos documentos |
-| Usuários | Convidar, ativar/desativar, perfil |
+| Parâmetros | Ajustes gerais (dias de parada, pesos, alerta de validade) |
+| Empresas vendedoras | Empresas do grupo: dados do cabeçalho da proposta, logo, prefixo e numeração de orçamento. Qualquer diretor cria; só o diretor da empresa edita |
+| Categorias | Categorias de produto por empresa, com catálogo (arquivo ou URL) |
+| Produtos | Catálogo por empresa vendedora: código, categoria, preço base, link no site e catálogo (arquivo ou URL) |
+| Metas | Meta mensal por vendedor em cada empresa |
+| Usuários | Convidar (vinculado a uma empresa/perfil), ativar/desativar e a grade empresa × perfil × gerente de cada pessoa |
 | Importar | CSV de empresas / contatos / negocições / produtos |
 | API keys | Chaves para agentes MCP (Cursor, Claude, **Grok**) |
 
@@ -138,7 +169,7 @@ Além do fluxo do vendedor:
 
 1. Revisar **Relatório da Presidência** no início da semana / mês.
 2. Ajustar funis e listas quando o processo mudar.
-3. Convidar novos vendedores.
+3. Convidar novos vendedores e definir em quais empresas (e com qual perfil) cada pessoa atua.
 4. Importar base CSV quando houver carga inicial ou atualização em lote.
 5. Gerar **API keys** para cada agente (Grok, Cursor, etc.) e revogar as antigas.
 
@@ -183,10 +214,15 @@ Revogar: botão Revogar na mesma tela → próximas chamadas retornam **401**.
 | `fechar_negociacao` | Venda ou perda |
 | `relatorio_presidencia` | Números do mês |
 | `previsao` | Previsão de fechamento |
-| `buscar_produto` | Catálogo |
-| `montar_orcamento` | Montar rascunho de orçamento |
+| `buscar_produto` | Catálogo (com categoria, link e catálogo) |
+| `montar_orcamento` | Montar orçamento numerado com itens |
+| `listar_empresas_vendedoras` | Empresas do grupo em que a key participa |
 
-Resources: `crm://funis`, `crm://listas`, `crm://negociacao/{id}`.
+As tools de leitura aceitam `empresa_vendedora` (nome ou id) para filtrar uma
+empresa; omitido = todas. Nas de escrita (`criar_negociacao`,
+`montar_orcamento`), quem participa de mais de uma empresa precisa informar.
+
+Resources: `crm://funis`, `crm://listas`, `crm://empresas-vendedoras`, `crm://negociacao/{id}`.
 
 Rate limit: **60 chamadas/min** por key. Logs em `mcp_log`.
 

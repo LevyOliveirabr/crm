@@ -289,20 +289,23 @@ Todos os argumentos de data usam `AAAA-MM-DD`. Ids são UUID.
 
 | Tool | Para que serve | Argumentos |
 |---|---|---|
-| `buscar_empresa` | Achar empresas por parte do nome (até 10, com nº de negociações abertas) | `texto` |
+| `listar_empresas_vendedoras` | Empresas do grupo em que o dono da key participa, com o perfil em cada uma. Use o nome ou o id em `empresa_vendedora` | — |
+| `buscar_empresa` | Achar empresas (clientes) por parte do nome (até 10, com nº de negociações abertas) | `texto` |
 | `criar_empresa` | Criar empresa (reutiliza se o nome já existir) e contato opcional | `nome`, `cidade?`, `uf?`, `segmento?`, `contato?{nome, whatsapp?, cargo?}` |
-| `listar_negociacoes` | Listar negociações com filtros | `status?` (aberta/vendida/perdida), `funil?`, `etapa?`, `responsavel_email?`, `parada_ha_dias?`, `limite?` (padrão 30, máx. 100) |
+| `listar_negociacoes` | Listar negociações com filtros | `empresa_vendedora?`, `status?` (aberta/vendida/perdida), `funil?`, `etapa?`, `responsavel_email?`, `parada_ha_dias?`, `limite?` (padrão 30, máx. 100) |
 | `obter_negociacao` | Ficha completa: timeline, ações, orçamentos | `id` |
-| `criar_negociacao` | Abrir negociação na primeira etapa do funil | `empresa_id` ou `empresa_nome`, `valor_estimado`, `funil?`, `linha?`, `origem?`, `temperatura?` (1 fria, 2 morna, 3 quente), `previsao_mes?`, `proxima_acao?{descricao, data, tipo?}` |
+| `criar_negociacao` | Abrir negociação na primeira etapa do funil | `empresa_vendedora?` (obrigatória se o usuário participa de mais de uma), `empresa_id` ou `empresa_nome`, `valor_estimado`, `funil?`, `linha?`, `origem?`, `temperatura?` (1 fria, 2 morna, 3 quente), `previsao_mes?`, `proxima_acao?{descricao, data, tipo?}` |
 | `registrar_interacao` | Gravar ligação, WhatsApp, visita, reunião, e-mail ou anotação | `negociacao_id`, `tipo` (ligacao/whatsapp/visita/reuniao/email/anotacao), `texto?` |
 | `criar_acao` | Agendar próxima ação | `negociacao_id`, `descricao`, `data`, `tipo?` (ligar/whatsapp/visita/reuniao/proposta/outro), `hora?` |
 | `concluir_acao` | Concluir ação e, opcionalmente, agendar a próxima | `acao_id`, `proxima?{descricao, data}` |
 | `mover_etapa` | Mover para outra etapa do mesmo funil | `negociacao_id`, `etapa` (nome ou id) |
 | `fechar_negociacao` | Marcar vendida ou perdida | `negociacao_id`, `resultado` (vendida/perdida), `valor_final?` (obrigatório na venda), `motivo?` (obrigatório na perda), `anotacao?` |
-| `relatorio_presidencia` | Números do mês: vendido, variação, previsão, top 10, perdas | `mes?` (`AAAA-MM`) |
-| `previsao` | Previsão de fechamento por mês (aberto, realista, otimista) | `meses?` (padrão 3) |
-| `buscar_produto` | Catálogo de produtos ativos | `texto` |
-| `montar_orcamento` | Reservado (retorna aviso) | — |
+| `relatorio_presidencia` | Números do mês: vendido, variação, previsão, top 10, perdas | `empresa_vendedora?`, `mes?` (`AAAA-MM`) |
+| `previsao` | Previsão de fechamento por mês (aberto, realista, otimista) | `empresa_vendedora?`, `meses?` (padrão 3) |
+| `buscar_produto` | Catálogo de produtos ativos, com categoria, link no site e catálogo | `empresa_vendedora?`, `texto` |
+| `montar_orcamento` | Cria orçamento numerado com itens (produtos via `produto_id` de `buscar_produto`, só do catálogo da empresa vendedora da negociação, ou itens livres); aplica R6 | `negociacao_id`, `itens[{produto_id? ou descricao, quantidade, preco_unitario?, desconto_pct?}]`, `condicoes_pagamento?`, `prazo_entrega?`, `observacoes?` |
+
+`empresa_vendedora` aceita nome (sem acento/caixa) ou id. Omitida nas leituras = todas as empresas do usuário.
 
 ### Resources (dados de referência, só leitura)
 
@@ -310,6 +313,7 @@ Todos os argumentos de data usam `AAAA-MM-DD`. Ids são UUID.
 |---|---|
 | `crm://funis` | Funis e etapas ativas (nomes que `mover_etapa` aceita) |
 | `crm://listas` | Linhas, origens, segmentos e motivos de perda |
+| `crm://empresas-vendedoras` | Empresas do grupo em que a key participa (id, nome, perfil) |
 | `crm://negociacao/{id}` | Ficha completa de uma negociação |
 
 Peça ao agente "leia o resource crm://funis" quando ele errar nome de etapa.
@@ -318,9 +322,10 @@ Peça ao agente "leia o resource crm://funis" quando ele errar nome de etapa.
 
 ## 7. Segurança, limites e auditoria
 
-- **Permissão por usuário.** A key herda o RLS do dono: vendedor só vê e
-  edita as próprias negociações; gerente, a equipe; diretor, tudo. Empresas e
-  contatos são visíveis a todos.
+- **Permissão por usuário e por empresa.** A key herda o RLS do dono: em cada
+  empresa vendedora, vendedor só vê e edita as próprias negociações; gerente,
+  a equipe; diretor, tudo daquela empresa. Empresas (clientes) e contatos são
+  visíveis a todos; produtos só aos membros da empresa vendedora.
 - **Rastreabilidade.** Toda escrita via agente grava interação com
   `origem_agente = true` e texto iniciado por `[agente]`. Cada chamada fica
   em `mcp_log` (tool, argumentos, ok, erro, tempo). Consulte no SQL Editor:

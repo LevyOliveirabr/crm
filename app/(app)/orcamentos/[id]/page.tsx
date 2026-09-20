@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { BotaoExportar } from "@/components/crm/botao-exportar";
 import { OrcamentoAcoes } from "@/components/crm/orcamento-acoes";
 import { OrcamentoDocumento } from "@/components/crm/orcamento-documento";
+import { OrcamentoItensEditor } from "@/components/crm/orcamento-itens-editor";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { carregarOrcamentoCompleto } from "@/lib/orcamentos/dados";
 import { createClient } from "@/lib/supabase/server";
@@ -41,6 +42,8 @@ export default async function OrcamentoPage({
       </header>
 
       <OrcamentoAcoes orcamentoId={o.id} situacao={o.situacao} aceitoEm={o.aceitoEm} />
+
+      {o.editavel ? <OrcamentoItensEditor o={o} /> : null}
 
       <OrcamentoDocumento o={o} />
     </div>

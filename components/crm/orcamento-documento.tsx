@@ -1,3 +1,5 @@
+import { ExternalLink, FileText } from "lucide-react";
+
 import type { OrcamentoCompleto } from "@/lib/orcamentos/dados";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/lib/format";
 
@@ -38,9 +40,15 @@ export function OrcamentoDocumento({ o }: { o: OrcamentoCompleto }) {
                 .join(" · ")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {[o.emitente?.telefone, o.emitente?.email, o.emitente?.site]
-                .filter(Boolean)
-                .join(" · ")}
+              {[o.emitente?.telefone, o.emitente?.email].filter(Boolean).join(" · ")}
+              {o.emitente?.site ? (
+                <>
+                  {o.emitente.telefone || o.emitente.email ? " · " : ""}
+                  <a href={o.emitente.site} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                    {o.emitente.site.replace(/^https?:\/\//, "")}
+                  </a>
+                </>
+              ) : null}
             </p>
           </div>
         </div>
@@ -104,7 +112,26 @@ export function OrcamentoDocumento({ o }: { o: OrcamentoCompleto }) {
               {o.itens.map((i, idx) => (
                 <tr key={i.id} className="border-b border-border">
                   <td className="px-2 py-2 text-muted-foreground tabular-nums">{idx + 1}</td>
-                  <td className="px-2 py-2">{i.descricao}</td>
+                  <td className="px-2 py-2">
+                    {i.descricao}
+                    {i.produto?.codigo ? (
+                      <span className="ml-1 text-xs text-muted-foreground">({i.produto.codigo})</span>
+                    ) : null}
+                    {i.produto && (i.produto.link || i.produto.catalogoUrl) ? (
+                      <span className="mt-0.5 flex flex-wrap gap-2 text-xs">
+                        {i.produto.link ? (
+                          <a href={i.produto.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
+                            <ExternalLink className="size-3" aria-hidden /> ver no site
+                          </a>
+                        ) : null}
+                        {i.produto.catalogoUrl ? (
+                          <a href={i.produto.catalogoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
+                            <FileText className="size-3" aria-hidden /> catálogo
+                          </a>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="px-2 py-2 text-right tabular-nums">
                     {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
                   </td>
@@ -195,6 +222,22 @@ export function OrcamentoDocumento({ o }: { o: OrcamentoCompleto }) {
               <p className="mt-1 whitespace-pre-line">{o.observacoes}</p>
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {o.links.length > 0 ? (
+        <section className="mt-5 text-sm">
+          <p className="eyebrow">Materiais e links</p>
+          <ul className="mt-1 space-y-1">
+            {o.links.map((l) => (
+              <li key={`${l.tipo}-${l.url}`} className="flex flex-wrap items-baseline gap-x-2">
+                <a href={l.url} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4">
+                  {l.titulo}
+                </a>
+                <span className="proposta-url break-all text-xs text-muted-foreground">{l.url}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

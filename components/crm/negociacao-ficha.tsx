@@ -34,7 +34,7 @@ import {
   moverEtapa,
   reabrir,
 } from "@/lib/actions/negociacoes";
-import { criarOrcamentoUpload } from "@/lib/actions/orcamentos";
+import { criarOrcamentoGerado, criarOrcamentoUpload } from "@/lib/actions/orcamentos";
 import {
   formatarData,
   formatarDataHora,
@@ -1238,7 +1238,7 @@ export function NegociacaoFicha({
           <DialogHeader>
             <DialogTitle>Novo orçamento</DialogTitle>
             <DialogDescription>
-              Anexe um PDF ou monte o orçamento (em breve).
+              Anexe um PDF pronto ou monte o orçamento com itens do catálogo da empresa vendedora.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
@@ -1328,13 +1328,24 @@ export function NegociacaoFicha({
                 type="button"
                 variant="outline"
                 className="w-full"
-                disabled
-                title="disponível na entrega 3"
+                disabled={pending}
+                onClick={() =>
+                  run(async () => {
+                    const res = await criarOrcamentoGerado(n.id);
+                    if (!res.ok) {
+                      setErro(res.error);
+                      return;
+                    }
+                    setOrcOpen(false);
+                    if (res.orcamentoId) router.push(`/orcamentos/${res.orcamentoId}`);
+                  })
+                }
               >
                 Montar orçamento
               </Button>
               <p className="mt-1 text-xs text-muted-foreground">
-                Disponível na entrega 3.
+                Cria um orçamento numerado com os dados da empresa vendedora; os itens são
+                escolhidos na próxima tela. Substitui o orçamento enviado anterior.
               </p>
             </div>
           </div>

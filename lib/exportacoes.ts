@@ -926,6 +926,8 @@ const orcamentoItens: RegistroExportacao = {
     { chave: "preco_unitario", titulo: "Preço unit.", tipo: "moeda" },
     { chave: "desconto_pct", titulo: "Desconto %", tipo: "percentual" },
     { chave: "total", titulo: "Total", tipo: "moeda" },
+    { chave: "link", titulo: "Link no site", tipo: "texto" },
+    { chave: "catalogo", titulo: "Catálogo", tipo: "texto" },
   ],
   async query(filtros, supabase) {
     const orcamentoId = pick(filtros, "orcamento_id", "id");
@@ -937,7 +939,7 @@ const orcamentoItens: RegistroExportacao = {
       supabase
         .from("orcamento_itens")
         .select(
-          "ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total, produtos(codigo)",
+          "ordem, descricao, unidade, quantidade, preco_unitario, desconto_pct, total, produtos(codigo, link, catalogo_url, catalogo_path)",
         )
         .eq("orcamento_id", orcamentoId)
         .order("ordem", { ascending: true })
@@ -946,22 +948,24 @@ const orcamentoItens: RegistroExportacao = {
 
     return {
       linhas: rows.map((r) => {
-        const prod = r.produtos as
-          | { codigo: string | null }
-          | { codigo: string | null }[]
-          | null;
-        const codigo = Array.isArray(prod)
-          ? (prod[0]?.codigo ?? null)
-          : (prod?.codigo ?? null);
+        type Prod = { codigo: string | null; link: string | null; catalogo_url: string | null; catalogo_path: string | null };
+        const prodRaw = r.produtos as unknown as Prod | Prod[] | null;
+        const prod = Array.isArray(prodRaw) ? (prodRaw[0] ?? null) : prodRaw;
         return {
           ordem: Number(r.ordem ?? 0),
-          codigo,
+          codigo: prod?.codigo ?? null,
           descricao: r.descricao,
           unidade: r.unidade,
           quantidade: Number(r.quantidade ?? 0),
           preco_unitario: Number(r.preco_unitario ?? 0),
           desconto_pct: Number(r.desconto_pct ?? 0),
           total: Number(r.total ?? 0),
+          link: prod?.link ?? null,
+          catalogo:
+            prod?.catalogo_url ??
+            (prod?.catalogo_path
+              ? supabase.storage.from("publico").getPublicUrl(prod.catalogo_path).data.publicUrl
+              : null),
         };
       }),
       filtrosLabel: { Orçamento: orcamentoId },
