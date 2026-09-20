@@ -2,6 +2,8 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { campoClass } from "@/components/crm/pagina";
+
 import {
   TIPOS_SEGMENTO,
   VISOES_DATA,
@@ -9,8 +11,6 @@ import {
   type OpcoesDashboard,
 } from "@/lib/dashboard/tipos";
 
-const campoClass =
-  "h-9 w-full rounded-lg border border-input bg-card px-2.5 text-sm font-medium outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function Campo({
   id,

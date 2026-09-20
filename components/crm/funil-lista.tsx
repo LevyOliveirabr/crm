@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Flame } from "lucide-react";
 import { formatarData, formatarMoeda } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CartaoNegociacaoData } from "@/components/crm/cartao-negociacao";
+import { EstadoVazio } from "@/components/crm/pagina";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -34,7 +35,7 @@ export type LinhaLista = CartaoNegociacaoData & {
 function Temperatura({ valor }: { valor: number }) {
   const temp = Math.min(3, Math.max(1, valor || 1));
   return (
-    <span className="inline-flex items-center gap-0.5 text-orange-600">
+    <span className="inline-flex items-center gap-0.5 text-brand-foreground">
       {Array.from({ length: temp }, (_, i) => (
         <Flame key={i} className="size-3 fill-current" aria-hidden />
       ))}
@@ -64,7 +65,7 @@ function SortHead({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <Icon className="size-3.5 opacity-60" aria-hidden />
@@ -106,9 +107,7 @@ export function FunilLista({ linhas }: { linhas: LinhaLista[] }) {
 
   if (linhas.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Nenhuma negociação neste funil com os filtros atuais.
-      </p>
+      <EstadoVazio texto="Nenhuma negociação neste funil com os filtros atuais." />
     );
   }
 
@@ -199,12 +198,7 @@ export function FunilLista({ linhas }: { linhas: LinhaLista[] }) {
                   <Badge variant="destructive">Atrasada</Badge>
                 ) : null}
                 {n.semAcao ? (
-                  <Badge
-                    variant="outline"
-                    className="border-amber-300 bg-amber-50 text-amber-800"
-                  >
-                    Sem ação
-                  </Badge>
+                  <Badge variant="warning">Sem ação</Badge>
                 ) : null}
                 {n.parada ? (
                   <Badge variant="secondary">Parada</Badge>

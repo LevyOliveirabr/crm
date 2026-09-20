@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
+import { campoClass } from "@/components/crm/pagina";
+
 export type VendedorOption = {
   id: string;
   nome: string;
@@ -30,15 +32,15 @@ export function SeletorVendedor({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor="filtro-vendedor" className="text-sm font-medium">
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor="filtro-vendedor" className="eyebrow">
         Vendedor
       </label>
       <select
         id="filtro-vendedor"
         value={valor ?? "todos"}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-full max-w-xs rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className={campoClass}
       >
         <option value="todos">Todos</option>
         {vendedores.map((v) => (

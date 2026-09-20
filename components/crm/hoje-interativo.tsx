@@ -17,6 +17,7 @@ import { adiarAcao, concluirAcao } from "@/lib/actions/acoes";
 import { formatarData } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 import { MiniFormProximaAcao } from "@/components/crm/mini-form-proxima-acao";
+import { Contador, EstadoVazio, Secao } from "@/components/crm/pagina";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -113,47 +114,48 @@ export function HojeInterativo({
 
   return (
     <>
-      {erro ? (
-        <p className="mb-3 text-sm text-destructive" role="alert">
-          {erro}
-        </p>
-      ) : null}
-
-      <SecaoAcoes
-        titulo="Atrasadas"
-        vazia="Nenhuma ação atrasada."
-        itens={atrasadas}
-        pending={pending}
-        pendingId={pendingId}
-        onConcluir={onConcluir}
-        onAdiar={onAdiar}
-        destaqueAtraso
-      />
-
-      <SecaoAcoes
-        titulo="Hoje"
-        vazia="Nenhuma ação para hoje."
-        itens={deHoje}
-        pending={pending}
-        pendingId={pendingId}
-        onConcluir={onConcluir}
-        onAdiar={onAdiar}
-      />
-
-      <section className="mt-6">
-        <h2 className="mb-2 text-sm font-semibold tracking-tight text-foreground">
-          Sem próxima ação
-        </h2>
-        {semAcao.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma negociação sem ação.
+      <div className="flex flex-col gap-4">
+        {erro ? (
+          <p className="text-sm text-destructive" role="alert">
+            {erro}
           </p>
+        ) : null}
+
+        <SecaoAcoes
+          titulo="Ações atrasadas"
+          vazia="Nenhuma ação atrasada. Bom trabalho."
+          itens={atrasadas}
+          pending={pending}
+          pendingId={pendingId}
+          onConcluir={onConcluir}
+          onAdiar={onAdiar}
+          destaqueAtraso
+        />
+
+        <SecaoAcoes
+          titulo="Para hoje"
+          vazia="Nenhuma ação agendada para hoje."
+          itens={deHoje}
+          pending={pending}
+          pendingId={pendingId}
+          onConcluir={onConcluir}
+          onAdiar={onAdiar}
+        />
+      </div>
+
+      <Secao
+        titulo="Sem próxima ação"
+        meta={semAcao.length > 0 ? <Contador valor={semAcao.length} tom="alerta" /> : undefined}
+        className="lg:col-start-2 lg:row-start-1"
+      >
+        {semAcao.length === 0 ? (
+          <EstadoVazio texto="Toda negociação aberta tem um próximo passo." compacto />
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
+          <ul className="divide-y divide-border">
             {semAcao.map((n) => (
               <li
                 key={n.id}
-                className="flex items-center justify-between gap-3 px-3 py-2.5"
+                className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
               >
                 <div className="min-w-0">
                   <Link
@@ -178,7 +180,7 @@ export function HojeInterativo({
             ))}
           </ul>
         )}
-      </section>
+      </Secao>
 
       <MiniFormProximaAcao
         open={miniOpen}
@@ -210,39 +212,31 @@ function SecaoAcoes({
   destaqueAtraso?: boolean;
 }) {
   return (
-    <section className="mt-6">
-      <h2
-        className={cn(
-          "mb-2 text-sm font-semibold tracking-tight",
-          destaqueAtraso && itens.length > 0
-            ? "text-destructive"
-            : "text-foreground",
-        )}
-      >
-        {titulo}
-        {itens.length > 0 ? (
-          <span className="ml-1.5 font-normal text-muted-foreground">
-            ({itens.length})
-          </span>
-        ) : null}
-      </h2>
+    <Secao
+      titulo={titulo}
+      meta={
+        itens.length > 0 ? (
+          <Contador valor={itens.length} tom={destaqueAtraso ? "ruim" : undefined} />
+        ) : undefined
+      }
+    >
       {itens.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{vazia}</p>
+        <EstadoVazio texto={vazia} compacto />
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border">
           {itens.map((acao) => {
             const Icon = TIPO_ICONE[acao.tipo] ?? CalendarClock;
             const busy = pending && pendingId === acao.id;
             return (
               <li
                 key={acao.id}
-                className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex min-w-0 items-start gap-2.5">
                   <span
                     className={cn(
-                      "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted",
-                      acao.atrasada && "bg-destructive/10 text-destructive",
+                      "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground",
+                      acao.atrasada && "bg-danger-bg text-destructive",
                     )}
                     title={TIPO_LABEL[acao.tipo]}
                   >
@@ -291,6 +285,6 @@ function SecaoAcoes({
           })}
         </ul>
       )}
-    </section>
+    </Secao>
   );
 }

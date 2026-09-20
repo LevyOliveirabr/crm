@@ -109,7 +109,7 @@ export function CartaoNegociacao({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-background p-2.5 shadow-xs",
+        "rounded-lg border border-border bg-card p-2.5 shadow-xs",
         isDragging && "opacity-90 shadow-md ring-2 ring-ring/40",
         pending && "opacity-70",
       )}
@@ -165,7 +165,7 @@ export function CartaoNegociacao({
           {formatarMoeda(negociacao.valorEstimado)}
         </span>
         <span
-          className="inline-flex items-center gap-0.5 text-orange-600"
+          className="inline-flex items-center gap-0.5 text-brand-foreground"
           title={`Temperatura ${temp}`}
           aria-label={`Temperatura ${temp}`}
         >
@@ -184,12 +184,7 @@ export function CartaoNegociacao({
             <Badge variant="destructive">Atrasada</Badge>
           ) : null}
           {negociacao.semAcao ? (
-            <Badge
-              variant="outline"
-              className="border-amber-300 bg-amber-50 text-amber-800"
-            >
-              Sem ação
-            </Badge>
+            <Badge variant="warning">Sem ação</Badge>
           ) : null}
           {negociacao.parada ? (
             <Badge variant="secondary" className="text-muted-foreground">

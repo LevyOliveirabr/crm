@@ -9,6 +9,7 @@ import type {
   VisaoData,
 } from "@/lib/dashboard/tipos";
 import { formatarData, formatarMoedaCurta, mesPorExtenso } from "@/lib/format";
+import { Tile } from "@/components/crm/pagina";
 import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------- */
@@ -30,56 +31,7 @@ function fmtPct(v: number): string {
   return `${v > 0 ? "▲" : "▼"} ${s}%`;
 }
 
-function Kpi({
-  label,
-  valor,
-  detalhe,
-  tom,
-  destaque = false,
-}: {
-  label: string;
-  valor: string;
-  detalhe: string;
-  tom?: "ok" | "ruim";
-  destaque?: boolean;
-}) {
-  return (
-    <div
-      role="listitem"
-      className={cn(
-        "card-surface flex flex-col justify-center px-4 py-3.5",
-        destaque && "border-primary bg-primary text-primary-foreground",
-      )}
-    >
-      <p
-        className={cn(
-          "eyebrow",
-          destaque && "text-primary-foreground/65",
-        )}
-      >
-        {label}
-      </p>
-      <p
-        className={cn(
-          "mt-1 font-heading text-2xl font-semibold tracking-tight tabular-nums",
-          destaque && "text-brand",
-        )}
-      >
-        {valor}
-      </p>
-      <p
-        className={cn(
-          "mt-0.5 text-xs text-muted-foreground",
-          destaque && "text-primary-foreground/70",
-          tom === "ok" && "font-medium text-success",
-          tom === "ruim" && "font-medium text-destructive",
-        )}
-      >
-        {detalhe}
-      </p>
-    </div>
-  );
-}
+const Kpi = Tile;
 
 export function KpisDashboard({ kpis }: { kpis: Kpis }) {
   const pctPonderado =
