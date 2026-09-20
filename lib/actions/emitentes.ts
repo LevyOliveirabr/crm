@@ -38,6 +38,14 @@ export async function urlPublica(path: string | null | undefined): Promise<strin
 
 // ---------- Empresas vendedoras ----------
 
+function usuarioJaTemEmpresaComNome(
+  empresas: { nome: string }[],
+  nome: string,
+): boolean {
+  const norm = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return empresas.some((e) => norm(e.nome) === norm(nome));
+}
+
 /** Empresas do usuário (todas as que participa), com flag de edição. */
 export async function listarEmitentesConfig(): Promise<
   (EmitenteRow & { podeEditar: boolean; logoUrl: string | null })[]
@@ -76,14 +84,20 @@ export async function salvarEmitente(
 
   const diretor = await exigirDiretorEmAlguma();
   if (!diretor) return { ok: false, error: "Apenas diretores podem criar empresas." };
-  const { data, error } = await supabase
+  if (usuarioJaTemEmpresaComNome(diretor.empresas, parsed.data.nome)) {
+    return { ok: false, error: "Já existe uma empresa vendedora com esse nome." };
+  }
+  // Sem `.select()` no insert: o RETURNING é avaliado antes do trigger que
+  // vincula o criador como diretor, e a política de leitura rejeitaria a linha.
+  const { error } = await supabase.from("emitentes").insert(parsed.data);
+  if (error) return { ok: false, error: error.message };
+  const { data: criada } = await supabase
     .from("emitentes")
-    .insert(parsed.data)
     .select("id")
-    .single();
-  if (error || !data) return { ok: false, error: error?.message ?? "Falha ao criar." };
+    .eq("nome", parsed.data.nome)
+    .maybeSingle();
   revalidar();
-  return { ok: true, id: data.id, message: "Empresa criada. Você é diretor dela." };
+  return { ok: true, id: criada?.id, message: "Empresa criada. Você é diretor dela." };
 }
 
 export async function uploadLogoEmitente(
