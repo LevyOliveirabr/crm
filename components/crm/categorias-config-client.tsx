@@ -23,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Toaster, toast } from "@/components/ui/toast";
+import { formularioClass, subPainelClass } from "@/components/crm/pagina";
+import { cn } from "@/lib/utils";
 
 type Categoria = CategoriaRow & { catalogoUrl: string | null };
 
@@ -40,7 +42,8 @@ export function CategoriasConfigClient({
   const [pending, startTransition] = useTransition();
   const [editando, setEditando] = useState<Categoria | null>(null);
   const [aberto, setAberto] = useState(false);
-  const nomeEmpresa = (id: string) => emitentes.find((e) => e.id === id)?.nome ?? "—";
+  const nomeEmpresa = (id: string) =>
+    emitentes.find((e) => e.id === id)?.nome ?? "—";
 
   return (
     <Toaster>
@@ -60,7 +63,7 @@ export function CategoriasConfigClient({
         {aberto ? (
           <form
             key={editando?.id ?? "nova"}
-            className="grid max-w-xl gap-3 rounded-xl border border-border p-4"
+            className={cn(formularioClass, "grid max-w-xl gap-3")}
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
@@ -83,14 +86,21 @@ export function CategoriasConfigClient({
               });
             }}
           >
-            <h2 className="font-medium">{editando ? "Editar categoria" : "Nova categoria"}</h2>
+            <h3 className="font-heading text-sm font-semibold">
+              {editando ? "Editar categoria" : "Nova categoria"}
+            </h3>
             <label className="text-sm">
               Empresa vendedora *
               <select
                 name="emitente_id"
                 required
                 disabled={Boolean(editando)}
-                defaultValue={editando?.emitente_id ?? emitenteInicial ?? emitentes[0]?.id ?? ""}
+                defaultValue={
+                  editando?.emitente_id ??
+                  emitenteInicial ??
+                  emitentes[0]?.id ??
+                  ""
+                }
                 className="mt-1 h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
               >
                 {emitentes.map((e) => (
@@ -102,18 +112,37 @@ export function CategoriasConfigClient({
             </label>
             <label className="text-sm">
               Nome *
-              <Input name="nome" required className="mt-1" defaultValue={editando?.nome ?? ""} />
+              <Input
+                name="nome"
+                required
+                className="mt-1"
+                defaultValue={editando?.nome ?? ""}
+              />
             </label>
             <label className="text-sm">
               Descrição
-              <Textarea name="descricao" rows={2} className="mt-1" defaultValue={editando?.descricao ?? ""} />
+              <Textarea
+                name="descricao"
+                rows={2}
+                className="mt-1"
+                defaultValue={editando?.descricao ?? ""}
+              />
             </label>
             <label className="text-sm">
               Catálogo hospedado (URL)
-              <Input name="catalogo_url" placeholder="https://" className="mt-1" defaultValue={editando?.catalogo_url ?? ""} />
+              <Input
+                name="catalogo_url"
+                placeholder="https://"
+                className="mt-1"
+                defaultValue={editando?.catalogo_url ?? ""}
+              />
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="ativo" defaultChecked={editando?.ativo ?? true} />
+              <input
+                type="checkbox"
+                name="ativo"
+                defaultChecked={editando?.ativo ?? true}
+              />
               Ativa
             </label>
             <div className="flex gap-2">
@@ -136,12 +165,19 @@ export function CategoriasConfigClient({
 
         {editando ? (
           <form
-            className="flex max-w-xl flex-wrap items-end gap-2 rounded-xl border border-dashed border-border p-4"
+            className={cn(
+              subPainelClass,
+              "flex max-w-xl flex-wrap items-end gap-2 border-dashed",
+            )}
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
               startTransition(async () => {
-                const res = await uploadCatalogoCategoria(editando.id, editando.emitente_id, fd);
+                const res = await uploadCatalogoCategoria(
+                  editando.id,
+                  editando.emitente_id,
+                  fd,
+                );
                 if (!res.ok) {
                   toast.add({ title: res.error, type: "error" });
                   return;
@@ -151,8 +187,15 @@ export function CategoriasConfigClient({
               });
             }}
           >
-            <div className="w-full text-sm font-medium">Catálogo da categoria (arquivo PDF ou imagem, até 10 MB)</div>
-            <Input name="catalogo" type="file" accept="application/pdf,image/*" required />
+            <div className="w-full text-sm font-medium">
+              Catálogo da categoria (arquivo PDF ou imagem, até 10 MB)
+            </div>
+            <Input
+              name="catalogo"
+              type="file"
+              accept="application/pdf,image/*"
+              required
+            />
             <Button type="submit" variant="secondary" disabled={pending}>
               <Paperclip className="size-4" /> Anexar catálogo
             </Button>
@@ -163,7 +206,11 @@ export function CategoriasConfigClient({
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    const res = await removerCatalogo("categoria", editando.id, editando.emitente_id);
+                    const res = await removerCatalogo(
+                      "categoria",
+                      editando.id,
+                      editando.emitente_id,
+                    );
                     if (!res.ok) toast.add({ title: res.error, type: "error" });
                     router.refresh();
                   })
@@ -191,7 +238,9 @@ export function CategoriasConfigClient({
                 <TableCell className="font-medium">
                   {c.nome}
                   {c.descricao ? (
-                    <p className="text-xs text-muted-foreground">{c.descricao}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.descricao}
+                    </p>
                   ) : null}
                 </TableCell>
                 <TableCell>{nomeEmpresa(c.emitente_id)}</TableCell>
@@ -211,7 +260,9 @@ export function CategoriasConfigClient({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={c.ativo ? "secondary" : "outline"}>{c.ativo ? "Ativa" : "Inativa"}</Badge>
+                  <Badge variant={c.ativo ? "secondary" : "outline"}>
+                    {c.ativo ? "Ativa" : "Inativa"}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -231,7 +282,8 @@ export function CategoriasConfigClient({
             {categorias.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-muted-foreground">
-                  Nenhuma categoria. Crie categorias para agrupar produtos e anexar um catálogo por grupo.
+                  Nenhuma categoria. Crie categorias para agrupar produtos e
+                  anexar um catálogo por grupo.
                 </TableCell>
               </TableRow>
             ) : null}

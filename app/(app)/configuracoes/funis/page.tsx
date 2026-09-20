@@ -1,19 +1,17 @@
 import { FunisConfigClient } from "@/components/crm/funis-config-client";
 import { listarFunisComEtapas } from "@/lib/actions/config";
+import { Secao } from "@/components/crm/pagina";
 
 export default async function FunisConfigPage() {
   const funis = await listarFunisComEtapas();
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-medium">Funis e etapas</h2>
-        <p className="text-sm text-muted-foreground">
-          Arraste para reordenar. Não dá para desativar etapa com negociações
-          abertas sem movê-las.
-        </p>
-      </div>
+    <Secao titulo="Funis e etapas">
+      <p className="mb-4 text-sm text-muted-foreground">
+        Arraste para reordenar. Não dá para desativar etapa com negociações
+        abertas sem movê-las.
+      </p>
       <FunisConfigClient initial={funis} />
-    </div>
+    </Secao>
   );
 }

@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { Toaster, toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { formularioClass, subPainelClass } from "@/components/crm/pagina";
 
 type Etapa = Database["public"]["Tables"]["etapas"]["Row"];
 
@@ -64,8 +65,14 @@ function EtapaSortable({
   const [abertas, setAbertas] = useState(0);
   const [destino, setDestino] = useState(outrasEtapas[0]?.id ?? "");
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: etapa.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: etapa.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -134,7 +141,10 @@ function EtapaSortable({
         toast.add({ title: res.error, type: "error" });
         return;
       }
-      toast.add({ title: "Negociações movidas e etapa desativada", type: "success" });
+      toast.add({
+        title: "Negociações movidas e etapa desativada",
+        type: "success",
+      });
       onChanged();
     });
   };
@@ -175,7 +185,9 @@ function EtapaSortable({
             disabled={pending}
           />
           <label className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Probabilidade de fechar</span>
+            <span className="text-muted-foreground">
+              Probabilidade de fechar
+            </span>
             <span className="inline-flex items-center gap-1">
               <Input
                 type="number"
@@ -248,7 +260,7 @@ function EtapaSortable({
             Escolha para onde movê-las antes de desativar.
           </p>
           <select
-            className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+            className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-sm"
             value={destino}
             onChange={(e) => setDestino(e.target.value)}
           >
@@ -259,10 +271,18 @@ function EtapaSortable({
             ))}
           </select>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setMoverAberto(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMoverAberto(false)}
+            >
               Cancelar
             </Button>
-            <Button type="button" disabled={pending || !destino} onClick={confirmarMover}>
+            <Button
+              type="button"
+              disabled={pending || !destino}
+              onClick={confirmarMover}
+            >
               Mover para…
             </Button>
           </DialogFooter>
@@ -313,7 +333,7 @@ function FunilBloco({
   };
 
   return (
-    <section className="rounded-xl border border-border p-4">
+    <section className={subPainelClass}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Input
           className="max-w-xs font-medium"
@@ -322,7 +342,9 @@ function FunilBloco({
           onBlur={() => {
             if (nomeFunil.trim() === funil.nome) return;
             startTransition(async () => {
-              const res = await atualizarFunil(funil.id, { nome: nomeFunil.trim() });
+              const res = await atualizarFunil(funil.id, {
+                nome: nomeFunil.trim(),
+              });
               if (!res.ok) toast.add({ title: res.error, type: "error" });
               else onChanged();
             });
@@ -389,11 +411,7 @@ function FunilBloco({
   );
 }
 
-export function FunisConfigClient({
-  initial,
-}: {
-  initial: FunilComEtapas[];
-}) {
+export function FunisConfigClient({ initial }: { initial: FunilComEtapas[] }) {
   const [funis, setFunis] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [novoFunil, setNovoFunil] = useState("");
@@ -417,7 +435,7 @@ export function FunisConfigClient({
           />
         ))}
 
-        <div className="flex gap-2">
+        <div className={cn(formularioClass, "flex gap-2")}>
           <Input
             placeholder="Nome do novo funil"
             value={novoFunil}

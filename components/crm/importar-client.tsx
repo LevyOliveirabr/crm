@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Toaster, toast } from "@/components/ui/toast";
+import { formularioClass, subPainelClass } from "@/components/crm/pagina";
+import { cn } from "@/lib/utils";
 
 const TIPOS: { tipo: TipoImportacao; label: string; ordem: number }[] = [
   { tipo: "empresas", label: "Empresas", ordem: 1 },
@@ -34,8 +36,8 @@ function BlocoImport({ tipo, label }: { tipo: TipoImportacao; label: string }) {
   const [relatorio, setRelatorio] = useState<ImportRelatorio | null>(null);
 
   return (
-    <section className="rounded-xl border border-border p-4">
-      <h2 className="text-base font-medium">{label}</h2>
+    <section className={subPainelClass}>
+      <h3 className="font-heading text-sm font-semibold">{label}</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Layout em <code className="text-xs">modelos/{tipo}.csv</code>
       </p>
@@ -104,7 +106,10 @@ function BlocoImport({ tipo, label }: { tipo: TipoImportacao; label: string }) {
                     {preview.mapeamento
                       .filter((m) => m.encontrado)
                       .map((m) => (
-                        <TableCell key={m.esperado} className="max-w-[10rem] truncate">
+                        <TableCell
+                          key={m.esperado}
+                          className="max-w-[10rem] truncate"
+                        >
                           {row[m.esperado] || "—"}
                         </TableCell>
                       ))}
@@ -138,7 +143,7 @@ function BlocoImport({ tipo, label }: { tipo: TipoImportacao; label: string }) {
       ) : null}
 
       {relatorio ? (
-        <div className="mt-4 space-y-2 rounded-lg bg-muted/50 p-3 text-sm">
+        <div className={cn(formularioClass, "mt-4 space-y-2 text-sm")}>
           <p>
             Importadas: <strong>{relatorio.importadas}</strong> · Reutilizadas:{" "}
             <strong>{relatorio.reutilizadas}</strong> · Erros/avisos:{" "}
@@ -169,7 +174,11 @@ export function ImportarClient() {
           Encoding UTF-8 ou Latin-1; separador <code>;</code> ou <code>,</code>.
         </p>
         {TIPOS.map((t) => (
-          <BlocoImport key={t.tipo} tipo={t.tipo} label={`${t.ordem}. ${t.label}`} />
+          <BlocoImport
+            key={t.tipo}
+            tipo={t.tipo}
+            label={`${t.ordem}. ${t.label}`}
+          />
         ))}
       </div>
     </Toaster>

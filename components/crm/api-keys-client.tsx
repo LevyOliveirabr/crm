@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/api-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Secao, formularioClass } from "@/components/crm/pagina";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,7 +21,11 @@ import {
 } from "@/components/ui/table";
 import { formatarDataHora } from "@/lib/format";
 
-export function ApiKeysClient({ keysIniciais }: { keysIniciais: ApiKeyResumo[] }) {
+export function ApiKeysClient({
+  keysIniciais,
+}: {
+  keysIniciais: ApiKeyResumo[];
+}) {
   const [keys, setKeys] = useState(keysIniciais);
   const [nome, setNome] = useState("Cursor");
   const [novaKey, setNovaKey] = useState<string | null>(null);
@@ -53,55 +58,66 @@ export function ApiKeysClient({ keysIniciais }: { keysIniciais: ApiKeyResumo[] }
       }
       setKeys((prev) =>
         prev.map((k) =>
-          k.id === id
-            ? { ...k, revogado_em: new Date().toISOString() }
-            : k,
+          k.id === id ? { ...k, revogado_em: new Date().toISOString() } : k,
         ),
       );
     });
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <h2 className="text-base font-medium">Gerar nova key</h2>
-        <p className="text-sm text-muted-foreground">
-          A key completa só aparece uma vez. Use no Cursor, Claude Desktop ou Grok
-          (variável de ambiente <code>CRM_FLED_API_KEY</code>).
+    <div className="flex flex-col gap-4">
+      <Secao
+        titulo="Gerar nova key"
+        meta="conecta Cursor ou Claude Desktop ao CRM via MCP"
+      >
+        <p className="mb-3 text-sm text-muted-foreground">
+          Endpoint <code className="text-xs">/api/mcp/mcp</code>. A key completa
+          só aparece uma vez. Use no Cursor, Claude Desktop ou Grok (variável de
+          ambiente <code>CRM_FLED_API_KEY</code>).
         </p>
-        <form onSubmit={onGerar} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label htmlFor="nome-key" className="text-sm font-medium">
-              Nome
-            </label>
-            <Input
-              id="nome-key"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex.: Grok bot, Cursor, Claude"
-              required
-              maxLength={80}
-            />
-          </div>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Gerando…" : "Gerar key"}
-          </Button>
-        </form>
-        {erro ? (
-          <p className="text-sm text-destructive" role="alert">
-            {erro}
-          </p>
-        ) : null}
-        {novaKey ? (
-          <div className="rounded-lg border border-border bg-muted/40 p-3">
-            <p className="mb-1 text-sm font-medium">Copie agora — não será mostrada de novo</p>
-            <code className="block break-all text-sm">{novaKey}</code>
-          </div>
-        ) : null}
-      </section>
+        <div className="flex flex-col gap-3">
+          <form
+            onSubmit={onGerar}
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          >
+            <div className="flex flex-1 flex-col gap-1.5">
+              <label htmlFor="nome-key" className="text-sm font-medium">
+                Nome
+              </label>
+              <Input
+                id="nome-key"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Ex.: Grok bot, Cursor, Claude"
+                required
+                maxLength={80}
+              />
+            </div>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Gerando…" : "Gerar key"}
+            </Button>
+          </form>
+          {erro ? (
+            <p className="text-sm text-destructive" role="alert">
+              {erro}
+            </p>
+          ) : null}
+          {novaKey ? (
+            <div className={formularioClass}>
+              <p className="mb-1 text-sm font-medium">
+                Copie agora — não será mostrada de novo
+              </p>
+              <code className="block break-all text-sm">{novaKey}</code>
+            </div>
+          ) : null}
+        </div>
+      </Secao>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-base font-medium">Suas keys</h2>
+      <Secao
+        titulo="Suas keys"
+        meta={`${keys.length} ${keys.length === 1 ? "key" : "keys"}`}
+        semPadding
+      >
         <Table>
           <TableHeader>
             <TableRow>
@@ -147,7 +163,7 @@ export function ApiKeysClient({ keysIniciais }: { keysIniciais: ApiKeyResumo[] }
             ) : null}
           </TableBody>
         </Table>
-      </section>
+      </Secao>
     </div>
   );
 }

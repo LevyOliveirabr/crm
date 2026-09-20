@@ -14,6 +14,13 @@ import { cn } from "@/lib/utils";
 export const campoClass =
   "h-9 w-full rounded-lg border border-input bg-card px-2.5 text-sm font-medium outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
+/** Painel interno (bloco dentro de uma seção: um funil, um tipo de importação). */
+export const subPainelClass = "rounded-xl border border-input bg-muted/30 p-4";
+
+/** Formulário aberto dentro de uma seção (faixa amarela à esquerda). */
+export const formularioClass =
+  "rounded-xl border border-border border-l-4 border-l-brand bg-card p-4 shadow-xs";
+
 /** Container padrão de página (largura do Dashboard). */
 export function Pagina({
   children,
@@ -77,14 +84,19 @@ export function PaginaCabecalho({
         <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
           {titulo}
           {subtitulo ? (
-            <span className="font-medium text-muted-foreground"> · {subtitulo}</span>
+            <span className="font-medium text-muted-foreground">
+              {" "}
+              · {subtitulo}
+            </span>
           ) : null}
         </h1>
         {descricao ? (
           <p className="mt-1 text-sm text-muted-foreground">{descricao}</p>
         ) : null}
       </div>
-      {acoes ? <div className="flex flex-wrap items-center gap-2">{acoes}</div> : null}
+      {acoes ? (
+        <div className="flex flex-wrap items-center gap-2">{acoes}</div>
+      ) : null}
     </header>
   );
 }
@@ -103,7 +115,10 @@ export function BarraFiltros({
   return (
     <section
       aria-label="Filtros"
-      className={cn("card-surface flex flex-col gap-3 p-4 print:hidden", className)}
+      className={cn(
+        "card-surface flex flex-col gap-3 p-4 print:hidden",
+        className,
+      )}
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {children}
@@ -176,11 +191,17 @@ export function Secao({
         >
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {titulo ? (
-              <h2 className="font-heading text-base font-semibold sm:text-lg">{titulo}</h2>
+              <h2 className="font-heading text-base font-semibold sm:text-lg">
+                {titulo}
+              </h2>
             ) : null}
-            {meta ? <span className="text-xs text-muted-foreground">{meta}</span> : null}
+            {meta ? (
+              <span className="text-xs text-muted-foreground">{meta}</span>
+            ) : null}
           </div>
-          {acoes ? <div className="flex flex-wrap items-center gap-2">{acoes}</div> : null}
+          {acoes ? (
+            <div className="flex flex-wrap items-center gap-2">{acoes}</div>
+          ) : null}
         </div>
       ) : null}
       {children}
@@ -236,7 +257,9 @@ export function Tile({
         className,
       )}
     >
-      <p className={cn("eyebrow", destaque && "text-primary-foreground/65")}>{label}</p>
+      <p className={cn("eyebrow", destaque && "text-primary-foreground/65")}>
+        {label}
+      </p>
       <p
         className={cn(
           "mt-1 font-heading text-2xl font-semibold tracking-tight tabular-nums",
@@ -322,7 +345,12 @@ export function Pilulas({
   onChange,
   ariaLabel,
 }: {
-  opcoes: { id: string; label: React.ReactNode; icone?: React.ComponentType<{ className?: string }>; href?: string }[];
+  opcoes: {
+    id: string;
+    label: React.ReactNode;
+    icone?: React.ComponentType<{ className?: string }>;
+    href?: string;
+  }[];
   valor: string;
   onChange?: (id: string) => void;
   ariaLabel: string;
@@ -338,10 +366,18 @@ export function Pilulas({
         const Icone = o.icone;
         const cls = cn(
           "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors",
-          ativo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          ativo
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
         );
         return o.href ? (
-          <Link key={o.id} href={o.href} role="tab" aria-selected={ativo} className={cls}>
+          <Link
+            key={o.id}
+            href={o.href}
+            role="tab"
+            aria-selected={ativo}
+            className={cls}
+          >
             {Icone ? <Icone className="size-4" /> : null}
             {o.label}
           </Link>
