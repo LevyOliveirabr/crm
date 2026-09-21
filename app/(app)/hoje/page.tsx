@@ -36,12 +36,9 @@ import {
   Tile,
   Tiles,
 } from "@/components/crm/pagina";
-import {
-  PRAZOS_HOJE,
-  SeletorPrazoHoje,
-  type PrazoHojeId,
-} from "@/components/crm/seletor-prazo-hoje";
+import { SeletorPrazoHoje } from "@/components/crm/seletor-prazo-hoje";
 import { SeletorVendedor } from "@/components/crm/seletor-vendedor";
+import { isPrazoHojeId, type PrazoHojeId } from "@/lib/hoje-prazo";
 
 type SearchParams = Promise<{
   emitente?: string | string[];
@@ -69,10 +66,7 @@ function resolverPrazo(
   ateParam: string | undefined,
   hoje: string,
 ): { prazo: PrazoHojeId; de: string; ate: string; rotulo: string } {
-  const ids = PRAZOS_HOJE.map((p) => p.id);
-  const prazo: PrazoHojeId = ids.includes(prazoParam as PrazoHojeId)
-    ? (prazoParam as PrazoHojeId)
-    : "hoje";
+  const prazo: PrazoHojeId = isPrazoHojeId(prazoParam) ? prazoParam : "hoje";
 
   if (prazo === "ontem") {
     const d = adicionarDiasISO(hoje, -1);
@@ -367,6 +361,7 @@ export default async function HojePage({
     .is("negociacoes.arquivado_em", null)
     .order("validade", { ascending: true });
 
+  orcQuery = aplicarEscopoEmitente(orcQuery, escopo, "negociacoes.emitente_id");
   if (filtrarVendedor) {
     orcQuery = orcQuery.eq("negociacoes.responsavel_id", filtrarVendedor);
   }
