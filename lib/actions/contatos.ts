@@ -108,8 +108,8 @@ export async function criarContato(
       email: parsed.data.email,
       cargo: parsed.data.cargo,
       decisor: parsed.data.decisor ?? false,
-      instagram: parsed.data.instagram,
-      linkedin: parsed.data.linkedin,
+      instagram: parsed.data.instagram ?? null,
+      linkedin: parsed.data.linkedin ?? null,
     })
     .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
     .single();
@@ -173,8 +173,8 @@ export async function atualizarContato(
       email: parsed.data.email,
       cargo: parsed.data.cargo,
       decisor: parsed.data.decisor ?? false,
-      instagram: parsed.data.instagram,
-      linkedin: parsed.data.linkedin,
+      instagram: parsed.data.instagram ?? null,
+      linkedin: parsed.data.linkedin ?? null,
     })
     .eq("id", atual.id)
     .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")

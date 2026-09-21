@@ -12,6 +12,10 @@ const row = {
   ativo: true,
   criado_em: "2026-01-01",
   gerente_id: null,
+  cargo: null,
+  telefone: null,
+  whatsapp: null,
+  linkedin: null,
 };
 const A = { id: "a", nome: "F-Led", perfil: "diretor" as const, gerenteId: null, ativo: true };
 const B = { id: "b", nome: "Formosa", perfil: "vendedor" as const, gerenteId: "g1", ativo: true };

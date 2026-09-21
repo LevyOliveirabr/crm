@@ -5,16 +5,14 @@ import type {
   BarraTrimestre,
   FunilDashboard,
   Kpis,
+  MotivoPerdaItem,
   NegociacaoResumo,
+  QuebraItem,
   VisaoData,
 } from "@/lib/dashboard/tipos";
 import { formatarData, formatarMoedaCurta, mesPorExtenso } from "@/lib/format";
 import { Tile } from "@/components/crm/pagina";
 import { cn } from "@/lib/utils";
-
-/* ---------------------------------------------------------------- */
-/* Cards de KPI                                                      */
-/* ---------------------------------------------------------------- */
 
 function mesCurto(mesISO: string): string {
   const nome = mesPorExtenso(mesISO).split(" ")[0] ?? "";
@@ -31,14 +29,47 @@ function fmtPct(v: number): string {
   return `${v > 0 ? "▲" : "▼"} ${s}%`;
 }
 
-const Kpi = Tile;
+/** Link de relatório construído no servidor a partir dos search params atuais. */
+export function linkRelatorio(
+  qs: string,
+  fonte: string,
+  extra?: Record<string, string | undefined>,
+): string {
+  const p = new URLSearchParams(qs);
+  p.set("fonte", fonte);
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (v) p.set(k, v);
+      else p.delete(k);
+    }
+  }
+  return `/dashboard/relatorio?${p.toString()}`;
+}
 
-export function KpisDashboard({ kpis }: { kpis: Kpis }) {
-  const pctPonderado =
-    kpis.pipelineTotal > 0
-      ? Math.round((kpis.pipelinePonderado / kpis.pipelineTotal) * 100)
-      : 0;
+function KpiLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-xl transition hover:ring-2 hover:ring-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    >
+      {children}
+    </Link>
+  );
+}
 
+export function KpisDashboard({
+  kpis,
+  qs,
+}: {
+  kpis: Kpis;
+  qs: string;
+}) {
   const deltaWin =
     kpis.winRate != null && kpis.winRateAnterior != null
       ? kpis.winRate - kpis.winRateAnterior
@@ -59,44 +90,47 @@ export function KpisDashboard({ kpis }: { kpis: Kpis }) {
       aria-label="Indicadores"
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-1"
     >
-      <Kpi
-        destaque
-        label="Pipeline total"
-        valor={formatarMoedaCurta(kpis.pipelineTotal)}
-        detalhe={`${kpis.qtdAbertas} ${kpis.qtdAbertas === 1 ? "negociação aberta" : "negociações abertas"}`}
-      />
-      <Kpi
-        label="Pipeline ponderado"
-        valor={formatarMoedaCurta(kpis.pipelinePonderado)}
-        detalhe={`${pctPonderado}% do total`}
-      />
-      <Kpi
-        label="Win rate"
-        valor={
-          kpis.winRate == null
-            ? "—"
-            : `${kpis.winRate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
-        }
-        detalhe={
-          deltaWin == null
-            ? kpis.winRate == null
-              ? "sem fechamentos no período"
-              : `${kpis.qtdVendidas} ganhas · ${kpis.qtdPerdidas} perdidas`
-            : `${fmtPts(deltaWin)} vs. período anterior`
-        }
-        tom={deltaWin == null ? undefined : deltaWin >= 0 ? "ok" : "ruim"}
-      />
-      <Kpi
-        label="Forecast mês corrente"
-        valor={formatarMoedaCurta(kpis.forecastMes)}
-        detalhe={`${mesCurto(kpis.mesAtual)} · ${negocios(kpis.forecastMesQtd)}`}
-      />
-      <Kpi
-        label="Forecast mês seguinte"
-        valor={formatarMoedaCurta(kpis.forecastMesSeguinte)}
-        detalhe={`${mesCurto(kpis.mesSeguinte)} · ${negocios(kpis.forecastMesSeguinteQtd)}`}
-      />
-      <Kpi
+      <KpiLink href={linkRelatorio(qs, "pipeline")}>
+        <Tile
+          destaque
+          label="Pipeline potencial"
+          valor={formatarMoedaCurta(kpis.pipelineTotal)}
+          detalhe={`${kpis.qtdAbertas} ${kpis.qtdAbertas === 1 ? "negócio em aberto" : "negócios em aberto"} · valor cheio`}
+        />
+      </KpiLink>
+      <KpiLink href={linkRelatorio(qs, "previsao")}>
+        <Tile
+          label="Previsão de faturamento"
+          valor={formatarMoedaCurta(kpis.previsaoFaturamento)}
+          detalhe={`Equivale a ${kpis.previsaoPctPotencial}% do potencial`}
+        />
+      </KpiLink>
+      <KpiLink href={linkRelatorio(qs, "winrate")}>
+        <Tile
+          label="Taxa de ganho"
+          valor={
+            kpis.winRate == null
+              ? "—"
+              : `${kpis.winRate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+          }
+          detalhe={
+            deltaWin == null
+              ? kpis.winRate == null
+                ? "sem fechamentos no período"
+                : `Por valor · ${kpis.winRateNegocio?.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) ?? "—"}% por negócio`
+              : `${fmtPts(deltaWin)} vs. período anterior · ${kpis.qtdVendidas} ganhas · ${kpis.qtdPerdidas} perdidas`
+          }
+          tom={deltaWin == null ? undefined : deltaWin >= 0 ? "ok" : "ruim"}
+        />
+      </KpiLink>
+      <KpiLink href={linkRelatorio(qs, "previsao90")}>
+        <Tile
+          label="Previsão próximos 90 dias"
+          valor={formatarMoedaCurta(kpis.previsao90)}
+          detalhe={`${mesCurto(kpis.mesAtual)} em diante`}
+        />
+      </KpiLink>
+      <Tile
         label="Forecast do trimestre"
         valor={formatarMoedaCurta(kpis.forecastTrimestre)}
         detalhe={
@@ -107,7 +141,6 @@ export function KpisDashboard({ kpis }: { kpis: Kpis }) {
         tom={deltaTri == null ? undefined : deltaTri >= 0 ? "ok" : "ruim"}
       />
       <MetaDoMes kpis={kpis} />
-      <CategoriasForecast kpis={kpis} />
     </div>
   );
 }
@@ -147,33 +180,116 @@ function MetaDoMes({ kpis }: { kpis: Kpis }) {
   );
 }
 
-function CategoriasForecast({ kpis }: { kpis: Kpis }) {
-  const linhas: { label: string; valor: number; tom: string }[] = [
-    { label: "Compromisso", valor: kpis.forecastCompromisso, tom: "bg-chart-2" },
-    { label: "Provável", valor: kpis.forecastProvavel, tom: "bg-chart-3" },
-    { label: "Possível", valor: kpis.forecastPossivel, tom: "bg-chart-4" },
-  ];
-  const total = linhas.reduce((s, l) => s + l.valor, 0) + kpis.forecastSemCategoria;
+export function QuebrasDashboard({
+  porTipoCliente,
+  porOrigem,
+  qs,
+}: {
+  porTipoCliente: QuebraItem[];
+  porOrigem: QuebraItem[];
+  qs: string;
+}) {
   return (
-    <div role="listitem" className="card-surface flex flex-col justify-center px-4 py-3.5">
-      <p className="eyebrow">Categorias de forecast</p>
-      <ul className="mt-2 flex flex-col gap-1.5">
-        {linhas.map((l) => (
-          <li key={l.label} className="flex items-center justify-between gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5">
-              <i className={cn("size-2 rounded-full", l.tom)} />
-              {l.label}
-            </span>
-            <span className="font-semibold tabular-nums">{formatarMoedaCurta(l.valor)}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">
-        {total > 0 && kpis.forecastSemCategoria > 0
-          ? `${formatarMoedaCurta(kpis.forecastSemCategoria)} sem categoria`
-          : "defina na ficha da negociação"}
-      </p>
+    <div className="grid gap-4 md:grid-cols-2">
+      <ListaQuebra
+        titulo="Por tipo de cliente"
+        itens={porTipoCliente}
+        qs={qs}
+        fonte="tipo_cliente"
+      />
+      <ListaQuebra
+        titulo="Origem do lead"
+        itens={porOrigem}
+        qs={qs}
+        fonte="origem"
+      />
     </div>
+  );
+}
+
+function ListaQuebra({
+  titulo,
+  itens,
+  qs,
+  fonte,
+}: {
+  titulo: string;
+  itens: QuebraItem[];
+  qs: string;
+  fonte: string;
+}) {
+  const max = Math.max(1, ...itens.map((i) => i.valor));
+  return (
+    <section className="card-surface p-4">
+      <h2 className="font-heading text-base font-semibold">{titulo}</h2>
+      {itens.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">Sem dados.</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {itens.slice(0, 8).map((i) => (
+            <li key={i.chave}>
+              <Link
+                href={linkRelatorio(qs, fonte, { chave: i.chave })}
+                className="block rounded-lg px-1 py-1 hover:bg-muted/50"
+              >
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="truncate font-medium">
+                    {i.label}{" "}
+                    <span className="text-muted-foreground">({i.qtd})</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    {formatarMoedaCurta(i.valor)}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-muted">
+                  <div
+                    className="h-1.5 rounded-full bg-brand/70"
+                    style={{ width: `${Math.round((i.valor / max) * 100)}%` }}
+                  />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+export function MotivosPerdaPainel({
+  itens,
+  qs,
+}: {
+  itens: MotivoPerdaItem[];
+  qs: string;
+}) {
+  return (
+    <section className="card-surface p-4">
+      <h2 className="font-heading text-base font-semibold">
+        Motivos de perda consolidados
+      </h2>
+      {itens.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Nenhuma perda no período.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border">
+          {itens.map((m) => (
+            <li key={m.motivo}>
+              <Link
+                href={linkRelatorio(qs, "motivo", { chave: m.motivo })}
+                className="flex items-center justify-between gap-2 py-2 text-sm hover:bg-muted/40"
+              >
+                <span className="font-medium">{m.motivo}</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {m.qtd} · {formatarMoedaCurta(m.valor)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -410,12 +526,18 @@ const TONS_FUNIL = [
   "bg-brand",
 ];
 
-export function FunilEstagios({ funis }: { funis: FunilDashboard[] }) {
+export function FunilEstagios({
+  funis,
+  qs,
+}: {
+  funis: FunilDashboard[];
+  qs: string;
+}) {
   const lista = funis.filter((f) => f.etapas.length > 0);
   return (
     <section className="card-surface p-4 sm:p-5" aria-label="Pipeline por estágio">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold sm:text-lg">Por estágio</h2>
+        <h2 className="text-base font-semibold sm:text-lg">Funil por estágio</h2>
         <span className="text-xs text-muted-foreground">negociações abertas</span>
       </div>
 
@@ -436,14 +558,17 @@ export function FunilEstagios({ funis }: { funis: FunilDashboard[] }) {
                 <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2">
                   {f.etapas.map((e, i) => {
                     const pct = Math.max(4, Math.round((e.valor / max) * 100));
-                    // Tom escurece conforme avança no funil; a última etapa é amarela.
                     const tom =
                       i === n - 1
                         ? TONS_FUNIL[4]
                         : TONS_FUNIL[Math.min(3, Math.floor((i / Math.max(1, n - 1)) * 4))];
                     return (
-                      <div key={e.etapaId} className="contents">
-                        <div className="min-w-0 text-xs font-semibold">
+                      <Link
+                        key={e.etapaId}
+                        href={linkRelatorio(qs, "etapa", { chave: e.etapaId })}
+                        className="contents"
+                      >
+                        <div className="min-w-0 text-xs font-semibold hover:underline">
                           <span className="block truncate">{e.nome}</span>
                           <span className="block text-[11px] font-medium text-muted-foreground">
                             {e.qtd} {e.qtd === 1 ? "negócio" : "negócios"}
@@ -459,7 +584,7 @@ export function FunilEstagios({ funis }: { funis: FunilDashboard[] }) {
                         <div className="text-right text-sm font-semibold tabular-nums">
                           {formatarMoedaCurta(e.valor)}
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

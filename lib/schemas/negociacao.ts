@@ -12,7 +12,12 @@ export const negociacaoSchema = z.object({
   titulo: z.string().trim().min(1, "Título é obrigatório"),
   linha: z.string().trim().optional().nullable(),
   origem: z.string().trim().optional().nullable(),
+  /** Valor potencial (pipeline cheio). */
   valor_estimado: z.coerce.number().nonnegative().default(0),
+  /** Previsão de faturamento; null = usa valor_estimado. */
+  valor_previsao: z.coerce.number().nonnegative().optional().nullable(),
+  /** true = negócio único; false = recorrente. */
+  negocio_unico: z.boolean().default(true),
   temperatura: z.coerce
     .number()
     .int()

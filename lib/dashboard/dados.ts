@@ -16,8 +16,10 @@ import type {
   FunilDashboard,
   Kpis,
   LinhaBase,
+  MotivoPerdaItem,
   NegociacaoResumo,
   OpcoesDashboard,
+  QuebraItem,
   TipoSegmento,
 } from "@/lib/dashboard/tipos";
 
@@ -31,15 +33,26 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Valor de previsão efetivo: valor_previsao ou fallback no potencial. */
+export function valorPrevisaoEfetivo(row: {
+  valor_estimado: number | null;
+  valor_previsao?: number | null;
+}): number {
+  if (row.valor_previsao != null && Number.isFinite(Number(row.valor_previsao))) {
+    return num(row.valor_previsao);
+  }
+  return num(row.valor_estimado);
+}
+
 const COLUNAS_ABERTAS = `
-  id, titulo, linha, origem, empresa_id, empresa_nome, empresa_uf, empresa_tipo_segmento,
+  id, titulo, linha, origem, empresa_id, empresa_nome, empresa_uf, empresa_tipo_segmento, empresa_segmento,
   responsavel_id, responsavel_nome, funil_id, funil_nome, etapa_id, etapa_nome, etapa_ordem,
-  valor_estimado, temperatura, previsao_mes, previsao_data, data_faturamento, criado_em,
+  valor_estimado, valor_previsao, negocio_unico, temperatura, previsao_mes, previsao_data, data_faturamento, criado_em,
   categoria_forecast, etapa_probabilidade,
   sem_acao, acao_atrasada, dias_sem_interacao, proxima_acao_data
 `;
 
-/** Sem as colunas da migration 0006 (empresa_uf, empresa_tipo_segmento, data_faturamento). */
+/** Sem as colunas da migration 0010 / 0006. */
 const COLUNAS_ABERTAS_LEGADO = `
   id, titulo, linha, origem, empresa_id, empresa_nome,
   responsavel_id, responsavel_nome, funil_id, funil_nome, etapa_id, etapa_nome, etapa_ordem,
@@ -56,6 +69,7 @@ type LinhaAberta = {
   empresa_nome: string | null;
   empresa_uf: string | null;
   empresa_tipo_segmento: TipoSegmento | null;
+  empresa_segmento: string | null;
   responsavel_id: string | null;
   responsavel_nome: string | null;
   funil_id: string | null;
@@ -64,6 +78,8 @@ type LinhaAberta = {
   etapa_nome: string | null;
   etapa_ordem: number | null;
   valor_estimado: number | null;
+  valor_previsao: number | null;
+  negocio_unico: boolean | null;
   temperatura: number | null;
   previsao_mes: string | null;
   previsao_data: string | null;
@@ -78,9 +94,17 @@ type LinhaAberta = {
 };
 
 type LinhaFechada = {
+  id?: string | null;
+  titulo?: string | null;
+  empresa_id?: string | null;
+  empresa_nome?: string | null;
+  responsavel_nome?: string | null;
+  etapa_nome?: string | null;
   status: "aberta" | "vendida" | "perdida" | null;
   valor_final: number | null;
   valor_estimado: number | null;
+  valor_previsao?: number | null;
+  motivo_perda?: string | null;
   fechado_em: string | null;
 };
 
@@ -96,6 +120,7 @@ function aplicarFiltros<
   if (f.origem) q = q.eq("origem", f.origem);
   if (f.uf) q = q.eq("empresa_uf", f.uf);
   if (f.segmento) q = q.eq("empresa_tipo_segmento", f.segmento);
+  if (f.tipoCliente) q = q.eq("empresa_segmento", f.tipoCliente);
   return q;
 }
 
@@ -134,26 +159,41 @@ function trimestreDe(dataISO: string): { ano: number; trimestre: 1 | 2 | 3 | 4 }
   return { ano: y!, trimestre: (Math.floor((m! - 1) / 3) + 1) as 1 | 2 | 3 | 4 };
 }
 
-function winRate(rows: LinhaFechada[]): {
+export function calcularWinRate(rows: {
+  status: string | null;
+  valor_final?: number | null;
+  valor_estimado?: number | null;
+}[]): {
   taxa: number | null;
+  taxaNegocio: number | null;
   vendidas: number;
   perdidas: number;
 } {
-  const vendidas = rows.filter((r) => r.status === "vendida").length;
-  const perdidas = rows.filter((r) => r.status === "perdida").length;
-  const total = vendidas + perdidas;
+  const vendidas = rows.filter((r) => r.status === "vendida");
+  const perdidas = rows.filter((r) => r.status === "perdida");
+  const qVend = vendidas.length;
+  const qPerd = perdidas.length;
+  const totalQ = qVend + qPerd;
+  const valorVend = vendidas.reduce((s, r) => s + num(r.valor_final), 0);
+  const valorPerd = perdidas.reduce((s, r) => s + num(r.valor_estimado), 0);
+  const totalV = valorVend + valorPerd;
   return {
-    taxa: total > 0 ? Math.round((vendidas / total) * 1000) / 10 : null,
-    vendidas,
-    perdidas,
+    taxa: totalV > 0 ? Math.round((valorVend / totalV) * 1000) / 10 : null,
+    taxaNegocio: totalQ > 0 ? Math.round((qVend / totalQ) * 1000) / 10 : null,
+    vendidas: qVend,
+    perdidas: qPerd,
   };
+}
+
+function winRate(rows: LinhaFechada[]) {
+  return calcularWinRate(rows);
 }
 
 export async function carregarOpcoesDashboard(
   supabase: Client,
   vendedores: { id: string; nome: string }[],
 ): Promise<OpcoesDashboard> {
-  const [{ data: etapas }, { data: ufsRaw }, { data: origens }] =
+  const [{ data: etapas }, { data: ufsRaw }, { data: origens }, { data: tiposCliente }] =
     await Promise.all([
       supabase
         .from("etapas")
@@ -170,6 +210,12 @@ export async function carregarOpcoesDashboard(
         .from("listas")
         .select("valor")
         .eq("tipo", "origem")
+        .eq("ativo", true)
+        .order("ordem"),
+      supabase
+        .from("listas")
+        .select("valor")
+        .eq("tipo", "segmento")
         .eq("ativo", true)
         .order("ordem"),
     ]);
@@ -208,6 +254,7 @@ export async function carregarOpcoesDashboard(
     etapas: etapasLista,
     ufs,
     origens: (origens ?? []).map((o) => o.valor),
+    tiposCliente: (tiposCliente ?? []).map((t) => t.valor),
   };
 }
 
@@ -245,7 +292,12 @@ export async function carregarDadosDashboard(
       filtros,
     );
     if (res.error) {
-      filtrosEfetivos = { ...filtros, uf: null, segmento: null };
+      filtrosEfetivos = {
+        ...filtros,
+        uf: null,
+        segmento: null,
+        tipoCliente: null,
+      };
       const legado = await aplicarFiltros(
         supabase
           .from("v_negociacoes")
@@ -273,7 +325,9 @@ export async function carregarDadosDashboard(
     aplicarFiltros(
       supabase
         .from("v_negociacoes")
-        .select("status, valor_final, valor_estimado, fechado_em")
+        .select(
+          "id, titulo, empresa_id, empresa_nome, responsavel_nome, etapa_nome, status, valor_final, valor_estimado, valor_previsao, motivo_perda, fechado_em",
+        )
         .in("status", ["vendida", "perdida"])
         .gte("fechado_em", `${filtros.de}T00:00:00-03:00`)
         .lt("fechado_em", `${ateExclusivo}T00:00:00-03:00`),
@@ -344,10 +398,13 @@ export async function carregarDadosDashboard(
         ...(r as LinhaAberta),
         empresa_uf: r.empresa_uf ?? null,
         empresa_tipo_segmento: r.empresa_tipo_segmento ?? null,
+        empresa_segmento: r.empresa_segmento ?? null,
         data_faturamento: r.data_faturamento ?? null,
         previsao_data: r.previsao_data ?? null,
         categoria_forecast: r.categoria_forecast ?? null,
         etapa_probabilidade: r.etapa_probabilidade ?? null,
+        valor_previsao: r.valor_previsao ?? null,
+        negocio_unico: r.negocio_unico ?? true,
       }),
     );
   const vendidasMes = (vendidasMesRaw ?? []) as LinhaFechada[];
@@ -358,17 +415,34 @@ export async function carregarDadosDashboard(
   const vendidasAno = (vendidasAnoRaw ?? []) as LinhaFechada[];
 
   // ---------- KPIs ----------
+  const metricaValor = (r: LinhaAberta) =>
+    filtros.metrica === "previsao"
+      ? valorPrevisaoEfetivo(r)
+      : num(r.valor_estimado);
+
   const pipelineTotal = abertas.reduce((s, r) => s + num(r.valor_estimado), 0);
+  const previsaoFaturamento = abertas.reduce(
+    (s, r) => s + valorPrevisaoEfetivo(r),
+    0,
+  );
   const ponderadoDe = (rows: LinhaAberta[]) =>
-    rows.reduce((s, r) => s + num(r.valor_estimado) * pesoNegociacao(r, pesos), 0);
+    rows.reduce((s, r) => s + valorPrevisaoEfetivo(r) * pesoNegociacao(r, pesos), 0);
   const somaCategoria = (cat: LinhaAberta["categoria_forecast"]) =>
     abertas
       .filter((r) => r.categoria_forecast === cat)
-      .reduce((s, r) => s + num(r.valor_estimado), 0);
+      .reduce((s, r) => s + valorPrevisaoEfetivo(r), 0);
   const pipelinePonderado = ponderadoDe(abertas);
 
   const wr = winRate(fechadas);
   const wrAnt = winRate(fechadasAnt);
+
+  const limite90 = adicionarDiasISO(hoje, 90);
+  const previsao90 = abertas
+    .filter((r) => {
+      const ref = r.previsao_data ?? mesPrevisao(r, hoje);
+      return ref >= hoje && ref <= limite90;
+    })
+    .reduce((s, r) => s + valorPrevisaoEfetivo(r), 0);
 
   const doMes = abertas.filter((r) => mesPrevisao(r, hoje) === mesAtual);
   const doMesSeguinte = abertas.filter(
@@ -391,11 +465,18 @@ export async function carregarDadosDashboard(
   const kpis: Kpis = {
     pipelineTotal,
     qtdAbertas: abertas.length,
+    previsaoFaturamento,
+    previsaoPctPotencial:
+      pipelineTotal > 0
+        ? Math.round((previsaoFaturamento / pipelineTotal) * 100)
+        : 0,
     pipelinePonderado,
     winRate: wr.taxa,
     winRateAnterior: wrAnt.taxa,
+    winRateNegocio: wr.taxaNegocio,
     qtdVendidas: wr.vendidas,
     qtdPerdidas: wr.perdidas,
+    previsao90,
     forecastMes: ponderadoDe(doMes),
     forecastMesQtd: doMes.length,
     forecastMesSeguinte: ponderadoDe(doMesSeguinte),
@@ -440,11 +521,11 @@ export async function carregarDadosDashboard(
     }
   } else if (filtros.visao === "criacao") {
     for (const r of abertas) {
-      somarNoTrimestre(r.criado_em, num(r.valor_estimado));
+      somarNoTrimestre(r.criado_em, metricaValor(r));
     }
   } else {
     for (const r of abertas) {
-      somarNoTrimestre(mesPrevisao(r, hoje), num(r.valor_estimado));
+      somarNoTrimestre(mesPrevisao(r, hoje), metricaValor(r));
     }
   }
 
@@ -480,7 +561,7 @@ export async function carregarDadosDashboard(
     const et = f?.etapas.get(r.etapa_id);
     if (!et) continue;
     et.qtd += 1;
-    et.valor += num(r.valor_estimado);
+    et.valor += metricaValor(r);
   }
   const funis: FunilDashboard[] = [...funisMap.entries()]
     .map(([funilId, f]) => {
@@ -521,7 +602,7 @@ export async function carregarDadosDashboard(
     .sort(
       (a, b) =>
         dataRef(a).localeCompare(dataRef(b)) ||
-        num(b.valor_estimado) - num(a.valor_estimado),
+        metricaValor(b) - metricaValor(a),
     )
     .slice(0, 6)
     .map((r) => resumo(r, hoje));
@@ -534,7 +615,7 @@ export async function carregarDadosDashboard(
         r.acao_atrasada === true ||
         num(r.dias_sem_interacao) > diasRisco,
     )
-    .sort((a, b) => num(b.valor_estimado) - num(a.valor_estimado))
+    .sort((a, b) => metricaValor(b) - metricaValor(a))
     .slice(0, 6)
     .map((r) => {
       const motivos: string[] = [];
@@ -560,6 +641,66 @@ export async function carregarDadosDashboard(
       };
     });
 
+  // ---------- Top 10 / quebras / fechados / motivos ----------
+  const top10: NegociacaoResumo[] = [...abertas]
+    .sort((a, b) => metricaValor(b) - metricaValor(a))
+    .slice(0, 10)
+    .map((r) => resumo(r, hoje));
+
+  function agregarQuebra(
+    chaveDe: (r: LinhaAberta) => string | null | undefined,
+  ): QuebraItem[] {
+    const map = new Map<string, QuebraItem>();
+    for (const r of abertas) {
+      const label = (chaveDe(r) ?? "").trim() || "Sem classificação";
+      const cur = map.get(label) ?? { chave: label, label, qtd: 0, valor: 0 };
+      cur.qtd += 1;
+      cur.valor += metricaValor(r);
+      map.set(label, cur);
+    }
+    return [...map.values()].sort((a, b) => b.valor - a.valor);
+  }
+
+  const porTipoCliente = agregarQuebra((r) => r.empresa_segmento);
+  const porOrigem = agregarQuebra((r) => r.origem);
+
+  const fechadosPeriodo: NegociacaoResumo[] = fechadas
+    .filter((r) => r.status === "vendida" || r.status === "perdida")
+    .sort(
+      (a, b) =>
+        String(b.fechado_em ?? "").localeCompare(String(a.fechado_em ?? "")) ||
+        num(b.valor_final ?? b.valor_estimado) -
+          num(a.valor_final ?? a.valor_estimado),
+    )
+    .slice(0, 12)
+    .map((r) => ({
+      id: r.id ?? "",
+      titulo: r.titulo ?? "Sem título",
+      empresaNome: r.empresa_nome ?? "—",
+      empresaId: r.empresa_id ?? "",
+      responsavelNome: r.responsavel_nome ?? "—",
+      etapaNome: r.etapa_nome ?? "—",
+      valor:
+        r.status === "vendida" ? num(r.valor_final) : num(r.valor_estimado),
+      valorPrevisao: valorPrevisaoEfetivo(r),
+      previsaoMes: null,
+      previsaoData: null,
+      status: r.status ?? undefined,
+      motivoPerda: r.motivo_perda ?? null,
+    }));
+
+  const motivosMap = new Map<string, MotivoPerdaItem>();
+  for (const r of fechadas.filter((x) => x.status === "perdida")) {
+    const motivo = (r.motivo_perda ?? "").trim() || "Sem motivo";
+    const cur = motivosMap.get(motivo) ?? { motivo, qtd: 0, valor: 0 };
+    cur.qtd += 1;
+    cur.valor += num(r.valor_estimado);
+    motivosMap.set(motivo, cur);
+  }
+  const motivosPerda = [...motivosMap.values()].sort(
+    (a, b) => b.valor - a.valor,
+  );
+
   // ---------- Base de dados ----------
   const base: LinhaBase[] = abertas.map((r) => ({
     id: r.id!,
@@ -570,7 +711,11 @@ export async function carregarDadosDashboard(
     responsavelNome: r.responsavel_nome ?? "—",
     etapaNome: r.etapa_nome ?? "—",
     segmento: r.empresa_tipo_segmento,
+    tipoCliente: r.empresa_segmento,
+    origem: r.origem,
     valor: num(r.valor_estimado),
+    valorPrevisao: valorPrevisaoEfetivo(r),
+    negocioUnico: r.negocio_unico !== false,
     previsaoMes: r.previsao_mes,
     previsaoData: r.previsao_data,
     dataFaturamento: r.data_faturamento,
@@ -582,6 +727,11 @@ export async function carregarDadosDashboard(
     kpis,
     trimestres,
     funis,
+    porTipoCliente,
+    porOrigem,
+    top10,
+    fechadosPeriodo,
+    motivosPerda,
     proximosFechamentos,
     emRisco,
     base,
@@ -599,6 +749,7 @@ function resumo(r: LinhaAberta, hoje: string): NegociacaoResumo {
     responsavelNome: r.responsavel_nome ?? "—",
     etapaNome: r.etapa_nome ?? "—",
     valor: num(r.valor_estimado),
+    valorPrevisao: valorPrevisaoEfetivo(r),
     previsaoMes: r.previsao_mes ? mesPrevisao(r, hoje) : null,
     previsaoData: r.previsao_data,
   };

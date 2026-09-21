@@ -67,13 +67,42 @@ export default async function NegociacaoPage({
     ? neg.usuarios[0]
     : neg.usuarios;
 
-  // Coluna criada na migration 0006; lida separadamente para a ficha
+  // Colunas das migrations 0006/0010; lidas separadamente para a ficha
   // continuar abrindo em bancos onde a migration ainda não foi aplicada.
-  const { data: faturamentoRow } = await supabase
-    .from("negociacoes")
-    .select("data_faturamento, previsao_data, categoria_forecast")
-    .eq("id", id)
-    .maybeSingle();
+  let extrasRow: {
+    data_faturamento: string | null;
+    previsao_data: string | null;
+    categoria_forecast: "compromisso" | "provavel" | "possivel" | null;
+    valor_previsao: number | null;
+    negocio_unico: boolean | null;
+  } | null = null;
+  {
+    const res = await supabase
+      .from("negociacoes")
+      .select(
+        "data_faturamento, previsao_data, categoria_forecast, valor_previsao, negocio_unico",
+      )
+      .eq("id", id)
+      .maybeSingle();
+    if (res.error) {
+      const legado = await supabase
+        .from("negociacoes")
+        .select("data_faturamento, previsao_data, categoria_forecast")
+        .eq("id", id)
+        .maybeSingle();
+      extrasRow = legado.data
+        ? {
+            ...legado.data,
+            valor_previsao: null,
+            negocio_unico: true,
+          }
+        : null;
+    } else {
+      extrasRow = res.data;
+    }
+  }
+
+  const faturamentoRow = extrasRow;
 
   const [
     { data: etapas },
@@ -202,6 +231,11 @@ export default async function NegociacaoPage({
         emitenteId: neg.emitente_id ?? null,
         emitenteNome: (Array.isArray(neg.emitentes) ? neg.emitentes[0]?.nome : neg.emitentes?.nome) ?? null,
         valorEstimado: Number(neg.valor_estimado),
+        valorPrevisao:
+          extrasRow?.valor_previsao != null
+            ? Number(extrasRow.valor_previsao)
+            : null,
+        negocioUnico: extrasRow?.negocio_unico !== false,
         temperatura: neg.temperatura,
         responsavelId: neg.responsavel_id,
         responsavelNome: responsavel?.nome ?? "—",

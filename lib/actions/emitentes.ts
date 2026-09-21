@@ -76,16 +76,22 @@ export async function salvarEmitente(
 
   const enderecoConcat =
     concatenarEndereco({
-      logradouro: parsed.data.logradouro,
-      numero: parsed.data.numero,
-      complemento: parsed.data.complemento,
-      bairro: parsed.data.bairro,
-      cep: parsed.data.cep,
-      municipio: parsed.data.municipio,
+      logradouro: parsed.data.logradouro ?? null,
+      numero: parsed.data.numero ?? null,
+      complemento: parsed.data.complemento ?? null,
+      bairro: parsed.data.bairro ?? null,
+      cep: parsed.data.cep ?? null,
+      municipio: parsed.data.municipio ?? null,
     }) ?? parsed.data.endereco;
 
   const payload = {
     ...parsed.data,
+    logradouro: parsed.data.logradouro ?? null,
+    numero: parsed.data.numero ?? null,
+    complemento: parsed.data.complemento ?? null,
+    bairro: parsed.data.bairro ?? null,
+    cep: parsed.data.cep ?? null,
+    municipio: parsed.data.municipio ?? null,
     endereco: enderecoConcat,
   };
 

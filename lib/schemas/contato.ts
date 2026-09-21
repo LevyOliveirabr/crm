@@ -23,8 +23,8 @@ export const contatoSchema = z.object({
   ),
   cargo: textoOpcional,
   decisor: z.boolean().default(false),
-  instagram: textoOpcional,
-  linkedin: textoOpcional,
+  instagram: textoOpcional.optional(),
+  linkedin: textoOpcional.optional(),
 });
 
 export type ContatoInput = z.infer<typeof contatoSchema>;

@@ -154,8 +154,8 @@ export async function criarEmpresa(
     return { ok: true, empresa: existenteAmplo };
   }
 
-  const municipio = parsed.data.municipio ?? parsed.data.cidade;
-  const cidade = parsed.data.cidade ?? parsed.data.municipio;
+  const municipio = parsed.data.municipio ?? parsed.data.cidade ?? null;
+  const cidade = parsed.data.cidade ?? parsed.data.municipio ?? null;
 
   const { data: criada, error: erroInsert } = await supabase
     .from("empresas")
@@ -168,11 +168,11 @@ export async function criarEmpresa(
       cnpj: parsed.data.cnpj,
       responsavel_id: parsed.data.responsavel_id ?? usuario.id,
       observacoes: parsed.data.observacoes,
-      logradouro: parsed.data.logradouro,
-      numero: parsed.data.numero,
-      complemento: parsed.data.complemento,
-      bairro: parsed.data.bairro,
-      cep: parsed.data.cep,
+      logradouro: parsed.data.logradouro ?? null,
+      numero: parsed.data.numero ?? null,
+      complemento: parsed.data.complemento ?? null,
+      bairro: parsed.data.bairro ?? null,
+      cep: parsed.data.cep ?? null,
       municipio,
     })
     .select("id, nome, cidade, segmento")
@@ -237,8 +237,8 @@ export async function atualizarEmpresa(
     atual.responsavel_id == null ||
     atual.responsavel_id === usuario.id;
 
-  const municipio = parsed.data.municipio ?? parsed.data.cidade;
-  const cidade = parsed.data.cidade ?? parsed.data.municipio;
+  const municipio = parsed.data.municipio ?? parsed.data.cidade ?? null;
+  const cidade = parsed.data.cidade ?? parsed.data.municipio ?? null;
 
   const { data: atualizada, error: erroUpdate } = await supabase
     .from("empresas")
@@ -252,11 +252,11 @@ export async function atualizarEmpresa(
         : {}),
       cnpj: parsed.data.cnpj,
       observacoes: parsed.data.observacoes,
-      logradouro: parsed.data.logradouro,
-      numero: parsed.data.numero,
-      complemento: parsed.data.complemento,
-      bairro: parsed.data.bairro,
-      cep: parsed.data.cep,
+      logradouro: parsed.data.logradouro ?? null,
+      numero: parsed.data.numero ?? null,
+      complemento: parsed.data.complemento ?? null,
+      bairro: parsed.data.bairro ?? null,
+      cep: parsed.data.cep ?? null,
       municipio,
       ...(podeAlterarResp && parsed.data.responsavel_id !== undefined
         ? { responsavel_id: parsed.data.responsavel_id }

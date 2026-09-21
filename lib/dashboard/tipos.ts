@@ -4,10 +4,18 @@ export type TipoSegmento = Database["public"]["Enums"]["tipo_segmento"];
 
 export type VisaoData = "previsao" | "criacao" | "fechamento";
 
+/** Métrica dos valores no funil / top 10 / quebras. */
+export type MetricaDashboard = "potencial" | "previsao";
+
 export const VISOES_DATA: { id: VisaoData; label: string }[] = [
   { id: "previsao", label: "Previsão de fechamento" },
   { id: "criacao", label: "Data de criação" },
   { id: "fechamento", label: "Fechamento real (vendas)" },
+];
+
+export const METRICAS_DASHBOARD: { id: MetricaDashboard; label: string }[] = [
+  { id: "potencial", label: "Valor potencial" },
+  { id: "previsao", label: "Valor previsão" },
 ];
 
 export const TIPOS_SEGMENTO: { id: TipoSegmento; label: string }[] = [
@@ -27,9 +35,12 @@ export type FiltrosDashboard = {
   vendedorId: string | null;
   etapaId: string | null;
   visao: VisaoData;
+  metrica: MetricaDashboard;
   uf: string | null;
   origem: string | null;
   segmento: TipoSegmento | null;
+  /** Tipo de cliente (lista segmento da empresa). */
+  tipoCliente: string | null;
   isDiretor: boolean;
   /** Ids visíveis (gerente: equipe; vendedor: ele mesmo). null = todos. */
   equipeIds?: string[] | null;
@@ -42,16 +53,28 @@ export type OpcoesDashboard = {
   etapas: { id: string; nome: string; funil: string }[];
   ufs: string[];
   origens: string[];
+  tiposCliente: string[];
 };
 
 export type Kpis = {
+  /** Pipeline potencial = Σ valor_estimado abertas. */
   pipelineTotal: number;
   qtdAbertas: number;
+  /** Previsão de faturamento = Σ valor_previsao (fallback potencial). */
+  previsaoFaturamento: number;
+  /** % previsão / potencial. */
+  previsaoPctPotencial: number;
+  /** Pipeline ponderado (legado / temperatura). */
   pipelinePonderado: number;
+  /** Taxa de ganho por valor no período. */
   winRate: number | null;
   winRateAnterior: number | null;
+  /** Taxa de ganho por quantidade. */
+  winRateNegocio: number | null;
   qtdVendidas: number;
   qtdPerdidas: number;
+  /** Previsão nos próximos 90 dias. */
+  previsao90: number;
   forecastMes: number;
   forecastMesQtd: number;
   forecastMesSeguinte: number;
@@ -65,7 +88,6 @@ export type Kpis = {
   vendidoMes: number;
   /** Soma das metas do mês atual (do vendedor filtrado ou de todos). */
   metaMes: number;
-  /** Totais por categoria de forecast (valor estimado das abertas). */
   forecastCompromisso: number;
   forecastProvavel: number;
   forecastPossivel: number;
@@ -97,6 +119,13 @@ export type FunilDashboard = {
   qtd: number;
 };
 
+export type QuebraItem = {
+  chave: string;
+  label: string;
+  qtd: number;
+  valor: number;
+};
+
 export type NegociacaoResumo = {
   id: string;
   titulo: string;
@@ -105,12 +134,21 @@ export type NegociacaoResumo = {
   responsavelNome: string;
   etapaNome: string;
   valor: number;
+  valorPrevisao: number;
   previsaoMes: string | null;
   previsaoData: string | null;
+  status?: "aberta" | "vendida" | "perdida";
+  motivoPerda?: string | null;
   /** Só em "risco": motivo legível. */
   motivo?: string;
   /** Só em "risco": dias parada. */
   diasSemInteracao?: number;
+};
+
+export type MotivoPerdaItem = {
+  motivo: string;
+  qtd: number;
+  valor: number;
 };
 
 export type LinhaBase = {
@@ -122,7 +160,11 @@ export type LinhaBase = {
   responsavelNome: string;
   etapaNome: string;
   segmento: TipoSegmento | null;
+  tipoCliente: string | null;
+  origem: string | null;
   valor: number;
+  valorPrevisao: number;
+  negocioUnico: boolean;
   previsaoMes: string | null;
   previsaoData: string | null;
   dataFaturamento: string | null;
@@ -134,9 +176,29 @@ export type DadosDashboard = {
   kpis: Kpis;
   trimestres: BarraTrimestre[];
   funis: FunilDashboard[];
+  porTipoCliente: QuebraItem[];
+  porOrigem: QuebraItem[];
+  top10: NegociacaoResumo[];
+  fechadosPeriodo: NegociacaoResumo[];
+  motivosPerda: MotivoPerdaItem[];
   proximosFechamentos: NegociacaoResumo[];
   emRisco: NegociacaoResumo[];
   base: LinhaBase[];
   pesos: { fria: number; morna: number; quente: number };
   diasRisco: number;
 };
+
+/** Fontes do drill-down `/dashboard/relatorio`. */
+export type FonteRelatorio =
+  | "pipeline"
+  | "previsao"
+  | "previsao90"
+  | "winrate"
+  | "etapa"
+  | "tipo_cliente"
+  | "origem"
+  | "top10"
+  | "fechados"
+  | "motivo"
+  | "risco"
+  | "proximos";

@@ -22,24 +22,26 @@ export const cnpjOpcionalSchema = z.preprocess(
 );
 
 export const enderecoCamposSchema = {
-  logradouro: textoOpcional,
-  numero: textoOpcional,
-  complemento: textoOpcional,
-  bairro: textoOpcional,
-  cep: z.preprocess(
-    (v) => {
-      if (v === "" || v === undefined || v === null) return null;
-      const d = String(v).replace(/\D/g, "").slice(0, 8);
-      if (!d) return null;
-      if (d.length === 8) return `${d.slice(0, 5)}-${d.slice(5)}`;
-      return d;
-    },
-    z
-      .string()
-      .nullable()
-      .refine((v) => v == null || /^\d{5}-\d{3}$/.test(v), "CEP inválido"),
-  ),
-  municipio: textoOpcional,
+  logradouro: textoOpcional.optional(),
+  numero: textoOpcional.optional(),
+  complemento: textoOpcional.optional(),
+  bairro: textoOpcional.optional(),
+  cep: z
+    .preprocess(
+      (v) => {
+        if (v === "" || v === undefined || v === null) return null;
+        const d = String(v).replace(/\D/g, "").slice(0, 8);
+        if (!d) return null;
+        if (d.length === 8) return `${d.slice(0, 5)}-${d.slice(5)}`;
+        return d;
+      },
+      z
+        .string()
+        .nullable()
+        .refine((v) => v == null || /^\d{5}-\d{3}$/.test(v), "CEP inválido"),
+    )
+    .optional(),
+  municipio: textoOpcional.optional(),
 };
 
 /** Cadastro/edição de empresa — SPEC 3.2 + 3.8 (obrigatório: nome). */

@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { campoClass } from "@/components/crm/pagina";
 
 import {
+  METRICAS_DASHBOARD,
   TIPOS_SEGMENTO,
   VISOES_DATA,
   type FiltrosDashboard,
@@ -60,14 +61,16 @@ export function DashboardFiltros({
     filtros.vendedorId ||
     filtros.etapaId ||
     filtros.visao !== "previsao" ||
+    filtros.metrica !== "potencial" ||
     filtros.uf ||
     filtros.origem ||
-    filtros.segmento;
+    filtros.segmento ||
+    filtros.tipoCliente;
 
   return (
     <section
       aria-label="Filtros"
-      className="card-surface mb-4 grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 xl:grid-cols-[1.6fr_repeat(6,1fr)]"
+      className="card-surface mb-4 grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 xl:grid-cols-[1.6fr_repeat(8,1fr)]"
     >
       <div className="col-span-2 flex min-w-0 flex-col gap-1.5 sm:col-span-3 xl:col-span-1">
         <span className="eyebrow">Período</span>
@@ -157,6 +160,25 @@ export function DashboardFiltros({
         </select>
       </Campo>
 
+      <Campo id="dash-metrica" label="Métrica">
+        <select
+          id="dash-metrica"
+          value={filtros.metrica}
+          onChange={(e) =>
+            setParams({
+              metrica: e.target.value === "potencial" ? null : e.target.value,
+            })
+          }
+          className={campoClass}
+        >
+          {METRICAS_DASHBOARD.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </Campo>
+
       <Campo id="dash-uf" label="Região (UF)">
         <select
           id="dash-uf"
@@ -189,7 +211,23 @@ export function DashboardFiltros({
         </select>
       </Campo>
 
-      <Campo id="dash-segmento" label="Segmento">
+      <Campo id="dash-tipo-cliente" label="Tipo de cliente">
+        <select
+          id="dash-tipo-cliente"
+          value={filtros.tipoCliente ?? ""}
+          onChange={(e) => setParams({ tipo_cliente: e.target.value || null })}
+          className={campoClass}
+        >
+          <option value="">Todos</option>
+          {opcoes.tiposCliente.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </Campo>
+
+      <Campo id="dash-segmento" label="Natureza">
         <select
           id="dash-segmento"
           value={filtros.segmento ?? ""}
@@ -206,7 +244,7 @@ export function DashboardFiltros({
       </Campo>
 
       {temFiltro ? (
-        <div className="col-span-2 sm:col-span-3 xl:col-span-7">
+        <div className="col-span-2 sm:col-span-3 xl:col-span-9">
           <button
             type="button"
             onClick={() => router.push(pathname)}
