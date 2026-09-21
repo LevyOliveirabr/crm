@@ -8,6 +8,8 @@ import {
   uploadLogoEmitente,
   type EmitenteRow,
 } from "@/lib/actions/emitentes";
+import { BotaoConsultarCnpj } from "@/components/crm/botao-consultar-cnpj";
+import { InputCnpj } from "@/components/crm/input-cnpj";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +32,14 @@ export function EmitenteForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [logo, setLogo] = useState(logoUrl);
+  const [cnpj, setCnpj] = useState(initial?.cnpj ?? "");
+  const [razaoSocial, setRazaoSocial] = useState(initial?.razao_social ?? "");
+  const [logradouro, setLogradouro] = useState(initial?.logradouro ?? "");
+  const [numero, setNumero] = useState(initial?.numero ?? "");
+  const [complemento, setComplemento] = useState(initial?.complemento ?? "");
+  const [bairro, setBairro] = useState(initial?.bairro ?? "");
+  const [cep, setCep] = useState(initial?.cep ?? "");
+  const [municipio, setMunicipio] = useState(initial?.municipio ?? "");
 
   return (
     <div className={cn(formularioClass, "flex max-w-xl flex-col gap-6")}>
@@ -42,9 +52,9 @@ export function EmitenteForm({
           startTransition(async () => {
             const res = await salvarEmitente(initial?.id ?? null, {
               nome: str("nome"),
-              razao_social: str("razao_social"),
-              cnpj: str("cnpj") || null,
-              endereco: str("endereco") || null,
+              razao_social: razaoSocial.trim() || str("razao_social"),
+              cnpj: cnpj || null,
+              endereco: null,
               telefone: str("telefone") || null,
               email: str("email") || null,
               site: str("site") || null,
@@ -57,6 +67,12 @@ export function EmitenteForm({
               rodape: str("rodape") || null,
               orcamento_prefixo: str("orcamento_prefixo") || "ORC",
               ativo: fd.get("ativo") === "on",
+              logradouro: logradouro || null,
+              numero: numero || null,
+              complemento: complemento || null,
+              bairro: bairro || null,
+              cep: cep || null,
+              municipio: municipio || null,
             });
             if (!res.ok) {
               toast.add({ title: res.error, type: "error" });
@@ -100,23 +116,90 @@ export function EmitenteForm({
             name="razao_social"
             required
             className="mt-1"
-            defaultValue={initial?.razao_social ?? ""}
+            value={razaoSocial}
+            onChange={(ev) => setRazaoSocial(ev.target.value)}
           />
         </label>
-        <label className="text-sm">
-          CNPJ
-          <Input
+        <div className="text-sm">
+          <span>CNPJ</span>
+          <InputCnpj
             name="cnpj"
             className="mt-1"
-            defaultValue={initial?.cnpj ?? ""}
+            value={cnpj}
+            onChange={setCnpj}
+          />
+          <div className="mt-1.5">
+            <BotaoConsultarCnpj
+              cnpj={cnpj}
+              onDados={(d) => {
+                setCnpj(d.cnpj);
+                if (!razaoSocial.trim()) setRazaoSocial(d.razaoSocial);
+                if (!logradouro) setLogradouro(d.logradouro ?? "");
+                if (!numero) setNumero(d.numero ?? "");
+                if (!complemento) setComplemento(d.complemento ?? "");
+                if (!bairro) setBairro(d.bairro ?? "");
+                if (!cep) setCep(d.cep ?? "");
+                if (!municipio) setMunicipio(d.municipio ?? d.cidade ?? "");
+              }}
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium">Endereço</p>
+        <label className="text-sm">
+          Logradouro
+          <Input
+            className="mt-1"
+            value={logradouro}
+            onChange={(ev) => setLogradouro(ev.target.value)}
           />
         </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            Número
+            <Input
+              className="mt-1"
+              value={numero}
+              onChange={(ev) => setNumero(ev.target.value)}
+            />
+          </label>
+          <label className="text-sm">
+            Complemento
+            <Input
+              className="mt-1"
+              value={complemento}
+              onChange={(ev) => setComplemento(ev.target.value)}
+            />
+          </label>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            Bairro
+            <Input
+              className="mt-1"
+              value={bairro}
+              onChange={(ev) => setBairro(ev.target.value)}
+            />
+          </label>
+          <label className="text-sm">
+            CEP
+            <Input
+              className="mt-1"
+              value={cep}
+              inputMode="numeric"
+              placeholder="00000-000"
+              onChange={(ev) => {
+                const d = ev.target.value.replace(/\D/g, "").slice(0, 8);
+                setCep(d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d);
+              }}
+            />
+          </label>
+        </div>
         <label className="text-sm">
-          Endereço
+          Município
           <Input
-            name="endereco"
             className="mt-1"
-            defaultValue={initial?.endereco ?? ""}
+            value={municipio}
+            onChange={(ev) => setMunicipio(ev.target.value)}
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">

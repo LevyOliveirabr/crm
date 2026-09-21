@@ -39,6 +39,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BotaoConsultarCnpj } from "@/components/crm/botao-consultar-cnpj";
+import { InputCnpj } from "@/components/crm/input-cnpj";
 import {
   EstadoVazio,
   Pagina,
@@ -60,6 +61,12 @@ export type EmpresaFichaData = {
   responsavelId: string | null;
   responsavelNome: string | null;
   observacoes: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cep: string | null;
+  municipio: string | null;
   aberto: number;
   vendido: number;
   perdido: number;
@@ -88,6 +95,8 @@ export type ContatoEmpresaItem = {
   email: string | null;
   cargo: string | null;
   decisor: boolean;
+  instagram: string | null;
+  linkedin: string | null;
 };
 
 export type TimelineEmpresaItem =
@@ -174,6 +183,8 @@ export function EmpresaFicha({
     email: "",
     cargo: "",
     decisor: false,
+    instagram: "",
+    linkedin: "",
   });
 
   const empresaResumo: EmpresaResumo = useMemo(
@@ -225,6 +236,12 @@ export function EmpresaFicha({
         cnpj: next.cnpj,
         responsavel_id: next.responsavelId,
         observacoes: next.observacoes,
+        logradouro: next.logradouro,
+        numero: next.numero,
+        complemento: next.complemento,
+        bairro: next.bairro,
+        cep: next.cep,
+        municipio: next.municipio,
       });
       if (!res.ok) {
         setE(e);
@@ -241,6 +258,8 @@ export function EmpresaFicha({
       email: "",
       cargo: "",
       decisor: false,
+      instagram: "",
+      linkedin: "",
     });
     setContatoOpen(true);
   }
@@ -253,6 +272,8 @@ export function EmpresaFicha({
       email: c.email ?? "",
       cargo: c.cargo ?? "",
       decisor: c.decisor,
+      instagram: c.instagram ?? "",
+      linkedin: c.linkedin ?? "",
     });
     setContatoOpen(true);
   }
@@ -270,6 +291,8 @@ export function EmpresaFicha({
         email: contatoForm.email || null,
         cargo: contatoForm.cargo || null,
         decisor: contatoForm.decisor,
+        instagram: contatoForm.instagram || null,
+        linkedin: contatoForm.linkedin || null,
       };
       const res = contatoEditId
         ? await atualizarContato(contatoEditId, payload)
@@ -290,6 +313,8 @@ export function EmpresaFicha({
                   email: res.contato.email,
                   cargo: res.contato.cargo,
                   decisor: res.contato.decisor,
+                  instagram: res.contato.instagram,
+                  linkedin: res.contato.linkedin,
                 }
               : c,
           ),
@@ -304,6 +329,8 @@ export function EmpresaFicha({
             email: res.contato.email,
             cargo: res.contato.cargo,
             decisor: res.contato.decisor,
+            instagram: res.contato.instagram,
+            linkedin: res.contato.linkedin,
           },
         ]);
       }
@@ -424,17 +451,96 @@ export function EmpresaFicha({
       <div className="grid gap-4 lg:grid-cols-2">
         <Secao titulo="Cadastro" className="lg:col-span-2">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs text-muted-foreground">
-                Cidade
+                Endereço (logradouro)
               </label>
               <Input
-                value={e.cidade ?? ""}
+                value={e.logradouro ?? ""}
                 disabled={inputDisabled}
                 onChange={(ev) =>
-                  setE((x) => ({ ...x, cidade: ev.target.value || null }))
+                  setE((x) => ({ ...x, logradouro: ev.target.value || null }))
                 }
-                onBlur={() => salvarCadastro({ cidade: e.cidade })}
+                onBlur={() => salvarCadastro({ logradouro: e.logradouro })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Número
+              </label>
+              <Input
+                value={e.numero ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, numero: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ numero: e.numero })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Complemento
+              </label>
+              <Input
+                value={e.complemento ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, complemento: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ complemento: e.complemento })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Bairro
+              </label>
+              <Input
+                value={e.bairro ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, bairro: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ bairro: e.bairro })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                CEP
+              </label>
+              <Input
+                value={e.cep ?? ""}
+                disabled={inputDisabled}
+                inputMode="numeric"
+                placeholder="00000-000"
+                onChange={(ev) => {
+                  const d = ev.target.value.replace(/\D/g, "").slice(0, 8);
+                  const fmt =
+                    d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+                  setE((x) => ({ ...x, cep: fmt || null }));
+                }}
+                onBlur={() => salvarCadastro({ cep: e.cep })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Município
+              </label>
+              <Input
+                value={e.municipio ?? e.cidade ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({
+                    ...x,
+                    municipio: ev.target.value || null,
+                    cidade: ev.target.value || null,
+                  }))
+                }
+                onBlur={() =>
+                  salvarCadastro({
+                    municipio: e.municipio,
+                    cidade: e.municipio ?? e.cidade,
+                  })
+                }
               />
             </div>
             <div>
@@ -456,7 +562,7 @@ export function EmpresaFicha({
             </div>
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">
-                Segmento
+                Segmento (tipo de cliente)
               </label>
               <Input
                 value={e.segmento ?? ""}
@@ -504,12 +610,10 @@ export function EmpresaFicha({
               <label className="mb-1 block text-xs text-muted-foreground">
                 CNPJ
               </label>
-              <Input
+              <InputCnpj
                 value={e.cnpj ?? ""}
                 disabled={inputDisabled}
-                onChange={(ev) =>
-                  setE((x) => ({ ...x, cnpj: ev.target.value || null }))
-                }
+                onChange={(v) => setE((x) => ({ ...x, cnpj: v || null }))}
                 onBlur={() => salvarCadastro({ cnpj: e.cnpj })}
               />
               <div className="mt-1.5">
@@ -517,12 +621,17 @@ export function EmpresaFicha({
                   cnpj={e.cnpj ?? ""}
                   disabled={inputDisabled}
                   onDados={(d) => {
-                    // Preenche só o que está vazio; nunca sobrescreve o que o usuário digitou.
                     salvarCadastro({
                       cnpj: d.cnpj,
                       nome: e.nome.trim() ? e.nome : d.razaoSocial || e.nome,
                       cidade: e.cidade ?? d.cidade,
+                      municipio: e.municipio ?? d.municipio ?? d.cidade,
                       uf: e.uf ?? d.uf,
+                      logradouro: e.logradouro ?? d.logradouro,
+                      numero: e.numero ?? d.numero,
+                      complemento: e.complemento ?? d.complemento,
+                      bairro: e.bairro ?? d.bairro,
+                      cep: e.cep ?? d.cep,
                     });
                   }}
                 />
@@ -839,6 +948,26 @@ export function EmpresaFicha({
                 value={contatoForm.cargo}
                 onChange={(ev) =>
                   setContatoForm((f) => ({ ...f, cargo: ev.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Instagram</label>
+              <Input
+                value={contatoForm.instagram}
+                placeholder="@usuario ou URL"
+                onChange={(ev) =>
+                  setContatoForm((f) => ({ ...f, instagram: ev.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">LinkedIn</label>
+              <Input
+                value={contatoForm.linkedin}
+                placeholder="URL do perfil"
+                onChange={(ev) =>
+                  setContatoForm((f) => ({ ...f, linkedin: ev.target.value }))
                 }
               />
             </div>

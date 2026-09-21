@@ -18,6 +18,10 @@ export type Database = {
           ativo: boolean;
           criado_em: string;
           gerente_id: string | null;
+          cargo: string | null;
+          telefone: string | null;
+          whatsapp: string | null;
+          linkedin: string | null;
         };
         Insert: {
           id: string;
@@ -27,6 +31,10 @@ export type Database = {
           ativo?: boolean;
           criado_em?: string;
           gerente_id?: string | null;
+          cargo?: string | null;
+          telefone?: string | null;
+          whatsapp?: string | null;
+          linkedin?: string | null;
         };
         Update: {
           id?: string;
@@ -36,6 +44,10 @@ export type Database = {
           ativo?: boolean;
           criado_em?: string;
           gerente_id?: string | null;
+          cargo?: string | null;
+          telefone?: string | null;
+          whatsapp?: string | null;
+          linkedin?: string | null;
         };
         Relationships: [];
       };
@@ -157,6 +169,12 @@ export type Database = {
           arquivado_em: string | null;
           criado_em: string;
           atualizado_em: string;
+          logradouro: string | null;
+          numero: string | null;
+          complemento: string | null;
+          bairro: string | null;
+          cep: string | null;
+          municipio: string | null;
         };
         Insert: {
           id?: string;
@@ -171,6 +189,12 @@ export type Database = {
           arquivado_em?: string | null;
           criado_em?: string;
           atualizado_em?: string;
+          logradouro?: string | null;
+          numero?: string | null;
+          complemento?: string | null;
+          bairro?: string | null;
+          cep?: string | null;
+          municipio?: string | null;
         };
         Update: {
           id?: string;
@@ -185,6 +209,12 @@ export type Database = {
           arquivado_em?: string | null;
           criado_em?: string;
           atualizado_em?: string;
+          logradouro?: string | null;
+          numero?: string | null;
+          complemento?: string | null;
+          bairro?: string | null;
+          cep?: string | null;
+          municipio?: string | null;
         };
         Relationships: [
           {
@@ -207,6 +237,8 @@ export type Database = {
           decisor: boolean;
           arquivado_em: string | null;
           criado_em: string;
+          instagram: string | null;
+          linkedin: string | null;
         };
         Insert: {
           id?: string;
@@ -218,6 +250,8 @@ export type Database = {
           decisor?: boolean;
           arquivado_em?: string | null;
           criado_em?: string;
+          instagram?: string | null;
+          linkedin?: string | null;
         };
         Update: {
           id?: string;
@@ -229,6 +263,8 @@ export type Database = {
           decisor?: boolean;
           arquivado_em?: string | null;
           criado_em?: string;
+          instagram?: string | null;
+          linkedin?: string | null;
         };
         Relationships: [
           {
@@ -251,6 +287,8 @@ export type Database = {
           linha: string | null;
           origem: string | null;
           valor_estimado: number;
+          valor_previsao: number | null;
+          negocio_unico: boolean;
           temperatura: number;
           previsao_mes: string | null;
           data_faturamento: string | null;
@@ -278,6 +316,8 @@ export type Database = {
           linha?: string | null;
           origem?: string | null;
           valor_estimado?: number;
+          valor_previsao?: number | null;
+          negocio_unico?: boolean;
           temperatura?: number;
           previsao_mes?: string | null;
           data_faturamento?: string | null;
@@ -306,6 +346,8 @@ export type Database = {
           linha?: string | null;
           origem?: string | null;
           valor_estimado?: number;
+          valor_previsao?: number | null;
+          negocio_unico?: boolean;
           temperatura?: number;
           previsao_mes?: string | null;
           data_faturamento?: string | null;
@@ -733,6 +775,12 @@ export type Database = {
           ativo: boolean;
           criado_em: string;
           atualizado_em: string;
+          logradouro: string | null;
+          numero: string | null;
+          complemento: string | null;
+          bairro: string | null;
+          cep: string | null;
+          municipio: string | null;
         };
         Insert: {
           id?: string;
@@ -754,6 +802,12 @@ export type Database = {
           ativo?: boolean;
           criado_em?: string;
           atualizado_em?: string;
+          logradouro?: string | null;
+          numero?: string | null;
+          complemento?: string | null;
+          bairro?: string | null;
+          cep?: string | null;
+          municipio?: string | null;
         };
         Update: {
           id?: string;
@@ -775,6 +829,12 @@ export type Database = {
           ativo?: boolean;
           criado_em?: string;
           atualizado_em?: string;
+          logradouro?: string | null;
+          numero?: string | null;
+          complemento?: string | null;
+          bairro?: string | null;
+          cep?: string | null;
+          municipio?: string | null;
         };
         Relationships: [];
       };
@@ -1036,6 +1096,8 @@ export type Database = {
           linha: string | null;
           origem: string | null;
           valor_estimado: number | null;
+          valor_previsao: number | null;
+          negocio_unico: boolean | null;
           temperatura: number | null;
           previsao_mes: string | null;
           data_faturamento: string | null;
@@ -1053,6 +1115,7 @@ export type Database = {
           atualizado_em: string | null;
           empresa_nome: string | null;
           empresa_cidade: string | null;
+          empresa_segmento: string | null;
           etapa_nome: string | null;
           etapa_ordem: number | null;
           funil_nome: string | null;
@@ -1146,6 +1209,12 @@ export type Database = {
           ciclo_medio_dias: number | null;
           ultimo_contato: string | null;
           tipo_segmento: Database["public"]["Enums"]["tipo_segmento"] | null;
+          logradouro: string | null;
+          numero: string | null;
+          complemento: string | null;
+          bairro: string | null;
+          cep: string | null;
+          municipio: string | null;
         };
         Relationships: [];
       };

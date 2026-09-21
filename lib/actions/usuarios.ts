@@ -184,6 +184,87 @@ export async function definirVinculoAction(input: {
   return { ok: true };
 }
 
+const atualizarUsuarioSchema = z.object({
+  id: z.uuid(),
+  nome: z.string().trim().min(2, "Informe o nome."),
+  email: z.email("Informe um e-mail válido."),
+  cargo: z.preprocess(
+    (v) => (v === "" || v === undefined ? null : v),
+    z.string().trim().nullable(),
+  ),
+  telefone: z.preprocess(
+    (v) => (v === "" || v === undefined ? null : v),
+    z.string().trim().nullable(),
+  ),
+  whatsapp: z.preprocess(
+    (v) => (v === "" || v === undefined ? null : String(v).replace(/\D/g, "") || null),
+    z.string().nullable(),
+  ),
+  linkedin: z.preprocess(
+    (v) => (v === "" || v === undefined ? null : v),
+    z.string().trim().nullable(),
+  ),
+});
+
+/**
+ * Edita dados do usuário (nome, e-mail Auth, cargo e contatos).
+ * Só diretor em alguma empresa.
+ */
+export async function atualizarUsuarioAction(
+  input: z.input<typeof atualizarUsuarioSchema>,
+): Promise<UsuarioActionState> {
+  const parsed = atualizarUsuarioSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const diretor = await exigirDiretorEmAlguma();
+  if (!diretor) {
+    return { error: "Apenas o diretor pode editar usuários." };
+  }
+
+  const supabase = await createClient();
+  const { data: atual, error: erroAtual } = await supabase
+    .from("usuarios")
+    .select("id, email")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+
+  if (erroAtual || !atual) {
+    return { error: "Usuário não encontrado." };
+  }
+
+  const { error } = await supabase
+    .from("usuarios")
+    .update({
+      nome: parsed.data.nome,
+      email: parsed.data.email,
+      cargo: parsed.data.cargo,
+      telefone: parsed.data.telefone,
+      whatsapp: parsed.data.whatsapp,
+      linkedin: parsed.data.linkedin,
+    })
+    .eq("id", parsed.data.id);
+
+  if (error) return { error: error.message };
+
+  if (parsed.data.email !== atual.email) {
+    const admin = createAdminClient();
+    const { error: authErr } = await admin.auth.admin.updateUserById(
+      parsed.data.id,
+      { email: parsed.data.email },
+    );
+    if (authErr) {
+      return {
+        error: `Dados salvos, mas falhou atualizar o e-mail de login: ${authErr.message}`,
+      };
+    }
+  }
+
+  revalidatePath("/configuracoes/usuarios");
+  return { ok: true, message: "Usuário atualizado." };
+}
+
 export type VinculoUsuario = {
   emitenteId: string;
   perfil: Perfil;

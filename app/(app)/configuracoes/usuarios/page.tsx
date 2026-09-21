@@ -5,6 +5,7 @@ import { KeyRound } from "lucide-react";
 import { ConvidarUsuarioForm } from "@/components/crm/convidar-usuario-form";
 import { Secao } from "@/components/crm/pagina";
 import { UsuarioAtivoToggle } from "@/components/crm/usuario-ativo-toggle";
+import { UsuarioEditarDialog } from "@/components/crm/usuario-editar-dialog";
 import { UsuarioEmpresasEditor } from "@/components/crm/usuario-empresas-editor";
 import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";

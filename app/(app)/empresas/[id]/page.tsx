@@ -39,7 +39,7 @@ export default async function EmpresaDetalhePage({
     supabase
       .from("empresas")
       .select(
-        "id, nome, cidade, uf, segmento, tipo_segmento, cnpj, responsavel_id, observacoes, arquivado_em, usuarios:responsavel_id(nome)",
+        "id, nome, cidade, uf, segmento, tipo_segmento, cnpj, responsavel_id, observacoes, arquivado_em, logradouro, numero, complemento, bairro, cep, municipio, usuarios:responsavel_id(nome)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -84,6 +84,20 @@ export default async function EmpresaDetalhePage({
     observacoes: (viewRow?.observacoes ?? empresaRow!.observacoes) as
       | string
       | null,
+    logradouro: (viewRow?.logradouro ?? empresaRow?.logradouro ?? null) as
+      | string
+      | null,
+    numero: (viewRow?.numero ?? empresaRow?.numero ?? null) as string | null,
+    complemento: (viewRow?.complemento ?? empresaRow?.complemento ?? null) as
+      | string
+      | null,
+    bairro: (viewRow?.bairro ?? empresaRow?.bairro ?? null) as string | null,
+    cep: (viewRow?.cep ?? empresaRow?.cep ?? null) as string | null,
+    municipio: (viewRow?.municipio ??
+      empresaRow?.municipio ??
+      viewRow?.cidade ??
+      empresaRow?.cidade ??
+      null) as string | null,
     aberto: Number(viewRow?.aberto ?? 0),
     vendido: Number(viewRow?.vendido ?? 0),
     perdido: Number(viewRow?.perdido ?? 0),
@@ -114,7 +128,7 @@ export default async function EmpresaDetalhePage({
     ).order("status"),
     supabase
       .from("contatos")
-      .select("id, nome, whatsapp, email, cargo, decisor")
+      .select("id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
       .eq("empresa_id", id)
       .is("arquivado_em", null)
       .order("nome"),
@@ -177,6 +191,8 @@ export default async function EmpresaDetalhePage({
     email: c.email,
     cargo: c.cargo,
     decisor: c.decisor,
+    instagram: c.instagram,
+    linkedin: c.linkedin,
   }));
 
   // Timeline consolidada: interações + ações concluídas + orçamentos
