@@ -89,8 +89,33 @@ export function OrcamentoDocumento({ o }: { o: OrcamentoCompleto }) {
           <p className="mt-1 font-semibold">{o.titulo ?? o.negociacao.titulo}</p>
           <p className="text-xs text-muted-foreground">
             Vendedor: {o.negociacao.responsavelNome}
-            {o.negociacao.responsavelEmail ? ` · ${o.negociacao.responsavelEmail}` : ""}
+            {o.negociacao.responsavelCargo
+              ? ` · ${o.negociacao.responsavelCargo}`
+              : ""}
           </p>
+          <p className="text-xs text-muted-foreground">
+            {[
+              o.negociacao.responsavelEmail,
+              o.negociacao.responsavelTelefone,
+              o.negociacao.responsavelWhatsapp
+                ? `WhatsApp ${o.negociacao.responsavelWhatsapp}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {o.negociacao.responsavelLinkedin ? (
+            <p className="text-xs text-muted-foreground">
+              <a
+                href={o.negociacao.responsavelLinkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                LinkedIn
+              </a>
+            </p>
+          ) : null}
         </div>
       </section>
 

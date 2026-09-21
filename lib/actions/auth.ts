@@ -3,8 +3,11 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { createClient } from "@/lib/supabase/server";
 import { getAppUrl } from "@/lib/app-url";
+import { emailHabilitado, enviarEmail } from "@/lib/email";
+import { emailRecuperacaoSenha } from "@/lib/email/templates";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
   email: z.email("Informe um e-mail válido."),
@@ -76,35 +79,65 @@ export async function esqueciSenhaAction(
   }
 
   const appUrl = getAppUrl();
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/definir-senha")}`,
-  });
+  const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/definir-senha")}`;
 
-  if (error) {
-    console.error("[esqueci-senha]", error.message);
-    const msg = error.message.toLowerCase();
-    if (
-      msg.includes("rate") ||
-      msg.includes("limit") ||
-      msg.includes("seconds") ||
-      msg.includes("too many")
-    ) {
-      return {
-        error:
-          "Muitos e-mails enviados. Espere cerca de 1 hora (limite do Supabase) e tente de novo. Confira também o spam.",
-      };
+  try {
+    if (emailHabilitado()) {
+      const admin = createAdminClient();
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email: parsed.data.email,
+        options: { redirectTo },
+      });
+      if (error) {
+        console.error("[esqueci-senha]", error.message);
+      } else {
+        const actionLink = data.properties?.action_link;
+        if (actionLink) {
+          const msg = emailRecuperacaoSenha({ link: actionLink });
+          const envio = await enviarEmail({
+            to: parsed.data.email,
+            subject: msg.subject,
+            html: msg.html,
+            text: msg.text,
+          });
+          if (!envio.ok && !("skipped" in envio && envio.skipped)) {
+            console.error("[esqueci-senha] resend", envio.error);
+          }
+        }
+      }
+    } else {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        parsed.data.email,
+        { redirectTo },
+      );
+      if (error) {
+        console.error("[esqueci-senha]", error.message);
+        const msg = error.message.toLowerCase();
+        if (
+          msg.includes("rate") ||
+          msg.includes("limit") ||
+          msg.includes("seconds") ||
+          msg.includes("too many")
+        ) {
+          return {
+            error:
+              "Muitos e-mails enviados. Espere cerca de 1 hora (limite do Supabase) e tente de novo. Confira também o spam.",
+          };
+        }
+        return {
+          error:
+            "Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos ou peça ao diretor para redefinir no painel do Supabase.",
+        };
+      }
     }
-    return {
-      error:
-        "Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos ou peça ao diretor para redefinir no painel do Supabase.",
-    };
+  } catch (err) {
+    console.error("[esqueci-senha]", err);
   }
 
-  return {
-    ok: true,
-    error: undefined,
-  };
+  // Sempre ok para não vazar se o e-mail existe.
+  return { ok: true, error: undefined };
 }
 
 const senhaSchema = z

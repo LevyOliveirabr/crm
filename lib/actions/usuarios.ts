@@ -10,6 +10,8 @@ import { exigirDiretorDe, exigirDiretorEmAlguma } from "@/lib/auth/permissoes-se
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
+import { emailHabilitado, enviarEmail } from "@/lib/email";
+import { emailConvite } from "@/lib/email/templates";
 
 export type UsuarioActionState = {
   error?: string;
@@ -53,24 +55,65 @@ export async function convidarUsuarioAction(
 
   const appUrl = getAppUrl();
   const admin = createAdminClient();
+  const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/definir-senha")}`;
 
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
-    data: {
+  let userId: string | null = null;
+
+  if (emailHabilitado()) {
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type: "invite",
+      email: parsed.data.email,
+      options: {
+        data: {
+          nome: parsed.data.nome,
+          perfil: parsed.data.perfil,
+        },
+        redirectTo,
+      },
+    });
+    if (linkErr) return { error: linkErr.message };
+    userId = linkData.user?.id ?? null;
+    const actionLink = linkData.properties?.action_link;
+    if (!actionLink) {
+      return { error: "Não foi possível gerar o link de convite." };
+    }
+    const empresaNome =
+      diretor.empresas.find((e) => e.id === parsed.data.emitente_id)?.nome ?? null;
+    const msg = emailConvite({
       nome: parsed.data.nome,
-      perfil: parsed.data.perfil,
-    },
-    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/definir-senha")}`,
-  });
-
-  if (error) {
-    return { error: error.message };
+      link: actionLink,
+      convidadoPor: diretor.nome,
+      empresaNome,
+    });
+    const envio = await enviarEmail({
+      to: parsed.data.email,
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+    });
+    if (!envio.ok && !("skipped" in envio && envio.skipped)) {
+      return { error: envio.error ?? "Falha ao enviar o e-mail de convite." };
+    }
+  } else {
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(
+      parsed.data.email,
+      {
+        data: {
+          nome: parsed.data.nome,
+          perfil: parsed.data.perfil,
+        },
+        redirectTo,
+      },
+    );
+    if (error) return { error: error.message };
+    userId = data.user?.id ?? null;
   }
 
-  if (data.user?.id) {
+  if (userId) {
     // o trigger handle_new_auth_user cria a linha em usuarios; o vínculo é feito aqui
     const { error: erroVinculo } = await admin.from("usuario_emitentes").upsert(
       {
-        usuario_id: data.user.id,
+        usuario_id: userId,
         emitente_id: parsed.data.emitente_id,
         perfil: parsed.data.perfil,
       },

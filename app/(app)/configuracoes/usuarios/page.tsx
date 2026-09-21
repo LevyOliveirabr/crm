@@ -130,7 +130,20 @@ export default async function UsuariosPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  <UsuarioAtivoToggle id={u.id} ativo={u.ativo} />
+                  <div className="flex flex-col items-end gap-1">
+                    <UsuarioEditarDialog
+                      usuario={{
+                        id: u.id,
+                        nome: u.nome,
+                        email: u.email,
+                        cargo: u.cargo,
+                        telefone: u.telefone,
+                        whatsapp: u.whatsapp,
+                        linkedin: u.linkedin,
+                      }}
+                    />
+                    <UsuarioAtivoToggle id={u.id} ativo={u.ativo} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
