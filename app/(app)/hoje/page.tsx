@@ -36,16 +36,88 @@ import {
   Tile,
   Tiles,
 } from "@/components/crm/pagina";
+import {
+  PRAZOS_HOJE,
+  SeletorPrazoHoje,
+  type PrazoHojeId,
+} from "@/components/crm/seletor-prazo-hoje";
 import { SeletorVendedor } from "@/components/crm/seletor-vendedor";
 
 type SearchParams = Promise<{
-  emitente?: string | string[]; vendedor?: string | string[] }>;
+  emitente?: string | string[];
+  vendedor?: string | string[];
+  prazo?: string | string[];
+  de?: string | string[];
+  ate?: string | string[];
+}>;
 
 function paramUnico(
   valor: string | string[] | undefined,
 ): string | undefined {
   if (Array.isArray(valor)) return valor[0];
   return valor;
+}
+
+function dataValida(v: string | undefined): string | null {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  return Number.isNaN(Date.parse(`${v}T12:00:00Z`)) ? null : v;
+}
+
+function resolverPrazo(
+  prazoParam: string | undefined,
+  deParam: string | undefined,
+  ateParam: string | undefined,
+  hoje: string,
+): { prazo: PrazoHojeId; de: string; ate: string; rotulo: string } {
+  const ids = PRAZOS_HOJE.map((p) => p.id);
+  const prazo: PrazoHojeId = ids.includes(prazoParam as PrazoHojeId)
+    ? (prazoParam as PrazoHojeId)
+    : "hoje";
+
+  if (prazo === "ontem") {
+    const d = adicionarDiasISO(hoje, -1);
+    return { prazo, de: d, ate: d, rotulo: "ontem" };
+  }
+  if (prazo === "amanha") {
+    const d = adicionarDiasISO(hoje, 1);
+    return { prazo, de: d, ate: d, rotulo: "amanhã" };
+  }
+  if (prazo === "7atras") {
+    return {
+      prazo,
+      de: adicionarDiasISO(hoje, -7),
+      ate: hoje,
+      rotulo: "últimos 7 dias",
+    };
+  }
+  if (prazo === "7frente") {
+    return {
+      prazo,
+      de: hoje,
+      ate: adicionarDiasISO(hoje, 7),
+      rotulo: "próximos 7 dias",
+    };
+  }
+  if (prazo === "30frente") {
+    return {
+      prazo,
+      de: hoje,
+      ate: adicionarDiasISO(hoje, 30),
+      rotulo: "próximos 30 dias",
+    };
+  }
+  if (prazo === "custom") {
+    let de = dataValida(deParam) ?? hoje;
+    let ate = dataValida(ateParam) ?? hoje;
+    if (ate < de) [de, ate] = [ate, de];
+    return {
+      prazo,
+      de,
+      ate,
+      rotulo: `${formatarData(de)} a ${formatarData(ate)}`,
+    };
+  }
+  return { prazo: "hoje", de: hoje, ate: hoje, rotulo: "hoje" };
 }
 
 export default async function HojePage({
@@ -63,6 +135,12 @@ export default async function HojePage({
   const hoje = hojeISO();
   const inicioMes = inicioMesAtualISO();
   const fimMes = inicioProximoMesISO(hoje);
+  const janela = resolverPrazo(
+    paramUnico(sp.prazo),
+    paramUnico(sp.de),
+    paramUnico(sp.ate),
+    hoje,
+  );
 
   const escopo = await getEscopoEmpresa(usuario, sp);
   const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
@@ -134,7 +212,14 @@ export default async function HojePage({
     0,
   );
 
-  // --- Ações pendentes (atrasadas + hoje) ---
+  // --- Ações no prazo escolhido (+ atrasadas se a janela inclui o passado) ---
+  // Inclui atrasadas (antes de hoje) quando olhamos "hoje" ou janelas que começam no passado.
+  const incluirAtrasadas = janela.de <= hoje;
+  const dataMinQuery = incluirAtrasadas
+    ? // pega atrasadas + janela (sem limite inferior artificial)
+      null
+    : janela.de;
+
   let acoesQuery = supabase
     .from("acoes")
     .select(
@@ -154,10 +239,22 @@ export default async function HojePage({
     `,
     )
     .is("concluida_em", null)
-    .lte("data", hoje)
+    .lte("data", janela.ate)
     .eq("negociacoes.status", "aberta")
     .is("negociacoes.arquivado_em", null)
     .order("data", { ascending: true });
+
+  if (dataMinQuery) {
+    acoesQuery = acoesQuery.gte("data", dataMinQuery);
+  } else if (janela.prazo !== "hoje" && janela.prazo !== "7atras" && janela.prazo !== "custom") {
+    acoesQuery = acoesQuery.gte("data", janela.de);
+  } else if (janela.prazo === "hoje") {
+    // hoje: atrasadas (qualquer passado) + hoje
+    acoesQuery = acoesQuery.lte("data", hoje);
+  } else {
+    // 7atras / custom com passado: filtra pelo de
+    acoesQuery = acoesQuery.gte("data", janela.de);
+  }
 
   acoesQuery = aplicarEscopoEmitente(acoesQuery, escopo, "negociacoes.emitente_id");
   if (filtrarVendedor) {
@@ -199,8 +296,17 @@ export default async function HojePage({
     return emp.nome ?? "—";
   }
 
-  const acoes: AcaoHojeItem[] = ((acoesRaw ?? []) as unknown as AcaoJoin[]).map(
-    (a) => ({
+  const acoes: AcaoHojeItem[] = ((acoesRaw ?? []) as unknown as AcaoJoin[])
+    .filter((a) => {
+      // Para amanha/7frente/30frente: só a janela (sem atrasadas)
+      if (!incluirAtrasadas) {
+        return a.data >= janela.de && a.data <= janela.ate;
+      }
+      // Atrasadas sempre; no período = dentro de de..ate e não atrasada
+      if (a.data < hoje) return true;
+      return a.data >= janela.de && a.data <= janela.ate;
+    })
+    .map((a) => ({
       id: a.id,
       descricao: a.descricao,
       tipo: a.tipo,
@@ -208,11 +314,12 @@ export default async function HojePage({
       negociacaoId: a.negociacao_id,
       empresaNome: empresaDe(a.negociacoes),
       atrasada: a.data < hoje,
-    }),
-  );
+    }));
 
-  const atrasadas = acoes.filter((a) => a.atrasada);
-  const deHoje = acoes.filter((a) => !a.atrasada);
+  const atrasadas = incluirAtrasadas ? acoes.filter((a) => a.atrasada) : [];
+  const noPeriodo = acoes.filter(
+    (a) => !a.atrasada && a.data >= janela.de && a.data <= janela.ate,
+  );
 
   // --- Negociações sem ação ---
   let semAcaoQuery = supabase
@@ -306,27 +413,39 @@ export default async function HojePage({
   });
   const podeEquipe = podeVerEquipe(usuario, escopo);
 
+  const tituloPeriodo =
+    janela.prazo === "hoje" ? "Para hoje" : `No prazo (${janela.rotulo})`;
+  const vazioPeriodo =
+    janela.prazo === "hoje"
+      ? "Nenhuma ação agendada para hoje."
+      : `Nenhuma ação no prazo (${janela.rotulo}).`;
+
   return (
     <Pagina className="pb-20">
       <PaginaCabecalho
         titulo="Meu dia"
         subtitulo={dataHoje}
-        descricao="Ações atrasadas, ações de hoje, negociações sem próximo passo e orçamentos vencendo."
+        descricao="Ações atrasadas, ações do prazo escolhido, negociações sem próximo passo e orçamentos vencendo."
         acoes={<BotaoExportar tela="acoes" filtros={{ vendedor: filtrarVendedor }} />}
       />
 
-      {podeEquipe ? (
-        <BarraFiltros>
-          <Suspense fallback={null}>
-            <SeletorVendedor vendedores={vendedores} valor={filtrarVendedor} />
-          </Suspense>
-          <CampoFiltro label="Empresa">
-            <p className="flex h-9 items-center text-sm font-medium">
-              {escopo.emitente?.nome ?? "Todas as empresas"}
-            </p>
-          </CampoFiltro>
-        </BarraFiltros>
-      ) : null}
+      <BarraFiltros>
+        <Suspense fallback={null}>
+          <SeletorPrazoHoje prazo={janela.prazo} de={janela.de} ate={janela.ate} />
+        </Suspense>
+        {podeEquipe ? (
+          <>
+            <Suspense fallback={null}>
+              <SeletorVendedor vendedores={vendedores} valor={filtrarVendedor} />
+            </Suspense>
+            <CampoFiltro label="Empresa">
+              <p className="flex h-9 items-center text-sm font-medium">
+                {escopo.emitente?.nome ?? "Todas as empresas"}
+              </p>
+            </CampoFiltro>
+          </>
+        ) : null}
+      </BarraFiltros>
 
       <Tiles colunas={3}>
         <Tile label="Aberto" valor={formatarMoeda(aberto)} detalhe="negociações abertas" />
@@ -345,7 +464,13 @@ export default async function HojePage({
       </Tiles>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <HojeInterativo atrasadas={atrasadas} deHoje={deHoje} semAcao={semAcao} />
+        <HojeInterativo
+          atrasadas={atrasadas}
+          deHoje={noPeriodo}
+          semAcao={semAcao}
+          tituloPeriodo={tituloPeriodo}
+          vazioPeriodo={vazioPeriodo}
+        />
 
         <Secao
           titulo="Orçamentos vencendo"

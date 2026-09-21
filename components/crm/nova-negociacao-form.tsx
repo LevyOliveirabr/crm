@@ -168,7 +168,7 @@ export function NovaNegociacaoForm({
     }
     const valor = parseMoedaBR(valorTexto);
     if (valor == null) {
-      setErro("Valor aproximado inválido.");
+      setErro("Valor potencial inválido.");
       return;
     }
 
@@ -363,10 +363,10 @@ export function NovaNegociacaoForm({
         ) : null}
       </div>
 
-      {/* Valor */}
+      {/* Valor potencial */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium" htmlFor="neg-valor">
-          Valor aproximado *
+          Valor potencial *
         </label>
         <Input
           id="neg-valor"

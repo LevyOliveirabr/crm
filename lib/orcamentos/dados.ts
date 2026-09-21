@@ -50,6 +50,10 @@ export type OrcamentoCompleto = {
     titulo: string;
     responsavelNome: string;
     responsavelEmail: string | null;
+    responsavelCargo: string | null;
+    responsavelTelefone: string | null;
+    responsavelWhatsapp: string | null;
+    responsavelLinkedin: string | null;
     status: string;
   };
   empresa: {
@@ -131,7 +135,7 @@ export async function carregarOrcamentoCompleto(
        condicoes_pagamento, prazo_entrega, frete, observacoes, arquivo_path, aceito_em, aceito_por,
        negociacoes!inner ( id, titulo, status, arquivado_em, contato_id, empresa_id, emitente_id,
          empresas ( id, nome, cnpj, cidade, uf ),
-         usuarios:responsavel_id ( nome, email ),
+         usuarios:responsavel_id ( nome, email, cargo, telefone, whatsapp, linkedin ),
          contatos:contato_id ( nome, email, whatsapp ) )`,
     )
     .eq("id", orcamentoId)
@@ -146,7 +150,14 @@ export async function carregarOrcamentoCompleto(
     arquivado_em: string | null;
     emitente_id: string | null;
     empresas: { id: string; nome: string; cnpj: string | null; cidade: string | null; uf: string | null } | null;
-    usuarios: { nome: string; email: string | null } | null;
+    usuarios: {
+      nome: string;
+      email: string | null;
+      cargo: string | null;
+      telefone: string | null;
+      whatsapp: string | null;
+      linkedin: string | null;
+    } | null;
     contatos: { nome: string; email: string | null; whatsapp: string | null } | null;
   };
   const negRaw = o.negociacoes as unknown as NegJoin | NegJoin[] | null;
@@ -254,6 +265,10 @@ export async function carregarOrcamentoCompleto(
       titulo: neg.titulo,
       responsavelNome: resp?.nome ?? "—",
       responsavelEmail: resp?.email ?? null,
+      responsavelCargo: resp?.cargo ?? null,
+      responsavelTelefone: resp?.telefone ?? null,
+      responsavelWhatsapp: resp?.whatsapp ?? null,
+      responsavelLinkedin: resp?.linkedin ?? null,
       status: neg.status,
     },
     empresa: {

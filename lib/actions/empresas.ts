@@ -47,6 +47,12 @@ export type EmpresaDetalhe = {
   responsavelId: string | null;
   responsavelNome: string | null;
   observacoes: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cep: string | null;
+  municipio: string | null;
   indicadores: EmpresaIndicadores;
 };
 
@@ -148,17 +154,26 @@ export async function criarEmpresa(
     return { ok: true, empresa: existenteAmplo };
   }
 
+  const municipio = parsed.data.municipio ?? parsed.data.cidade ?? null;
+  const cidade = parsed.data.cidade ?? parsed.data.municipio ?? null;
+
   const { data: criada, error: erroInsert } = await supabase
     .from("empresas")
     .insert({
       nome,
-      cidade: parsed.data.cidade,
+      cidade,
       uf: parsed.data.uf,
       segmento: parsed.data.segmento,
       tipo_segmento: parsed.data.tipo_segmento ?? null,
       cnpj: parsed.data.cnpj,
       responsavel_id: parsed.data.responsavel_id ?? usuario.id,
       observacoes: parsed.data.observacoes,
+      logradouro: parsed.data.logradouro ?? null,
+      numero: parsed.data.numero ?? null,
+      complemento: parsed.data.complemento ?? null,
+      bairro: parsed.data.bairro ?? null,
+      cep: parsed.data.cep ?? null,
+      municipio,
     })
     .select("id, nome, cidade, segmento")
     .single();
@@ -222,11 +237,14 @@ export async function atualizarEmpresa(
     atual.responsavel_id == null ||
     atual.responsavel_id === usuario.id;
 
+  const municipio = parsed.data.municipio ?? parsed.data.cidade ?? null;
+  const cidade = parsed.data.cidade ?? parsed.data.municipio ?? null;
+
   const { data: atualizada, error: erroUpdate } = await supabase
     .from("empresas")
     .update({
       nome: parsed.data.nome.trim(),
-      cidade: parsed.data.cidade,
+      cidade,
       uf: parsed.data.uf,
       segmento: parsed.data.segmento,
       ...(parsed.data.tipo_segmento !== undefined
@@ -234,6 +252,12 @@ export async function atualizarEmpresa(
         : {}),
       cnpj: parsed.data.cnpj,
       observacoes: parsed.data.observacoes,
+      logradouro: parsed.data.logradouro ?? null,
+      numero: parsed.data.numero ?? null,
+      complemento: parsed.data.complemento ?? null,
+      bairro: parsed.data.bairro ?? null,
+      cep: parsed.data.cep ?? null,
+      municipio,
       ...(podeAlterarResp && parsed.data.responsavel_id !== undefined
         ? { responsavel_id: parsed.data.responsavel_id }
         : {}),

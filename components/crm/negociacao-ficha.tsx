@@ -82,6 +82,8 @@ export type NegociacaoFichaData = {
   emitenteId: string | null;
   emitenteNome: string | null;
   valorEstimado: number;
+  valorPrevisao: number | null;
+  negocioUnico: boolean;
   temperatura: number;
   responsavelId: string;
   responsavelNome: string;
@@ -245,6 +247,11 @@ export function NegociacaoFicha({
   const [valorLocal, setValorLocal] = useState(
     formatarMoeda(inicial.valorEstimado).replace(/^R\$\s?/, ""),
   );
+  const [valorPrevisaoLocal, setValorPrevisaoLocal] = useState(
+    inicial.valorPrevisao != null
+      ? formatarMoeda(inicial.valorPrevisao).replace(/^R\$\s?/, "")
+      : "",
+  );
 
   const [rapidoTipo, setRapidoTipo] = useState<TipoInteracao | null>(null);
   const [rapidoTexto, setRapidoTexto] = useState("");
@@ -367,6 +374,33 @@ export function NegociacaoFicha({
     salvarCampo("valor_estimado", parsed, (p) => ({
       ...p,
       valorEstimado: parsed,
+    }));
+  }
+
+  function onBlurValorPrevisao() {
+    const texto = valorPrevisaoLocal.trim();
+    if (!texto) {
+      if (n.valorPrevisao == null) return;
+      setValorPrevisaoLocal("");
+      salvarCampo("valor_previsao", null, (p) => ({
+        ...p,
+        valorPrevisao: null,
+      }));
+      return;
+    }
+    const parsed = parseMoedaBR(texto);
+    if (parsed == null) {
+      setValorPrevisaoLocal(
+        n.valorPrevisao != null
+          ? formatarMoeda(n.valorPrevisao).replace(/^R\$\s?/, "")
+          : "",
+      );
+      return;
+    }
+    if (parsed === n.valorPrevisao) return;
+    salvarCampo("valor_previsao", parsed, (p) => ({
+      ...p,
+      valorPrevisao: parsed,
     }));
   }
 
@@ -776,7 +810,7 @@ export function NegociacaoFicha({
           <Secao titulo="Dados">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex min-w-0 flex-col gap-1.5">
-                <span className="eyebrow">Valor</span>
+                <span className="eyebrow">Valor potencial</span>
                 <div className="flex items-center gap-1">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <Input
@@ -788,6 +822,44 @@ export function NegociacaoFicha({
                     inputMode="decimal"
                   />
                 </div>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Valor previsão</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground">R$</span>
+                  <Input
+                    value={valorPrevisaoLocal}
+                    onChange={(e) => setValorPrevisaoLocal(e.target.value)}
+                    onBlur={onBlurValorPrevisao}
+                    disabled={pending || !aberta}
+                    className="h-8 w-36 tabular-nums"
+                    inputMode="decimal"
+                    placeholder="= potencial"
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-2 flex min-w-0 items-center gap-2">
+                <input
+                  id="negocio-unico"
+                  type="checkbox"
+                  checked={n.negocioUnico}
+                  disabled={pending || !aberta}
+                  onChange={(e) =>
+                    salvarCampo("negocio_unico", e.target.checked, (p) => ({
+                      ...p,
+                      negocioUnico: e.target.checked,
+                    }))
+                  }
+                  className="size-4 rounded border-input"
+                />
+                <label htmlFor="negocio-unico" className="text-sm font-medium">
+                  Negócio único
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    (desmarque se for recorrente)
+                  </span>
+                </label>
               </div>
 
               <div className="flex min-w-0 flex-col gap-1.5">

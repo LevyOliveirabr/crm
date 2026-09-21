@@ -2,6 +2,7 @@
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { apenasDigitosCnpj, formatarCnpj, validarCnpj } from "@/lib/cnpj";
+import { formatarCep } from "@/lib/endereco";
 
 export type DadosCnpj = {
   cnpj: string; // formatado 00.000.000/0000-00
@@ -13,6 +14,12 @@ export type DadosCnpj = {
   atividadePrincipal: string | null;
   telefone: string | null;
   email: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cep: string | null;
+  municipio: string | null;
 };
 
 export type ConsultaCnpjResult =
@@ -31,8 +38,90 @@ function titulo(v: string | null | undefined): string | null {
     .replace(/\b(Da|De|Do|Das|Dos|E)\b/g, (m) => m.toLowerCase());
 }
 
+function str(j: Record<string, unknown>, k: string): string | null {
+  return typeof j[k] === "string" ? (j[k] as string) : null;
+}
+
+function mapBrasilApi(j: Record<string, unknown>, d: string): DadosCnpj {
+  const cepRaw = str(j, "cep");
+  const municipio = titulo(str(j, "municipio"));
+  return {
+    cnpj: formatarCnpj(d),
+    razaoSocial: titulo(str(j, "razao_social")) ?? "",
+    nomeFantasia: titulo(str(j, "nome_fantasia")),
+    cidade: municipio,
+    uf: str(j, "uf")?.toUpperCase() ?? null,
+    situacao: titulo(str(j, "descricao_situacao_cadastral")),
+    atividadePrincipal: titulo(str(j, "cnae_fiscal_descricao")),
+    telefone: str(j, "ddd_telefone_1"),
+    email: str(j, "email")?.toLowerCase() ?? null,
+    logradouro: titulo(str(j, "logradouro")),
+    numero: str(j, "numero")?.trim() || null,
+    complemento: titulo(str(j, "complemento")),
+    bairro: titulo(str(j, "bairro")),
+    cep: cepRaw ? formatarCep(cepRaw) : null,
+    municipio,
+  };
+}
+
+function mapOpenCnpj(j: Record<string, unknown>, d: string): DadosCnpj {
+  const cepRaw = str(j, "cep") ?? str(j, "address_zip");
+  const municipio =
+    titulo(str(j, "municipio")) ??
+    titulo(str(j, "city")) ??
+    titulo(str(j, "municipality"));
+  return {
+    cnpj: formatarCnpj(d),
+    razaoSocial:
+      titulo(str(j, "razao_social")) ??
+      titulo(str(j, "company_name")) ??
+      "",
+    nomeFantasia:
+      titulo(str(j, "nome_fantasia")) ?? titulo(str(j, "trading_name")),
+    cidade: municipio,
+    uf: (str(j, "uf") ?? str(j, "state"))?.toUpperCase() ?? null,
+    situacao:
+      titulo(str(j, "descricao_situacao_cadastral")) ??
+      titulo(str(j, "registration_status")),
+    atividadePrincipal:
+      titulo(str(j, "cnae_fiscal_descricao")) ??
+      titulo(str(j, "main_activity")),
+    telefone: str(j, "ddd_telefone_1") ?? str(j, "phone"),
+    email: (str(j, "email") ?? "").toLowerCase() || null,
+    logradouro:
+      titulo(str(j, "logradouro")) ?? titulo(str(j, "street")),
+    numero: str(j, "numero")?.trim() || str(j, "number")?.trim() || null,
+    complemento:
+      titulo(str(j, "complemento")) ?? titulo(str(j, "complement")),
+    bairro: titulo(str(j, "bairro")) ?? titulo(str(j, "district")),
+    cep: cepRaw ? formatarCep(cepRaw) : null,
+    municipio,
+  };
+}
+
+async function fetchJson(
+  url: string,
+  timeoutMs: number,
+): Promise<{ ok: true; json: Record<string, unknown> } | { ok: false; status: number } | { ok: false; timeout: true } | { ok: false; network: true }> {
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(timeoutMs),
+      cache: "no-store",
+    });
+    if (!res.ok) return { ok: false, status: res.status };
+    const json = (await res.json()) as Record<string, unknown>;
+    return { ok: true, json };
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return { ok: false, timeout: true };
+    }
+    return { ok: false, network: true };
+  }
+}
+
 /**
- * Consulta dados públicos do CNPJ na BrasilAPI (base da Receita Federal).
+ * Consulta dados públicos do CNPJ (BrasilAPI, com fallback OpenCNPJ).
  * Não grava nada: o formulário decide quais campos preencher.
  */
 export async function consultarCnpj(cnpj: string): Promise<ConsultaCnpjResult> {
@@ -42,39 +131,34 @@ export async function consultarCnpj(cnpj: string): Promise<ConsultaCnpjResult> {
   const d = apenasDigitosCnpj(cnpj ?? "");
   if (!validarCnpj(d)) return { ok: false, error: "CNPJ inválido." };
 
-  try {
-    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${d}`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(8_000),
-      cache: "no-store",
-    });
-    if (res.status === 404) return { ok: false, error: "CNPJ não encontrado na Receita." };
-    if (!res.ok) return { ok: false, error: `Consulta indisponível (${res.status}). Tente de novo.` };
-
-    const j = (await res.json()) as Record<string, unknown>;
-    const str = (k: string) => (typeof j[k] === "string" ? (j[k] as string) : null);
-
-    return {
-      ok: true,
-      dados: {
-        cnpj: formatarCnpj(d),
-        razaoSocial: titulo(str("razao_social")) ?? "",
-        nomeFantasia: titulo(str("nome_fantasia")),
-        cidade: titulo(str("municipio")),
-        uf: str("uf")?.toUpperCase() ?? null,
-        situacao: titulo(str("descricao_situacao_cadastral")),
-        atividadePrincipal: titulo(str("cnae_fiscal_descricao")),
-        telefone: str("ddd_telefone_1"),
-        email: str("email")?.toLowerCase() ?? null,
-      },
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error:
-        err instanceof Error && err.name === "TimeoutError"
-          ? "A consulta demorou demais. Tente de novo."
-          : "Falha ao consultar o CNPJ.",
-    };
+  const brasil = await fetchJson(
+    `https://brasilapi.com.br/api/cnpj/v1/${d}`,
+    8_000,
+  );
+  if (brasil.ok) {
+    return { ok: true, dados: mapBrasilApi(brasil.json, d) };
   }
+  if ("status" in brasil && brasil.status === 404) {
+    return { ok: false, error: "CNPJ não encontrado na Receita." };
+  }
+
+  const open = await fetchJson(`https://api.opencnpj.org/${d}`, 8_000);
+  if (open.ok) {
+    return { ok: true, dados: mapOpenCnpj(open.json, d) };
+  }
+  if ("status" in open && open.status === 404) {
+    return { ok: false, error: "CNPJ não encontrado na Receita." };
+  }
+
+  if (
+    ("timeout" in brasil && brasil.timeout) ||
+    ("timeout" in open && open.timeout)
+  ) {
+    return { ok: false, error: "A consulta demorou demais. Tente de novo." };
+  }
+
+  return {
+    ok: false,
+    error: "Consulta indisponível no momento. Tente de novo em instantes.",
+  };
 }

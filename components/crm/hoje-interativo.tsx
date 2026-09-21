@@ -64,10 +64,16 @@ export function HojeInterativo({
   atrasadas,
   deHoje,
   semAcao,
+  tituloAtrasadas = "Ações atrasadas",
+  tituloPeriodo = "Para hoje",
+  vazioPeriodo = "Nenhuma ação agendada para hoje.",
 }: {
   atrasadas: AcaoHojeItem[];
   deHoje: AcaoHojeItem[];
   semAcao: NegociacaoSemAcaoItem[];
+  tituloAtrasadas?: string;
+  tituloPeriodo?: string;
+  vazioPeriodo?: string;
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -122,7 +128,7 @@ export function HojeInterativo({
         ) : null}
 
         <SecaoAcoes
-          titulo="Ações atrasadas"
+          titulo={tituloAtrasadas}
           vazia="Nenhuma ação atrasada. Bom trabalho."
           itens={atrasadas}
           pending={pending}
@@ -133,8 +139,8 @@ export function HojeInterativo({
         />
 
         <SecaoAcoes
-          titulo="Para hoje"
-          vazia="Nenhuma ação agendada para hoje."
+          titulo={tituloPeriodo}
+          vazia={vazioPeriodo}
           itens={deHoje}
           pending={pending}
           pendingId={pendingId}

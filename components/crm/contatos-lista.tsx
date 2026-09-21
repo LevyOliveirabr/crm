@@ -43,6 +43,8 @@ export type ContatoListaRow = {
   email: string | null;
   cargo: string | null;
   decisor: boolean;
+  instagram: string | null;
+  linkedin: string | null;
   podeEditar: boolean;
 };
 
@@ -60,6 +62,8 @@ const formVazio = {
   email: "",
   cargo: "",
   decisor: false,
+  instagram: "",
+  linkedin: "",
 };
 
 export function ContatosLista({ contatos, empresas }: Props) {
@@ -103,6 +107,8 @@ export function ContatosLista({ contatos, empresas }: Props) {
       email: c.email ?? "",
       cargo: c.cargo ?? "",
       decisor: c.decisor,
+      instagram: c.instagram ?? "",
+      linkedin: c.linkedin ?? "",
     });
     setOpen(true);
   }
@@ -117,6 +123,8 @@ export function ContatosLista({ contatos, empresas }: Props) {
         email: form.email || null,
         cargo: form.cargo || null,
         decisor: form.decisor,
+        instagram: form.instagram || null,
+        linkedin: form.linkedin || null,
       };
       const res = editId
         ? await atualizarContato(editId, payload)
@@ -331,6 +339,26 @@ export function ContatosLista({ contatos, empresas }: Props) {
                 value={form.cargo}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, cargo: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Instagram</label>
+              <Input
+                value={form.instagram}
+                placeholder="@usuario ou URL"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, instagram: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">LinkedIn</label>
+              <Input
+                value={form.linkedin}
+                placeholder="URL do perfil"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, linkedin: e.target.value }))
                 }
               />
             </div>

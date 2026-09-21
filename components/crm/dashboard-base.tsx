@@ -38,8 +38,10 @@ const TEMP_LABEL: Record<number, string> = {
 export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
   const [todas, setTodas] = useState(false);
   const visiveis = todas ? linhas : linhas.slice(0, LIMITE_INICIAL);
-  const totalVisivel = visiveis.reduce((s, l) => s + l.valor, 0);
-  const total = linhas.reduce((s, l) => s + l.valor, 0);
+  const totalPotencialVisivel = visiveis.reduce((s, l) => s + l.valor, 0);
+  const totalPrevisaoVisivel = visiveis.reduce((s, l) => s + l.valorPrevisao, 0);
+  const totalPotencial = linhas.reduce((s, l) => s + l.valor, 0);
+  const totalPrevisao = linhas.reduce((s, l) => s + l.valorPrevisao, 0);
 
   return (
     <section className="card-surface p-4 sm:p-5" aria-label="Base de dados">
@@ -57,16 +59,18 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
         </p>
       ) : (
         <div className="-mx-1 overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse text-sm">
+          <table className="w-full min-w-[980px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-input">
                 <Th>Oportunidade</Th>
                 <Th>Conta</Th>
                 <Th>Responsável</Th>
                 <Th>Fase</Th>
-                <Th>Segmento</Th>
-                <Th direita>Valor</Th>
+                <Th>Tipo cliente</Th>
+                <Th>Único</Th>
+                <Th direita>Potencial</Th>
                 <Th direita>Previsão</Th>
+                <Th direita>Data prev.</Th>
                 <Th direita>Faturamento</Th>
               </tr>
             </thead>
@@ -106,7 +110,11 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
                   </Td>
                   <Td>{l.etapaNome}</Td>
                   <Td>
-                    {l.segmento ? (
+                    {l.tipoCliente ? (
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-bold tracking-[0.04em] uppercase text-muted-foreground">
+                        {l.tipoCliente}
+                      </span>
+                    ) : l.segmento ? (
                       <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-bold tracking-[0.04em] uppercase text-muted-foreground">
                         {rotuloSegmento(l.segmento)}
                       </span>
@@ -114,8 +122,20 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </Td>
+                  <Td>
+                    {l.negocioUnico ? (
+                      <span className="text-xs font-medium">Sim</span>
+                    ) : (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Recorrente
+                      </span>
+                    )}
+                  </Td>
                   <Td direita numerico>
                     {formatarMoeda(l.valor)}
+                  </Td>
+                  <Td direita numerico>
+                    {formatarMoeda(l.valorPrevisao)}
                   </Td>
                   <Td direita numerico>
                     {l.previsaoData ? formatarData(l.previsaoData) : mesAbrev(l.previsaoMes)}
@@ -128,7 +148,7 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-input font-bold">
-                <td colSpan={5} className="px-2.5 py-3">
+                <td colSpan={6} className="px-2.5 py-3">
                   {todas || linhas.length <= LIMITE_INICIAL ? (
                     <>
                       {linhas.length}{" "}
@@ -161,7 +181,10 @@ export function DashboardBase({ linhas }: { linhas: LinhaBase[] }) {
                   ) : null}
                 </td>
                 <td className="px-2.5 py-3 text-right tabular-nums whitespace-nowrap">
-                  {formatarMoeda(todas ? total : totalVisivel)}
+                  {formatarMoeda(todas ? totalPotencial : totalPotencialVisivel)}
+                </td>
+                <td className="px-2.5 py-3 text-right tabular-nums whitespace-nowrap">
+                  {formatarMoeda(todas ? totalPrevisao : totalPrevisaoVisivel)}
                 </td>
                 <td colSpan={2} />
               </tr>

@@ -31,6 +31,8 @@ const criarNegociacaoSchema = z.object({
   empresa_id: z.uuid("Empresa é obrigatória"),
   emitente_id: z.uuid("Empresa vendedora é obrigatória"),
   valor_estimado: z.coerce.number().nonnegative().default(0),
+  valor_previsao: z.coerce.number().nonnegative().optional().nullable(),
+  negocio_unico: z.boolean().default(true),
   funil_id: z.uuid("Funil é obrigatório"),
   linha: z.string().trim().optional().nullable(),
   titulo: z.string().trim().optional().nullable(),
@@ -66,6 +68,8 @@ const criarNegociacaoSchema = z.object({
 const CAMPOS_EDITAVEIS = [
   "titulo",
   "valor_estimado",
+  "valor_previsao",
+  "negocio_unico",
   "temperatura",
   "responsavel_id",
   "linha",
@@ -259,6 +263,8 @@ export async function criarNegociacao(
       linha,
       origem: data.origem?.trim() || null,
       valor_estimado: data.valor_estimado,
+      valor_previsao: data.valor_previsao ?? null,
+      negocio_unico: data.negocio_unico ?? true,
       temperatura: data.temperatura ?? 2,
       previsao_mes: previsao,
       previsao_data: previsaoData,
@@ -361,6 +367,25 @@ export async function atualizarCampo(
         return { ok: false, error: "Valor inválido." };
       }
       patch.valor_estimado = n;
+      break;
+    }
+    case "valor_previsao": {
+      if (parsed.data.valor == null || parsed.data.valor === "") {
+        patch.valor_previsao = null;
+        break;
+      }
+      const n =
+        typeof parsed.data.valor === "number"
+          ? parsed.data.valor
+          : parseMoedaBR(String(parsed.data.valor ?? ""));
+      if (n == null || n < 0) {
+        return { ok: false, error: "Valor previsão inválido." };
+      }
+      patch.valor_previsao = n;
+      break;
+    }
+    case "negocio_unico": {
+      patch.negocio_unico = Boolean(parsed.data.valor);
       break;
     }
     case "temperatura": {

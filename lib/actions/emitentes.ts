@@ -7,6 +7,7 @@ import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { ehDiretorDe } from "@/lib/auth/permissoes";
 import { exigirDiretorDe, exigirDiretorEmAlguma } from "@/lib/auth/permissoes-server";
 import type { Database } from "@/lib/database.types";
+import { concatenarEndereco } from "@/lib/endereco";
 import { categoriaProdutoSchema, emitenteSchema } from "@/lib/schemas/emitente";
 import { createClient } from "@/lib/supabase/server";
 
@@ -73,10 +74,31 @@ export async function salvarEmitente(
   }
   const supabase = await createClient();
 
+  const enderecoConcat =
+    concatenarEndereco({
+      logradouro: parsed.data.logradouro ?? null,
+      numero: parsed.data.numero ?? null,
+      complemento: parsed.data.complemento ?? null,
+      bairro: parsed.data.bairro ?? null,
+      cep: parsed.data.cep ?? null,
+      municipio: parsed.data.municipio ?? null,
+    }) ?? parsed.data.endereco;
+
+  const payload = {
+    ...parsed.data,
+    logradouro: parsed.data.logradouro ?? null,
+    numero: parsed.data.numero ?? null,
+    complemento: parsed.data.complemento ?? null,
+    bairro: parsed.data.bairro ?? null,
+    cep: parsed.data.cep ?? null,
+    municipio: parsed.data.municipio ?? null,
+    endereco: enderecoConcat,
+  };
+
   if (id) {
     const diretor = await exigirDiretorDe(id);
     if (!diretor) return { ok: false, error: "Apenas o diretor desta empresa pode alterar." };
-    const { error } = await supabase.from("emitentes").update(parsed.data).eq("id", id);
+    const { error } = await supabase.from("emitentes").update(payload).eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidar();
     return { ok: true, id, message: "Empresa salva." };
@@ -89,7 +111,7 @@ export async function salvarEmitente(
   }
   // Sem `.select()` no insert: o RETURNING é avaliado antes do trigger que
   // vincula o criador como diretor, e a política de leitura rejeitaria a linha.
-  const { error } = await supabase.from("emitentes").insert(parsed.data);
+  const { error } = await supabase.from("emitentes").insert(payload);
   if (error) return { ok: false, error: error.message };
   const { data: criada } = await supabase
     .from("emitentes")

@@ -5,6 +5,7 @@ import { KeyRound } from "lucide-react";
 import { ConvidarUsuarioForm } from "@/components/crm/convidar-usuario-form";
 import { Secao } from "@/components/crm/pagina";
 import { UsuarioAtivoToggle } from "@/components/crm/usuario-ativo-toggle";
+import { UsuarioEditarDialog } from "@/components/crm/usuario-editar-dialog";
 import { UsuarioEmpresasEditor } from "@/components/crm/usuario-empresas-editor";
 import { getEscopoEmpresa } from "@/lib/auth/escopo-empresa";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
@@ -129,7 +130,20 @@ export default async function UsuariosPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  <UsuarioAtivoToggle id={u.id} ativo={u.ativo} />
+                  <div className="flex flex-col items-end gap-1">
+                    <UsuarioEditarDialog
+                      usuario={{
+                        id: u.id,
+                        nome: u.nome,
+                        email: u.email,
+                        cargo: u.cargo,
+                        telefone: u.telefone,
+                        whatsapp: u.whatsapp,
+                        linkedin: u.linkedin,
+                      }}
+                    />
+                    <UsuarioAtivoToggle id={u.id} ativo={u.ativo} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -15,6 +15,8 @@ export type ContatoResumo = {
   email: string | null;
   cargo: string | null;
   decisor: boolean;
+  instagram: string | null;
+  linkedin: string | null;
 };
 
 export type ContatoListaItem = ContatoResumo & {
@@ -66,7 +68,7 @@ export async function listarContatosEmpresa(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("contatos")
-    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor")
+    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
     .eq("empresa_id", idParsed.data)
     .is("arquivado_em", null)
     .order("nome");
@@ -106,8 +108,10 @@ export async function criarContato(
       email: parsed.data.email,
       cargo: parsed.data.cargo,
       decisor: parsed.data.decisor ?? false,
+      instagram: parsed.data.instagram ?? null,
+      linkedin: parsed.data.linkedin ?? null,
     })
-    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor")
+    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
     .single();
 
   if (error) return { ok: false, error: error.message };
@@ -169,9 +173,11 @@ export async function atualizarContato(
       email: parsed.data.email,
       cargo: parsed.data.cargo,
       decisor: parsed.data.decisor ?? false,
+      instagram: parsed.data.instagram ?? null,
+      linkedin: parsed.data.linkedin ?? null,
     })
     .eq("id", atual.id)
-    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor")
+    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
     .maybeSingle();
 
   if (error) return { ok: false, error: error.message };

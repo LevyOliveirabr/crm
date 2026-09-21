@@ -661,6 +661,15 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 - Escopo na UI: cookie `crm_emitente` ("todas" ou id) com override `?emitente=`; um núcleo puro (`lib/auth/escopo-empresa-core.ts`) serve páginas, `/api/exportar` e MCP (argumento `empresa_vendedora`).
 - Migration `0009` (após o deploy): remove `emitente`, os defaults de `emitente_id`, `usuarios.gerente_id` e as chaves `config.orcamento_*`.
 
+### 3.8 Melhorias CRM (migration 0010)
+
+- `empresas`: endereço estruturado `logradouro`, `numero`, `complemento`, `bairro`, `cep`, `municipio` (`cidade` continua; sincronizar com `municipio` na UI). CNPJ com máscara e validador.
+- `emitentes`: mesmos campos de endereço estruturado; `endereco` text permanece como linha concatenada para PDF legado.
+- `contatos`: `instagram`, `linkedin`.
+- `usuarios`: `cargo`, `telefone`, `whatsapp`, `linkedin` (aparecem no orçamento junto com o emitente).
+- `negociacoes`: `valor_previsao numeric(14,2)` (previsão de faturamento; null = usa `valor_estimado`); `negocio_unico boolean not null default true` (`false` = recorrente). `valor_estimado` = valor potencial (pipeline cheio). Flag/estágio FATURADO fica para entrega futura.
+- `v_negociacoes` ganha `empresa_segmento` (tipo de cliente da lista). Dashboard: KPIs clicáveis abrem `/dashboard/relatorio` com a lista das negociações do número.
+
 ## 4. Regras de negócio
 
 | # | Regra | Onde implementar |
