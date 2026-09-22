@@ -208,9 +208,15 @@ export default async function FunilPage({
   });
 
   const etapaNomeById = new Map(etapas.map((e) => [e.id, e.nome]));
+  const linhaPorId = new Map(
+    (negRaw ?? [])
+      .filter((n) => n.id)
+      .map((n) => [n.id as string, n.linha ?? null] as const),
+  );
   const linhas: LinhaLista[] = negociacoes.map((n) => ({
     ...n,
     etapaNome: etapaNomeById.get(n.etapaId) ?? "—",
+    linha: linhaPorId.get(n.id) ?? null,
   }));
 
   const dadosNova = await carregarDadosFormNegociacao();
