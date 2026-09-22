@@ -3,18 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 import { CampoFiltro } from "@/components/crm/pagina";
-
-export const PRAZOS_HOJE = [
-  { id: "hoje", label: "Hoje" },
-  { id: "ontem", label: "Ontem" },
-  { id: "amanha", label: "Amanhã" },
-  { id: "7atras", label: "Últimos 7 dias" },
-  { id: "7frente", label: "Próximos 7 dias" },
-  { id: "30frente", label: "Próximos 30 dias" },
-  { id: "custom", label: "Período…" },
-] as const;
-
-export type PrazoHojeId = (typeof PRAZOS_HOJE)[number]["id"];
+import { PRAZOS_HOJE, type PrazoHojeId } from "@/lib/hoje-prazo";
 
 export function SeletorPrazoHoje({
   prazo,
