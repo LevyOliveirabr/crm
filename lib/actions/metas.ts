@@ -7,6 +7,8 @@ import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { exigirDiretorDe } from "@/lib/auth/permissoes-server";
 import { createClient } from "@/lib/supabase/server";
 
+export type TipoMeta = "faturamento" | "pipeline";
+
 export type MetaRow = {
   responsavel_id: string;
   mes: string; // yyyy-mm-01
@@ -21,6 +23,7 @@ export type MetasAno = {
   emitentes: { id: string; nome: string }[];
   vendedores: { id: string; nome: string; ativo: boolean; perfil: string }[];
   metas: MetaRow[];
+  tipo: TipoMeta;
 };
 
 /**
@@ -30,6 +33,7 @@ export type MetasAno = {
 export async function listarMetasAno(
   ano: number,
   emitenteId?: string | null,
+  tipo: TipoMeta = "faturamento",
 ): Promise<MetasAno | null> {
   const usuario = await getUsuarioAtual();
   if (!usuario) return null;
@@ -45,18 +49,31 @@ export async function listarMetasAno(
     perfil: string;
     usuarios: { id: string; nome: string; ativo: boolean } | { id: string; nome: string; ativo: boolean }[] | null;
   };
-  const [{ data: membros }, { data: metas }] = await Promise.all([
+  const [{ data: membros }, metasRes] = await Promise.all([
     supabase
       .from("usuario_emitentes")
       .select("usuario_id, perfil, usuarios:usuario_id ( id, nome, ativo )")
       .eq("emitente_id", alvo.id),
     supabase
       .from("metas")
-      .select("responsavel_id, mes, valor")
+      .select("responsavel_id, mes, valor, tipo")
       .eq("emitente_id", alvo.id)
+      .eq("tipo", tipo)
       .gte("mes", `${ano}-01-01`)
       .lte("mes", `${ano}-12-01`),
   ]);
+  const metas = metasRes.error
+    ? tipo === "pipeline"
+      ? []
+      : (
+          await supabase
+            .from("metas")
+            .select("responsavel_id, mes, valor")
+            .eq("emitente_id", alvo.id)
+            .gte("mes", `${ano}-01-01`)
+            .lte("mes", `${ano}-12-01`)
+        ).data
+    : metasRes.data;
 
   const vendedores = ((membros ?? []) as unknown as Membro[])
     .map((m) => {
@@ -72,6 +89,7 @@ export async function listarMetasAno(
     emitenteId: alvo.id,
     emitenteNome: alvo.nome,
     emitentes,
+    tipo,
     vendedores,
     metas: (metas ?? []).map((m) => ({
       responsavel_id: m.responsavel_id,
@@ -86,6 +104,7 @@ const salvarSchema = z.object({
   responsavel_id: z.uuid(),
   mes: z.string().regex(/^\d{4}-\d{2}-01$/),
   valor: z.coerce.number().min(0).max(999_999_999),
+  tipo: z.enum(["faturamento", "pipeline"]).default("faturamento"),
 });
 
 export async function salvarMeta(
@@ -106,9 +125,10 @@ export async function salvarMeta(
         emitente_id: parsed.data.emitente_id,
         responsavel_id: parsed.data.responsavel_id,
         mes: parsed.data.mes,
+        tipo: parsed.data.tipo,
         valor: parsed.data.valor,
       },
-      { onConflict: "responsavel_id,emitente_id,mes" },
+      { onConflict: "responsavel_id,emitente_id,mes,tipo" },
     );
   if (error) return { ok: false, error: error.message };
 
@@ -123,6 +143,7 @@ export async function replicarMetaAno(input: {
   emitenteId: string;
   ano: number;
   mesOrigem: number;
+  tipo?: TipoMeta;
 }): Promise<{ ok: true; copiadas: number } | { ok: false; error: string }> {
   const diretor = await exigirDiretorDe(input.emitenteId);
   if (!diretor) return { ok: false, error: "Apenas o diretor da empresa pode definir metas." };
@@ -135,11 +156,13 @@ export async function replicarMetaAno(input: {
 
   const supabase = await createClient();
   const origem = `${ano}-${String(mesOrigem).padStart(2, "0")}-01`;
+  const tipo = input.tipo ?? "faturamento";
   const { data: base } = await supabase
     .from("metas")
     .select("responsavel_id, valor")
     .eq("emitente_id", input.emitenteId)
-    .eq("mes", origem);
+    .eq("mes", origem)
+    .eq("tipo", tipo);
 
   const linhas = [];
   for (const m of base ?? []) {
@@ -148,6 +171,7 @@ export async function replicarMetaAno(input: {
         emitente_id: input.emitenteId,
         responsavel_id: m.responsavel_id,
         mes: `${ano}-${String(k).padStart(2, "0")}-01`,
+        tipo,
         valor: Number(m.valor ?? 0),
       });
     }
@@ -156,7 +180,7 @@ export async function replicarMetaAno(input: {
 
   const { error } = await supabase
     .from("metas")
-    .upsert(linhas, { onConflict: "responsavel_id,emitente_id,mes" });
+    .upsert(linhas, { onConflict: "responsavel_id,emitente_id,mes,tipo" });
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/configuracoes/metas");

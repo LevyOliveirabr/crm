@@ -69,6 +69,7 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
         emitente_id: dados.emitenteId,
         responsavel_id: id,
         mes: `${dados.ano}-${String(mes).padStart(2, "0")}-01`,
+        tipo: dados.tipo,
         valor,
       });
       if (!res.ok) toast.add({ title: res.error, type: "error" });
@@ -77,12 +78,20 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
 
   function mudarAno(delta: number) {
     router.push(
-      `/configuracoes/metas?ano=${dados.ano + delta}&empresa=${dados.emitenteId}`,
+      `/configuracoes/metas?ano=${dados.ano + delta}&empresa=${dados.emitenteId}&tipo=${dados.tipo}`,
     );
   }
 
   function mudarEmpresa(id: string) {
-    router.push(`/configuracoes/metas?ano=${dados.ano}&empresa=${id}`);
+    router.push(
+      `/configuracoes/metas?ano=${dados.ano}&empresa=${id}&tipo=${dados.tipo}`,
+    );
+  }
+
+  function mudarTipo(tipo: "faturamento" | "pipeline") {
+    router.push(
+      `/configuracoes/metas?ano=${dados.ano}&empresa=${dados.emitenteId}&tipo=${tipo}`,
+    );
   }
 
   return (
@@ -103,6 +112,24 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
               ))}
             </select>
           </label>
+          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-0.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={dados.tipo === "faturamento" ? "default" : "ghost"}
+              onClick={() => mudarTipo("faturamento")}
+            >
+              Faturamento
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={dados.tipo === "pipeline" ? "default" : "ghost"}
+              onClick={() => mudarTipo("pipeline")}
+            >
+              Pipeline
+            </Button>
+          </div>
           <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-0.5">
             <Button
               type="button"
@@ -153,6 +180,7 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
                     emitenteId: dados.emitenteId,
                     ano: dados.ano,
                     mesOrigem: mesReplicar,
+                    tipo: dados.tipo,
                   });
                   if (!res.ok) {
                     toast.add({ title: res.error, type: "error" });
@@ -249,7 +277,7 @@ export function MetasConfigClient({ dados }: { dados: MetasAno }) {
             <tfoot>
               <tr className="border-t-2 border-input bg-muted/40 font-semibold">
                 <td className="sticky left-0 z-10 bg-muted/40 px-3 py-2">
-                  Total
+                  Total da equipe
                 </td>
                 {totais.map((t, i) => (
                   <td

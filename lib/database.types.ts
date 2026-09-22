@@ -289,6 +289,10 @@ export type Database = {
           valor_estimado: number;
           valor_previsao: number | null;
           negocio_unico: boolean;
+          faturado: boolean;
+          valor_faturado: number | null;
+          faturado_em: string | null;
+          negociacao_origem_id: string | null;
           temperatura: number;
           previsao_mes: string | null;
           data_faturamento: string | null;
@@ -318,6 +322,10 @@ export type Database = {
           valor_estimado?: number;
           valor_previsao?: number | null;
           negocio_unico?: boolean;
+          faturado?: boolean;
+          valor_faturado?: number | null;
+          faturado_em?: string | null;
+          negociacao_origem_id?: string | null;
           temperatura?: number;
           previsao_mes?: string | null;
           data_faturamento?: string | null;
@@ -348,6 +356,10 @@ export type Database = {
           valor_estimado?: number;
           valor_previsao?: number | null;
           negocio_unico?: boolean;
+          faturado?: boolean;
+          valor_faturado?: number | null;
+          faturado_em?: string | null;
+          negociacao_origem_id?: string | null;
           temperatura?: number;
           previsao_mes?: string | null;
           data_faturamento?: string | null;
@@ -937,6 +949,7 @@ export type Database = {
           responsavel_id: string;
           emitente_id: string;
           mes: string;
+          tipo: string;
           valor: number;
           criado_em: string;
           atualizado_em: string;
@@ -946,6 +959,7 @@ export type Database = {
           responsavel_id: string;
           emitente_id?: string;
           mes: string;
+          tipo?: string;
           valor?: number;
           criado_em?: string;
           atualizado_em?: string;
@@ -955,6 +969,7 @@ export type Database = {
           responsavel_id?: string;
           emitente_id?: string;
           mes?: string;
+          tipo?: string;
           valor?: number;
           criado_em?: string;
           atualizado_em?: string;
@@ -972,6 +987,41 @@ export type Database = {
             columns: ["responsavel_id"];
             isOneToOne: false;
             referencedRelation: "usuarios";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      negociacao_parcelas: {
+        Row: {
+          id: string;
+          negociacao_id: string;
+          mes: string;
+          valor: number;
+          ordem: number;
+          criado_em: string;
+        };
+        Insert: {
+          id?: string;
+          negociacao_id: string;
+          mes: string;
+          valor?: number;
+          ordem?: number;
+          criado_em?: string;
+        };
+        Update: {
+          id?: string;
+          negociacao_id?: string;
+          mes?: string;
+          valor?: number;
+          ordem?: number;
+          criado_em?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "negociacao_parcelas_negociacao_id_fkey";
+            columns: ["negociacao_id"];
+            isOneToOne: false;
+            referencedRelation: "negociacoes";
             referencedColumns: ["id"];
           },
         ];
@@ -1098,6 +1148,10 @@ export type Database = {
           valor_estimado: number | null;
           valor_previsao: number | null;
           negocio_unico: boolean | null;
+          faturado: boolean | null;
+          valor_faturado: number | null;
+          faturado_em: string | null;
+          negociacao_origem_id: string | null;
           temperatura: number | null;
           previsao_mes: string | null;
           data_faturamento: string | null;

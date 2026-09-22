@@ -50,6 +50,10 @@ import {
 import type { Database } from "@/lib/database.types";
 import { MiniFormProximaAcao } from "@/components/crm/mini-form-proxima-acao";
 import {
+  NegociacaoComplementos,
+  type ParcelaFicha,
+} from "@/components/crm/negociacao-complementos";
+import {
   EstadoVazio,
   Pagina,
   PaginaCabecalho,
@@ -224,6 +228,10 @@ export function NegociacaoFicha({
   motivosPerda,
   vendedores,
   isDiretor,
+  faturado = false,
+  valorFaturado = null,
+  faturadoEm = null,
+  parcelas = [],
 }: {
   negociacao: NegociacaoFichaData;
   etapas: EtapaBarra[];
@@ -237,6 +245,10 @@ export function NegociacaoFicha({
   motivosPerda: string[];
   vendedores: VendedorOption[];
   isDiretor: boolean;
+  faturado?: boolean;
+  valorFaturado?: number | null;
+  faturadoEm?: string | null;
+  parcelas?: ParcelaFicha[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -861,6 +873,16 @@ export function NegociacaoFicha({
                   </span>
                 </label>
               </div>
+
+              <NegociacaoComplementos
+                negociacaoId={n.id}
+                status={n.status}
+                valorFinal={n.valorFinal}
+                faturado={faturado}
+                valorFaturado={valorFaturado}
+                faturadoEm={faturadoEm}
+                parcelas={parcelas}
+              />
 
               <div className="flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Temperatura</span>

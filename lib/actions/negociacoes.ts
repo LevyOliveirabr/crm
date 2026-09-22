@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
 import { ehDiretorDe, ehMembroDe } from "@/lib/auth/permissoes";
 import {
+  hojeISO,
   inicioMesAtualISO,
   inicioProximoMesISO,
   parseMoedaBR,
@@ -807,4 +808,163 @@ export async function excluirNegociacao(
   revalidatePath(`/negociacoes/${negociacao.id}`);
 
   return { ok: true, negociacaoId: negociacao.id };
+}
+
+/** Marca o faturamento de uma venda já fechada (R19). */
+export async function marcarFaturado(
+  negociacaoId: string,
+  valorFaturado: number,
+  faturadoEm?: string | null,
+): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+  if (!Number.isFinite(valorFaturado) || valorFaturado < 0) {
+    return { ok: false, error: "Informe o valor faturado." };
+  }
+  const data =
+    faturadoEm && /^\d{4}-\d{2}-\d{2}$/.test(faturadoEm)
+      ? faturadoEm
+      : hojeISO();
+
+  const supabase = await createClient();
+  const { data: neg, error } = await supabase
+    .from("negociacoes")
+    .select("id, status, arquivado_em")
+    .eq("id", negociacaoId)
+    .maybeSingle();
+  if (error || !neg) return { ok: false, error: "Negociação não encontrada." };
+  if (neg.arquivado_em) return { ok: false, error: "Negociação arquivada." };
+  if (neg.status !== "vendida") {
+    return { ok: false, error: "Só é possível faturar uma venda já marcada." };
+  }
+
+  const { error: erroUp } = await supabase
+    .from("negociacoes")
+    .update({
+      faturado: true,
+      valor_faturado: valorFaturado,
+      faturado_em: data,
+    })
+    .eq("id", neg.id);
+  if (erroUp) return { ok: false, error: erroUp.message };
+
+  revalidatePath(`/negociacoes/${neg.id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/relatorios");
+  return { ok: true, negociacaoId: neg.id };
+}
+
+export async function salvarParcela(input: {
+  negociacaoId: string;
+  mes: string;
+  valor: number;
+  id?: string | null;
+}): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+  if (!/^\d{4}-\d{2}/.test(input.mes)) {
+    return { ok: false, error: "Mês inválido." };
+  }
+  if (!Number.isFinite(input.valor) || input.valor < 0) {
+    return { ok: false, error: "Valor da parcela inválido." };
+  }
+  const mes = `${input.mes.slice(0, 7)}-01`;
+  const supabase = await createClient();
+  if (input.id) {
+    const { error } = await supabase
+      .from("negociacao_parcelas")
+      .update({ mes, valor: input.valor })
+      .eq("id", input.id)
+      .eq("negociacao_id", input.negociacaoId);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await supabase.from("negociacao_parcelas").insert({
+      negociacao_id: input.negociacaoId,
+      mes,
+      valor: input.valor,
+    });
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath(`/negociacoes/${input.negociacaoId}`);
+  revalidatePath("/dashboard");
+  return { ok: true, negociacaoId: input.negociacaoId };
+}
+
+export async function excluirParcela(
+  negociacaoId: string,
+  parcelaId: string,
+): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("negociacao_parcelas")
+    .delete()
+    .eq("id", parcelaId)
+    .eq("negociacao_id", negociacaoId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/negociacoes/${negociacaoId}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Cria uma negociação filha ligada à original (R22). */
+export async function clonarNegociacao(
+  negociacaoId: string,
+): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+  const supabase = await createClient();
+  const { data: origem, error } = await supabase
+    .from("negociacoes")
+    .select(
+      "id, titulo, empresa_id, contato_id, funil_id, emitente_id, linha, origem, valor_estimado, valor_previsao, temperatura, negocio_unico, arquivado_em",
+    )
+    .eq("id", negociacaoId)
+    .maybeSingle();
+  if (error || !origem) return { ok: false, error: "Negociação não encontrada." };
+  if (origem.arquivado_em) return { ok: false, error: "Negociação arquivada." };
+  if (!ehMembroDe(usuario, origem.emitente_id)) {
+    return { ok: false, error: "Você não participa desta empresa vendedora." };
+  }
+
+  const { data: etapa } = await supabase
+    .from("etapas")
+    .select("id")
+    .eq("funil_id", origem.funil_id)
+    .eq("ativo", true)
+    .order("ordem", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!etapa) return { ok: false, error: "Funil sem etapas ativas." };
+
+  const { data: criada, error: erroIns } = await supabase
+    .from("negociacoes")
+    .insert({
+      empresa_id: origem.empresa_id,
+      emitente_id: origem.emitente_id,
+      contato_id: origem.contato_id,
+      funil_id: origem.funil_id,
+      etapa_id: etapa.id,
+      titulo: `Renovação — ${origem.titulo}`,
+      linha: origem.linha,
+      origem: origem.origem,
+      valor_estimado: origem.valor_estimado,
+      valor_previsao: origem.valor_previsao,
+      negocio_unico: origem.negocio_unico,
+      temperatura: origem.temperatura,
+      previsao_mes: inicioProximoMesISO(),
+      responsavel_id: usuario.id,
+      status: "aberta",
+      negociacao_origem_id: origem.id,
+    })
+    .select("id")
+    .single();
+  if (erroIns || !criada) {
+    return { ok: false, error: erroIns?.message ?? "Não foi possível renovar." };
+  }
+
+  revalidatePath("/funil");
+  revalidatePath("/dashboard");
+  redirect(`/negociacoes/${criada.id}`);
 }

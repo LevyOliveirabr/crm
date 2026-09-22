@@ -36,6 +36,7 @@ import {
   Tile,
   Tiles,
 } from "@/components/crm/pagina";
+import { SeletorEmpresa } from "@/components/crm/seletor-empresa";
 import { SeletorPrazoHoje } from "@/components/crm/seletor-prazo-hoje";
 import { SeletorVendedor } from "@/components/crm/seletor-vendedor";
 import { isPrazoHojeId, type PrazoHojeId } from "@/lib/hoje-prazo";
@@ -428,28 +429,34 @@ export default async function HojePage({
         <Suspense fallback={null}>
           <SeletorPrazoHoje prazo={janela.prazo} de={janela.de} ate={janela.ate} />
         </Suspense>
+        <CampoFiltro label="Empresa">
+          <SeletorEmpresa
+            empresas={escopo.empresas}
+            valor={escopo.emitenteId}
+            fixo={escopo.fixo}
+            tema="claro"
+          />
+        </CampoFiltro>
         {podeEquipe ? (
-          <>
-            <Suspense fallback={null}>
-              <SeletorVendedor vendedores={vendedores} valor={filtrarVendedor} />
-            </Suspense>
-            <CampoFiltro label="Empresa">
-              <p className="flex h-9 items-center text-sm font-medium">
-                {escopo.emitente?.nome ?? "Todas as empresas"}
-              </p>
-            </CampoFiltro>
-          </>
+          <Suspense fallback={null}>
+            <SeletorVendedor vendedores={vendedores} valor={filtrarVendedor} />
+          </Suspense>
         ) : null}
       </BarraFiltros>
 
       <Tiles colunas={3}>
         <Tile label="Aberto" valor={formatarMoeda(aberto)} detalhe="negociações abertas" />
-        <Tile
-          label="Vendido no mês"
-          valor={formatarMoeda(vendido)}
-          detalhe={mesPorExtenso(inicioMes)}
-          tom="ok"
-        />
+        <Link
+          href={`/relatorios/composicao?periodo=mes&mes=${inicioMes}&tipo=vendidas${escopo.emitenteId ? `&emitente=${escopo.emitenteId}` : ""}${filtrarVendedor ? `&vendedor=${filtrarVendedor}` : ""}`}
+          className="block rounded-xl transition hover:ring-2 hover:ring-brand/40"
+        >
+          <Tile
+            label="Vendido no mês"
+            valor={formatarMoeda(vendido)}
+            detalhe={`${mesPorExtenso(inicioMes)} · clique para ver as vendas`}
+            tom="ok"
+          />
+        </Link>
         <Tile
           label="Perdido no mês"
           valor={formatarMoeda(perdido)}

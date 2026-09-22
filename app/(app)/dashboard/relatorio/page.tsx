@@ -43,6 +43,14 @@ function dataValida(v: string | undefined): string | null {
   return Number.isNaN(Date.parse(`${v}T12:00:00Z`)) ? null : v;
 }
 
+function paramLista(valor: string | string[] | undefined): string[] {
+  const bruto = Array.isArray(valor) ? valor : valor ? [valor] : [];
+  return bruto
+    .flatMap((v) => v.split(","))
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function uuidValido(v: string | undefined): string | null {
   if (!v) return null;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -61,6 +69,11 @@ const TITULOS: Record<string, string> = {
   tipo_cliente: "Por tipo de cliente",
   origem: "Por origem do lead",
   top10: "Top 10 oportunidades",
+  vendido: "Vendido no mês — detalhe",
+  faturado: "Faturado no mês — detalhe",
+  vencida: "Previsão vencida em aberto",
+  pipeline_gerado: "Pipeline gerado no mês",
+  uf: "Por estado",
   fechados: "Negócios fechados no período",
   motivo: "Perdas por motivo",
   risco: "Oportunidades em risco",
@@ -97,14 +110,6 @@ export default async function DashboardRelatorioPage({
   )
     ? (metricaParam as MetricaDashboard)
     : "potencial";
-  const segmentoParam = paramUnico(sp.segmento);
-  const segmento: TipoSegmento | null = TIPOS_SEGMENTO.some(
-    (t) => t.id === segmentoParam,
-  )
-    ? (segmentoParam as TipoSegmento)
-    : null;
-  const ufParam = paramUnico(sp.uf)?.trim().toUpperCase();
-
   const supabase = await createClient();
   const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
   const vendedorFiltro = resolverFiltroVendedor(
@@ -118,16 +123,23 @@ export default async function DashboardRelatorioPage({
     de,
     ate,
     vendedorId: vendedorFiltro,
-    etapaId: uuidValido(paramUnico(sp.etapa)),
+    etapaIds: paramLista(sp.etapa)
+      .map((id) => uuidValido(id))
+      .filter((id): id is string => Boolean(id)),
     visao,
     metrica,
-    uf: ufParam && /^[A-Z]{2}$/.test(ufParam) ? ufParam : null,
-    origem: paramUnico(sp.origem)?.trim() || null,
-    segmento,
+    ufs: paramLista(sp.uf)
+      .map((u) => u.toUpperCase())
+      .filter((u) => /^[A-Z]{2}$/.test(u)),
+    origens: paramLista(sp.origem),
+    segmentos: paramLista(sp.segmento).filter((s): s is TipoSegmento =>
+      TIPOS_SEGMENTO.some((t) => t.id === s),
+    ),
     tipoCliente: paramUnico(sp.tipo_cliente)?.trim() || null,
     isDiretor,
     equipeIds: idsEquipeVisivel(usuario, vendedores, escopo),
     emitenteId: escopo.emitenteId,
+    usuarioId: usuario.id,
   };
 
   const dados = await carregarDadosDashboard(supabase, filtros);
@@ -239,6 +251,32 @@ export default async function DashboardRelatorioPage({
     titulo = `Origem: ${chave}`;
   } else if (fonte === "top10") {
     itens = dados.top10;
+  } else if (fonte === "vendido") {
+    itens = dados.vendidosMes;
+  } else if (fonte === "faturado") {
+    itens = dados.faturadosMes;
+  } else if (fonte === "vencida") {
+    itens = dados.previsaoVencidaLista;
+  } else if (fonte === "uf" && chave) {
+    itens = dados.base
+      .filter(
+        (b) =>
+          (b.empresaUf ?? "").trim() === chave ||
+          (!(b.empresaUf ?? "").trim() && chave === "Sem classificação"),
+      )
+      .map((b) => ({
+        id: b.id,
+        titulo: b.titulo,
+        empresaNome: b.empresaNome,
+        empresaId: b.empresaId,
+        responsavelNome: b.responsavelNome,
+        etapaNome: b.etapaNome,
+        valor: b.valor,
+        valorPrevisao: b.valorPrevisao,
+        previsaoMes: b.previsaoMes,
+        previsaoData: b.previsaoData,
+      }));
+    titulo = `Estado: ${chave}`;
   } else if (fonte === "motivo" && chave) {
     itens = dados.fechadosPeriodo.filter(
       (n) =>
@@ -266,7 +304,13 @@ export default async function DashboardRelatorioPage({
   }
 
   const total = itens.reduce(
-    (s, n) => s + (metrica === "previsao" ? n.valorPrevisao : n.valor),
+    (s, n) =>
+      s +
+      (fonte === "vendido"
+        ? n.valor
+        : metrica === "previsao"
+          ? n.valorPrevisao
+          : n.valor),
     0,
   );
 

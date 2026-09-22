@@ -214,6 +214,16 @@ export function RelatoriosClient({
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
+  function hrefComposicao(tipo: "vendidas" | "abertas", responsavel?: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("aba");
+    params.set("tipo", tipo);
+    if (responsavel) params.set("responsavel", responsavel);
+    else params.delete("responsavel");
+    const qs = params.toString();
+    return `/relatorios/composicao${qs ? `?${qs}` : ""}`;
+  }
+
   function onAbaChange(next: string | number | null) {
     const valor = String(next ?? "presidencia") as AbaRelatorio;
     setAba(valor);
@@ -294,6 +304,11 @@ export function RelatoriosClient({
             />
           }
         />
+        <p className="text-sm print:hidden">
+          <Link href="/relatorios/noventa-dias" className="font-medium underline">
+            Prestação de contas dos últimos 90 dias
+          </Link>
+        </p>
 
         <BarraFiltros>
           <CampoFiltro id="filtro-periodo" label="Período">
@@ -509,12 +524,18 @@ export function RelatoriosClient({
                           anterior={p.vendido_mes_anterior}
                         />
                       </div>
-                      <div>
+                      <Link
+                        href={hrefComposicao("vendidas")}
+                        className="rounded-lg outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-brand"
+                      >
                         <p className="eyebrow">Negócios / ticket</p>
-                        <p className="font-heading text-2xl font-semibold tabular-nums">
+                        <p className="font-heading text-2xl font-semibold tabular-nums underline-offset-2 hover:underline">
                           {p.qtd_vendida} · {formatarMoedaCurta(p.ticket_medio)}
                         </p>
-                      </div>
+                        <p className="text-xs text-muted-foreground">
+                          Clique para ver as vendas desta soma
+                        </p>
+                      </Link>
                       <div>
                         <p className="eyebrow">Perdido</p>
                         <p className="font-heading text-xl font-semibold tabular-nums">
@@ -950,13 +971,16 @@ export function RelatoriosClient({
                         ) : null}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex flex-col items-end gap-0.5">
+                        <Link
+                          href={hrefComposicao("vendidas", r.responsavel_id)}
+                          className="inline-flex flex-col items-end gap-0.5 rounded-md hover:underline"
+                        >
                           {formatarMoeda(r.vendido)}
                           <DeltaBadge
                             atual={r.vendido}
                             anterior={r.vendido_ant}
                           />
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell className="text-right">
                         {r.meta > 0 ? (
@@ -980,7 +1004,12 @@ export function RelatoriosClient({
                       </TableCell>
                       <TableCell className="text-right">{r.qtd}</TableCell>
                       <TableCell className="text-right">
-                        {formatarMoeda(r.aberto)}
+                        <Link
+                          href={hrefComposicao("abertas", r.responsavel_id)}
+                          className="rounded-md hover:underline"
+                        >
+                          {formatarMoeda(r.aberto)}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-right">
                         {r.conversao_pct != null ? `${r.conversao_pct}%` : "—"}
