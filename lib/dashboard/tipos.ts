@@ -33,12 +33,12 @@ export type FiltrosDashboard = {
   de: string;
   ate: string;
   vendedorId: string | null;
-  etapaId: string | null;
+  etapaIds: string[];
   visao: VisaoData;
   metrica: MetricaDashboard;
-  uf: string | null;
-  origem: string | null;
-  segmento: TipoSegmento | null;
+  ufs: string[];
+  origens: string[];
+  segmentos: TipoSegmento[];
   /** Tipo de cliente (lista segmento da empresa). */
   tipoCliente: string | null;
   isDiretor: boolean;
@@ -46,6 +46,8 @@ export type FiltrosDashboard = {
   equipeIds?: string[] | null;
   /** Empresa vendedora selecionada; null = todas. */
   emitenteId?: string | null;
+  /** Usuário logado — para separar meta pessoal da soma da equipe. */
+  usuarioId?: string | null;
 };
 
 export type OpcoesDashboard = {
@@ -86,8 +88,21 @@ export type Kpis = {
   mesSeguinte: string;
   /** Vendido (valor final) no mês atual, dentro dos filtros. */
   vendidoMes: number;
-  /** Soma das metas do mês atual (do vendedor filtrado ou de todos). */
+  /** Soma das metas de faturamento do mês (equipe ou pessoa filtrada). */
   metaMes: number;
+  /** Meta de faturamento só do usuário logado. */
+  metaPessoal: number;
+  /** Meta de pipeline (negócios novos) no mês. */
+  metaPipeline: number;
+  /** Valor estimado das negociações criadas no mês. */
+  pipelineGerado: number;
+  /** Valor faturado no mês (faturado_em). */
+  faturadoMes: number;
+  /** Aberto com previsão já vencida. */
+  previsaoVencida: number;
+  qtdPrevisaoVencida: number;
+  /** As 10 maiores / pipeline potencial. */
+  top10Pct: number;
   forecastCompromisso: number;
   forecastProvavel: number;
   forecastPossivel: number;
@@ -157,6 +172,7 @@ export type LinhaBase = {
   linha: string | null;
   empresaId: string;
   empresaNome: string;
+  empresaUf: string | null;
   responsavelNome: string;
   etapaNome: string;
   segmento: TipoSegmento | null;
@@ -178,7 +194,12 @@ export type DadosDashboard = {
   funis: FunilDashboard[];
   porTipoCliente: QuebraItem[];
   porOrigem: QuebraItem[];
+  porUf: QuebraItem[];
+  previsaoVencidaLista: NegociacaoResumo[];
   top10: NegociacaoResumo[];
+  /** Vendas do mês corrente (valor final) que formam o KPI Vendido no mês. */
+  vendidosMes: NegociacaoResumo[];
+  faturadosMes: NegociacaoResumo[];
   fechadosPeriodo: NegociacaoResumo[];
   motivosPerda: MotivoPerdaItem[];
   proximosFechamentos: NegociacaoResumo[];
@@ -198,6 +219,11 @@ export type FonteRelatorio =
   | "tipo_cliente"
   | "origem"
   | "top10"
+  | "vendido"
+  | "faturado"
+  | "vencida"
+  | "pipeline_gerado"
+  | "uf"
   | "fechados"
   | "motivo"
   | "risco"

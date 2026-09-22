@@ -220,6 +220,33 @@ export default async function NegociacaoPage({
     else if (item.tipo === "motivo_perda") motivosPerda.push(item.valor);
   }
 
+  let faturado = false;
+  let valorFaturado: number | null = null;
+  let faturadoEm: string | null = null;
+  const fatRes = await supabase
+    .from("negociacoes")
+    .select("faturado, valor_faturado, faturado_em")
+    .eq("id", id)
+    .maybeSingle();
+  if (!fatRes.error && fatRes.data) {
+    faturado = Boolean(fatRes.data.faturado);
+    valorFaturado =
+      fatRes.data.valor_faturado != null ? Number(fatRes.data.valor_faturado) : null;
+    faturadoEm = fatRes.data.faturado_em;
+  }
+  const parcRes = await supabase
+    .from("negociacao_parcelas")
+    .select("id, mes, valor")
+    .eq("negociacao_id", id)
+    .order("mes", { ascending: true });
+  const parcelas = parcRes.error
+    ? []
+    : (parcRes.data ?? []).map((p) => ({
+        id: p.id,
+        mes: String(p.mes),
+        valor: Number(p.valor ?? 0),
+      }));
+
   return (
     <NegociacaoFicha
       key={`${neg.id}-${neg.atualizado_em}-${neg.status}-${neg.etapa_id}`}
@@ -269,6 +296,10 @@ export default async function NegociacaoPage({
       motivosPerda={motivosPerda}
       vendedores={vendedores}
       isDiretor={ehDiretorDe(usuario, neg.emitente_id)}
+      faturado={faturado}
+      valorFaturado={valorFaturado}
+      faturadoEm={faturadoEm}
+      parcelas={parcelas}
     />
   );
 }

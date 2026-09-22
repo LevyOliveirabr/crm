@@ -111,15 +111,16 @@ type LinhaFechada = {
 function aplicarFiltros<
   T extends {
     eq: (c: string, v: string) => T;
+    in: (c: string, v: string[]) => T;
   },
 >(query: T, f: FiltrosDashboard): T {
   let q = query;
   if (f.emitenteId) q = q.eq("emitente_id", f.emitenteId);
   if (f.vendedorId) q = q.eq("responsavel_id", f.vendedorId);
-  if (f.etapaId) q = q.eq("etapa_id", f.etapaId);
-  if (f.origem) q = q.eq("origem", f.origem);
-  if (f.uf) q = q.eq("empresa_uf", f.uf);
-  if (f.segmento) q = q.eq("empresa_tipo_segmento", f.segmento);
+  if (f.etapaIds.length > 0) q = q.in("etapa_id", f.etapaIds);
+  if (f.origens.length > 0) q = q.in("origem", f.origens);
+  if (f.ufs.length > 0) q = q.in("empresa_uf", f.ufs);
+  if (f.segmentos.length > 0) q = q.in("empresa_tipo_segmento", f.segmentos);
   if (f.tipoCliente) q = q.eq("empresa_segmento", f.tipoCliente);
   return q;
 }
@@ -294,8 +295,8 @@ export async function carregarDadosDashboard(
     if (res.error) {
       filtrosEfetivos = {
         ...filtros,
-        uf: null,
-        segmento: null,
+        ufs: [],
+        segmentos: [],
         tipoCliente: null,
       };
       const legado = await aplicarFiltros(
@@ -321,6 +322,8 @@ export async function carregarDadosDashboard(
     { data: etapasRaw },
     { data: vendidasMesRaw },
     { data: metasRaw },
+    { data: faturadasMesRaw },
+    { data: criadasMesRaw },
   ] = await Promise.all([
     aplicarFiltros(
       supabase
@@ -365,19 +368,56 @@ export async function carregarDadosDashboard(
     aplicarFiltros(
       supabase
         .from("v_negociacoes")
-        .select("status, valor_final, valor_estimado, fechado_em")
+        .select(
+          "id, titulo, empresa_id, empresa_nome, responsavel_nome, etapa_nome, status, valor_final, valor_estimado, valor_previsao, fechado_em",
+        )
         .eq("status", "vendida")
         .gte("fechado_em", `${mesAtual}T00:00:00-03:00`)
         .lt("fechado_em", `${mesSeguinte}T00:00:00-03:00`),
       filtros_,
     ),
-    (() => {
-      let q = supabase.from("metas").select("responsavel_id, valor").eq("mes", mesAtual);
-      if (filtros.emitenteId) q = q.eq("emitente_id", filtros.emitenteId);
-      if (filtros.vendedorId) q = q.eq("responsavel_id", filtros.vendedorId);
-      else if (filtros.equipeIds && filtros.equipeIds.length > 0) q = q.in("responsavel_id", filtros.equipeIds);
-      return q;
+    (async () => {
+      const aplicar = <T extends { eq: (c: string, v: string) => T; in: (c: string, v: string[]) => T }>(
+        q: T,
+      ) => {
+        let out = q;
+        if (filtros.emitenteId) out = out.eq("emitente_id", filtros.emitenteId);
+        if (filtros.vendedorId) out = out.eq("responsavel_id", filtros.vendedorId);
+        else if (filtros.equipeIds && filtros.equipeIds.length > 0) {
+          out = out.in("responsavel_id", filtros.equipeIds);
+        }
+        return out;
+      };
+      const novo = await aplicar(
+        supabase.from("metas").select("responsavel_id, valor, tipo").eq("mes", mesAtual),
+      );
+      if (!novo.error) return novo;
+      const legado = await aplicar(
+        supabase.from("metas").select("responsavel_id, valor").eq("mes", mesAtual),
+      );
+      return {
+        data: (legado.data ?? []).map((m) => ({ ...m, tipo: "faturamento" })),
+      };
     })(),
+    aplicarFiltros(
+      supabase
+        .from("v_negociacoes")
+        .select(
+          "id, titulo, empresa_id, empresa_nome, responsavel_nome, etapa_nome, valor_faturado, faturado_em",
+        )
+        .eq("faturado", true)
+        .gte("faturado_em", mesAtual)
+        .lt("faturado_em", mesSeguinte),
+      filtros_,
+    ),
+    aplicarFiltros(
+      supabase
+        .from("v_negociacoes")
+        .select("valor_estimado")
+        .gte("criado_em", `${mesAtual}T00:00:00-03:00`)
+        .lt("criado_em", `${mesSeguinte}T00:00:00-03:00`),
+      filtros_,
+    ),
   ]);
 
   const pesos = { fria: 0.2, morna: 0.5, quente: 0.8 };
@@ -407,9 +447,107 @@ export async function carregarDadosDashboard(
         negocio_unico: r.negocio_unico ?? true,
       }),
     );
+
+  const parcelasPor = new Map<string, { mes: string; valor: number }[]>();
+  const idsAbertas = abertas
+    .map((a) => a.id)
+    .filter((id): id is string => Boolean(id));
+  if (idsAbertas.length > 0) {
+    const parc = await supabase
+      .from("negociacao_parcelas")
+      .select("negociacao_id, mes, valor")
+      .in("negociacao_id", idsAbertas);
+    if (!parc.error) {
+      for (const p of parc.data ?? []) {
+        const lista = parcelasPor.get(p.negociacao_id) ?? [];
+        lista.push({ mes: String(p.mes), valor: num(p.valor) });
+        parcelasPor.set(p.negociacao_id, lista);
+      }
+    }
+  }
+
+  function previsaoVencidaDe(r: LinhaAberta): boolean {
+    const ps = r.id ? parcelasPor.get(r.id) : undefined;
+    if (ps && ps.length > 0) {
+      return ps.some((p) => inicioMesISO(p.mes) < mesAtual);
+    }
+    return mesPrevisao(r, hoje) < mesAtual;
+  }
+
+  function linhasNoMes(mes: string): LinhaAberta[] {
+    const out: LinhaAberta[] = [];
+    for (const r of abertas) {
+      const ps = r.id ? parcelasPor.get(r.id) : undefined;
+      if (!ps || ps.length === 0) {
+        if (mesPrevisao(r, hoje) === mes) out.push(r);
+        continue;
+      }
+      const soma = ps
+        .filter((p) => inicioMesISO(p.mes) === mes)
+        .reduce((s, p) => s + p.valor, 0);
+      if (soma <= 0) continue;
+      out.push({ ...r, valor_previsao: soma, previsao_mes: mes });
+    }
+    return out;
+  }
+
   const vendidasMes = (vendidasMesRaw ?? []) as LinhaFechada[];
   const vendidoMes = vendidasMes.reduce((s, r) => s + num(r.valor_final), 0);
-  const metaMes = (metasRaw ?? []).reduce((s, m) => s + num(m.valor), 0);
+  const vendidosMes: NegociacaoResumo[] = vendidasMes
+    .filter((r) => r.id)
+    .map((r) => ({
+      id: r.id ?? "",
+      titulo: r.titulo ?? "Sem título",
+      empresaNome: r.empresa_nome ?? "—",
+      empresaId: r.empresa_id ?? "",
+      responsavelNome: r.responsavel_nome ?? "—",
+      etapaNome: r.etapa_nome ?? "—",
+      valor: num(r.valor_final),
+      valorPrevisao: num(r.valor_final),
+      previsaoMes: null,
+      previsaoData: null,
+      status: "vendida" as const,
+    }));
+  const faturadosMes: NegociacaoResumo[] = (
+    (faturadasMesRaw ?? []) as {
+      id?: string | null;
+      titulo?: string | null;
+      empresa_id?: string | null;
+      empresa_nome?: string | null;
+      responsavel_nome?: string | null;
+      etapa_nome?: string | null;
+      valor_faturado?: number | null;
+    }[]
+  )
+    .filter((r) => r.id)
+    .map((r) => ({
+      id: r.id ?? "",
+      titulo: r.titulo ?? "Sem título",
+      empresaNome: r.empresa_nome ?? "—",
+      empresaId: r.empresa_id ?? "",
+      responsavelNome: r.responsavel_nome ?? "—",
+      etapaNome: r.etapa_nome ?? "—",
+      valor: num(r.valor_faturado),
+      valorPrevisao: num(r.valor_faturado),
+      previsaoMes: null,
+      previsaoData: null,
+      status: "vendida" as const,
+    }));
+  const metasLista = (metasRaw ?? []) as {
+    responsavel_id: string;
+    valor: number;
+    tipo?: string | null;
+  }[];
+  const metasFaturamento = metasLista.filter(
+    (m) => !m.tipo || m.tipo === "faturamento",
+  );
+  const metaMes = metasFaturamento.reduce((s, m) => s + num(m.valor), 0);
+  const metaPessoal = metasFaturamento
+    .filter((m) => filtros.usuarioId && m.responsavel_id === filtros.usuarioId)
+    .reduce((s, m) => s + num(m.valor), 0);
+  const metaPipeline = metasLista
+    .filter((m) => m.tipo === "pipeline")
+    .reduce((s, m) => s + num(m.valor), 0);
   const fechadas = (fechadasRaw ?? []) as LinhaFechada[];
   const fechadasAnt = (fechadasAntRaw ?? []) as LinhaFechada[];
   const vendidasAno = (vendidasAnoRaw ?? []) as LinhaFechada[];
@@ -444,10 +582,8 @@ export async function carregarDadosDashboard(
     })
     .reduce((s, r) => s + valorPrevisaoEfetivo(r), 0);
 
-  const doMes = abertas.filter((r) => mesPrevisao(r, hoje) === mesAtual);
-  const doMesSeguinte = abertas.filter(
-    (r) => mesPrevisao(r, hoje) === mesSeguinte,
-  );
+  const doMes = linhasNoMes(mesAtual);
+  const doMesSeguinte = linhasNoMes(mesSeguinte);
   const triAtual = trimestreDe(hoje);
   const doTrimestre = abertas.filter((r) => {
     const t = trimestreDe(mesPrevisao(r, hoje));
@@ -488,6 +624,31 @@ export async function carregarDadosDashboard(
     mesSeguinte,
     vendidoMes,
     metaMes,
+    metaPessoal,
+    metaPipeline,
+    pipelineGerado: ((criadasMesRaw ?? []) as { valor_estimado: number | null }[]).reduce(
+      (s, r) => s + num(r.valor_estimado),
+      0,
+    ),
+    faturadoMes: ((faturadasMesRaw ?? []) as { valor_faturado: number | null }[]).reduce(
+      (s, r) => s + num(r.valor_faturado),
+      0,
+    ),
+    previsaoVencida: abertas
+      .filter((r) => previsaoVencidaDe(r))
+      .reduce((s, r) => s + valorPrevisaoEfetivo(r), 0),
+    qtdPrevisaoVencida: abertas.filter((r) => previsaoVencidaDe(r)).length,
+    top10Pct:
+      pipelineTotal > 0
+        ? Math.round(
+            ([...abertas]
+              .sort((a, b) => num(b.valor_estimado) - num(a.valor_estimado))
+              .slice(0, 10)
+              .reduce((s, r) => s + num(r.valor_estimado), 0) /
+              pipelineTotal) *
+              1000,
+          ) / 10
+        : 0,
     forecastCompromisso: somaCategoria("compromisso"),
     forecastProvavel: somaCategoria("provavel"),
     forecastPossivel: somaCategoria("possivel"),
@@ -663,6 +824,10 @@ export async function carregarDadosDashboard(
 
   const porTipoCliente = agregarQuebra((r) => r.empresa_segmento);
   const porOrigem = agregarQuebra((r) => r.origem);
+  const porUf = agregarQuebra((r) => r.empresa_uf);
+  const previsaoVencidaLista = abertas
+    .filter((r) => previsaoVencidaDe(r))
+    .map((r) => resumo(r, hoje));
 
   const fechadosPeriodo: NegociacaoResumo[] = fechadas
     .filter((r) => r.status === "vendida" || r.status === "perdida")
@@ -708,6 +873,7 @@ export async function carregarDadosDashboard(
     linha: r.linha,
     empresaId: r.empresa_id ?? "",
     empresaNome: r.empresa_nome ?? "—",
+    empresaUf: r.empresa_uf,
     responsavelNome: r.responsavel_nome ?? "—",
     etapaNome: r.etapa_nome ?? "—",
     segmento: r.empresa_tipo_segmento,
@@ -729,7 +895,11 @@ export async function carregarDadosDashboard(
     funis,
     porTipoCliente,
     porOrigem,
+    porUf,
+    previsaoVencidaLista,
     top10,
+    vendidosMes,
+    faturadosMes,
     fechadosPeriodo,
     motivosPerda,
     proximosFechamentos,

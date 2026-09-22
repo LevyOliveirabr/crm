@@ -6,6 +6,7 @@ import { EstadoVazio, Secao } from "@/components/crm/pagina";
 type SearchParams = Promise<{
   ano?: string | string[];
   empresa?: string | string[];
+  tipo?: string | string[];
 }>;
 
 export default async function MetasPage({
@@ -20,13 +21,16 @@ export default async function MetasPage({
     anoParam && /^\d{4}$/.test(anoParam) ? Number(anoParam) : anoAtual;
 
   const empresaParam = Array.isArray(sp.empresa) ? sp.empresa[0] : sp.empresa;
-  const dados = await listarMetasAno(ano, empresaParam ?? null);
+  const tipoParam = Array.isArray(sp.tipo) ? sp.tipo[0] : sp.tipo;
+  const tipo = tipoParam === "pipeline" ? "pipeline" : "faturamento";
+  const dados = await listarMetasAno(ano, empresaParam ?? null, tipo);
 
   return (
     <Secao titulo="Metas">
       <p className="mb-4 text-sm text-muted-foreground">
-        Meta mensal de vendas por vendedor em cada empresa vendedora. Clique na
-        célula, digite o valor e saia do campo para salvar.
+        Meta por pessoa, por empresa e por mês. A meta da equipe é a soma das
+        pessoas — não se digita um total à parte. Quem também vende vê a própria
+        linha e o total embaixo. Use “Pipeline” para a meta de negócios novos.
       </p>
       {dados ? (
         <MetasConfigClient dados={dados} />

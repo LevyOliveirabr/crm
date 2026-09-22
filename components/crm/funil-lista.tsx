@@ -2,21 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, Flame } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame } from "lucide-react";
 
 import { formatarData, formatarMoeda } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CartaoNegociacaoData } from "@/components/crm/cartao-negociacao";
-import { EstadoVazio } from "@/components/crm/pagina";
+import { EstadoVazio, campoClass } from "@/components/crm/pagina";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type SortKey =
   | "titulo"
@@ -43,51 +35,20 @@ function Temperatura({ valor }: { valor: number }) {
   );
 }
 
-function SortHead({
-  label,
-  column,
-  className,
-  sortKey,
-  sortAsc,
-  onSort,
-}: {
-  label: string;
-  column: SortKey;
-  className?: string;
-  sortKey: SortKey;
-  sortAsc: boolean;
-  onSort: (key: SortKey) => void;
-}) {
-  const ativo = sortKey === column;
-  const Icon = !ativo ? ArrowUpDown : sortAsc ? ArrowUp : ArrowDown;
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className="inline-flex items-center gap-1 hover:text-foreground"
-      >
-        {label}
-        <Icon className="size-3.5 opacity-60" aria-hidden />
-      </button>
-    </TableHead>
-  );
-}
+const ORDENACAO: { id: SortKey; label: string }[] = [
+  { id: "valorEstimado", label: "Valor" },
+  { id: "titulo", label: "Título" },
+  { id: "empresaNome", label: "Empresa" },
+  { id: "etapaNome", label: "Etapa" },
+  { id: "temperatura", label: "Temperatura" },
+  { id: "diasNaEtapa", label: "Dias na etapa" },
+  { id: "proximaAcaoData", label: "Próxima ação" },
+  { id: "responsavelNome", label: "Responsável" },
+];
 
 export function FunilLista({ linhas }: { linhas: LinhaLista[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("valorEstimado");
   const [sortAsc, setSortAsc] = useState(false);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortAsc((v) => !v);
-    } else {
-      setSortKey(key);
-      setSortAsc(
-        key === "titulo" || key === "empresaNome" || key === "etapaNome",
-      );
-    }
-  }
 
   const ordenadas = useMemo(() => {
     const copy = [...linhas];
@@ -112,127 +73,80 @@ export function FunilLista({ linhas }: { linhas: LinhaLista[] }) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <SortHead
-            label="Título"
-            column="titulo"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Empresa"
-            column="empresaNome"
-            className="hidden sm:table-cell"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Etapa"
-            column="etapaNome"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Valor"
-            column="valorEstimado"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Temp."
-            column="temperatura"
-            className="hidden md:table-cell"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Dias"
-            column="diasNaEtapa"
-            className="hidden md:table-cell"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Próxima ação"
-            column="proximaAcaoData"
-            className="hidden lg:table-cell"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-          <SortHead
-            label="Responsável"
-            column="responsavelNome"
-            className="hidden lg:table-cell"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={toggleSort}
-          />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-xs text-muted-foreground sm:max-w-xs">
+          Ordenar por
+          <select
+            className={campoClass}
+            value={sortKey}
+            onChange={(e) => {
+              const key = e.target.value as SortKey;
+              setSortKey(key);
+              setSortAsc(
+                key === "titulo" || key === "empresaNome" || key === "etapaNome",
+              );
+            }}
+          >
+            {ORDENACAO.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => setSortAsc((v) => !v)}
+          className="inline-flex h-9 items-center gap-1 rounded-lg border border-input px-3 text-sm font-medium"
+        >
+          {sortAsc ? (
+            <ArrowUp className="size-3.5" aria-hidden />
+          ) : (
+            <ArrowDown className="size-3.5" aria-hidden />
+          )}
+          {sortAsc ? "Crescente" : "Decrescente"}
+        </button>
+      </div>
+      <ul className="divide-y divide-border">
         {ordenadas.map((n) => (
-          <TableRow key={n.id}>
-            <TableCell>
+          <li key={n.id} className="flex flex-col gap-1 py-3">
+            <div className="flex items-start justify-between gap-3">
               <Link
                 href={`/negociacoes/${n.id}`}
                 className="font-medium hover:underline"
               >
                 {n.titulo}
               </Link>
-              <div className="mt-0.5 flex flex-wrap gap-1 sm:hidden">
-                <span className="text-xs text-muted-foreground">
-                  {n.empresaNome}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {n.acaoAtrasada ? (
-                  <Badge variant="destructive">Atrasada</Badge>
-                ) : null}
-                {n.semAcao ? (
-                  <Badge variant="warning">Sem ação</Badge>
-                ) : null}
-                {n.parada ? (
-                  <Badge variant="secondary">Parada</Badge>
-                ) : null}
-              </div>
-            </TableCell>
-            <TableCell className="hidden sm:table-cell">{n.empresaNome}</TableCell>
-            <TableCell>{n.etapaNome}</TableCell>
-            <TableCell className="tabular-nums">
-              {formatarMoeda(n.valorEstimado)}
-            </TableCell>
-            <TableCell className="hidden md:table-cell">
-              <Temperatura valor={n.temperatura} />
-            </TableCell>
-            <TableCell className="hidden tabular-nums md:table-cell">
-              {n.diasNaEtapa} d
-            </TableCell>
-            <TableCell
+              <span className="shrink-0 font-semibold tabular-nums">
+                {formatarMoeda(n.valorEstimado)}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {n.empresaNome} · {n.etapaNome}
+            </p>
+            <p
               className={cn(
-                "hidden lg:table-cell",
+                "text-sm",
                 n.acaoAtrasada && "text-destructive",
               )}
             >
-              {n.proximaAcaoDescricao ?? "—"}
-              {n.proximaAcaoData
-                ? ` · ${formatarData(n.proximaAcaoData)}`
-                : null}
-            </TableCell>
-            <TableCell className="hidden lg:table-cell">
-              {n.responsavelNome ?? "—"}
-            </TableCell>
-          </TableRow>
+              {n.proximaAcaoDescricao ?? "Sem próxima ação"}
+              {n.proximaAcaoData ? ` · ${formatarData(n.proximaAcaoData)}` : ""}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{n.responsavelNome ?? "—"}</span>
+              <Temperatura valor={n.temperatura} />
+              <span>{n.diasNaEtapa} dias na etapa</span>
+              {n.acaoAtrasada ? (
+                <Badge variant="destructive">Atrasada</Badge>
+              ) : null}
+              {n.semAcao ? <Badge variant="warning">Sem ação</Badge> : null}
+              {n.parada ? <Badge variant="secondary">Parada</Badge> : null}
+            </div>
+          </li>
         ))}
-      </TableBody>
-    </Table>
+      </ul>
+    </div>
   );
 }

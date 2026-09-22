@@ -670,6 +670,15 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 - `negociacoes`: `valor_previsao numeric(14,2)` (previsão de faturamento; null = usa `valor_estimado`); `negocio_unico boolean not null default true` (`false` = recorrente). `valor_estimado` = valor potencial (pipeline cheio). Flag/estágio FATURADO fica para entrega futura.
 - `v_negociacoes` ganha `empresa_segmento` (tipo de cliente da lista). Dashboard: KPIs clicáveis abrem `/dashboard/relatorio` com a lista das negociações do número.
 
+### 3.9 Faturamento, metas, parcelas e renovação (migration 0011)
+
+- `negociacoes.faturado boolean not null default false`, `valor_faturado numeric(14,2)`, `faturado_em date`. Faturar é um passo **depois** de `status = vendida`. `data_faturamento` continua sendo a data prevista; `faturado_em` é a data real.
+- `negociacoes.negociacao_origem_id uuid` (null ou outra negociação): renovação cria uma negociação nova ligada à original.
+- `metas.tipo text not null default 'faturamento'` (`faturamento` ou `pipeline`). Única por (responsável, empresa, mês, tipo). A meta da equipe **não é um registro**: é a soma das metas das pessoas. Quem também vende vê a própria meta e a soma.
+- `negociacao_parcelas (id, negociacao_id, mes date dia 1, valor numeric, ordem)`: várias previsões no tempo para o mesmo negócio. RLS igual às ações da negociação.
+- Formulário `/negociacoes/nova`: numa página, empresa (nova com UF), contato novo, negociação e próxima ação.
+- Dashboard: filtros de UF, origem, etapa e segmento aceitam várias opções. Relatórios: Negócios/ticket, Vendido e Aberto abrem a lista que forma o número.
+
 ## 4. Regras de negócio
 
 | # | Regra | Onde implementar |
@@ -692,6 +701,11 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 | R16 | Produto, categoria e meta pertencem a uma empresa vendedora; o orçamento só aceita produtos do catálogo da empresa da negociação (item livre continua permitido). | `criarOrcamentoGerado`, `adicionarItemOrcamento` |
 | R17 | Perfil por empresa: diretor de A não tem poder em B. Recursos globais (funis, listas, parâmetros, usuários, clientes, importação) exigem ser diretor em alguma empresa; recursos da empresa exigem ser diretor dela. | `perfilEm`, `exigirDiretorDe`, RLS |
 | R18 | Todo relatório, dashboard, listagem, exportação e tool MCP respeita o escopo (uma empresa ou todas). "Todas" = sem filtro (a RLS limita às empresas do usuário). | `getEscopoEmpresa`, `aplicarEscopoEmitente` |
+| R19 | Marcar faturado só em negociação `vendida`: exige `valor_faturado` (default `valor_final`) e `faturado_em` (default hoje). | Server Action `marcarFaturado` |
+| R20 | Meta é por pessoa, empresa, mês e tipo (`faturamento` ou `pipeline`). Meta da equipe = soma. Pipeline realizado = soma de `valor_estimado` das negociações criadas no mês. | `salvarMeta`, Dashboard |
+| R21 | Parcelas substituem a previsão única no mês em que existirem: o valor do mês é a soma das parcelas daquele mês. | `negociacao_parcelas`, Dashboard |
+| R22 | Renovar cria negociação aberta copiando empresa, contato, funil, valor e linha, com `negociacao_origem_id` apontando para a original e título prefixado com "Renovação". | Server Action `clonarNegociacao` |
+| R23 | Lançamento rápido: se o contato tiver nome, cria o contato na empresa antes da negociação. Empresa nova grava UF. | `NovaNegociacaoForm` |
 | R14 | Excluir: o padrão é arquivar (`arquivado_em`). Diretor pode arquivar qualquer coisa; vendedor só o que é seu. Arquivados somem de todas as telas e views. Exclusão definitiva (delete físico, com cascade em interações, ações, orçamentos e arquivos do Storage) só pelo diretor, com confirmação na ficha. | Server Actions |
 
 ---

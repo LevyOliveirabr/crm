@@ -1041,6 +1041,74 @@ export async function carregarDadosRelatorios(
   };
 }
 
+export type LinhaComposicao = {
+  id: string;
+  titulo: string;
+  empresaNome: string;
+  valor: number;
+  responsavelNome: string;
+  referencia: string | null;
+};
+
+/** Negociações que formam um número do relatório (vendido ou aberto). */
+export async function listarComposicaoRelatorio(
+  supabase: Client,
+  filtros: FiltrosRelatorio,
+  tipo: "vendidas" | "abertas",
+  responsavelId: string | null,
+): Promise<LinhaComposicao[]> {
+  const recorte: FiltrosRelatorio = {
+    ...filtros,
+    vendedorId: responsavelId ?? filtros.vendedorId,
+  };
+
+  if (tipo === "vendidas") {
+    let q = supabase
+      .from("v_negociacoes")
+      .select("id, titulo, empresa_nome, valor_final, responsavel_nome, fechado_em")
+      .eq("status", "vendida")
+      .gte("fechado_em", `${filtros.periodo.inicio}T00:00:00-03:00`)
+      .lt("fechado_em", `${filtros.periodo.fimExclusivo}T00:00:00-03:00`)
+      .order("fechado_em", { ascending: false });
+    q = aplicarFiltrosNeg(q, recorte);
+    if (
+      !recorte.vendedorId &&
+      filtros.equipeIds &&
+      filtros.equipeIds.length > 0
+    ) {
+      q = q.in("responsavel_id", filtros.equipeIds);
+    }
+    const { data } = await q;
+    return (data ?? []).map((n) => ({
+      id: n.id ?? "",
+      titulo: n.titulo ?? "Sem título",
+      empresaNome: n.empresa_nome ?? "—",
+      valor: num(n.valor_final),
+      responsavelNome: n.responsavel_nome ?? "—",
+      referencia: n.fechado_em,
+    }));
+  }
+
+  let q = supabase
+    .from("v_negociacoes")
+    .select("id, titulo, empresa_nome, valor_estimado, responsavel_nome, etapa_nome")
+    .eq("status", "aberta")
+    .order("valor_estimado", { ascending: false });
+  q = aplicarFiltrosNeg(q, recorte);
+  if (!recorte.vendedorId && filtros.equipeIds && filtros.equipeIds.length > 0) {
+    q = q.in("responsavel_id", filtros.equipeIds);
+  }
+  const { data } = await q;
+  return (data ?? []).map((n) => ({
+    id: n.id ?? "",
+    titulo: n.titulo ?? "Sem título",
+    empresaNome: n.empresa_nome ?? "—",
+    valor: num(n.valor_estimado),
+    responsavelNome: n.responsavel_nome ?? "—",
+    referencia: n.etapa_nome,
+  }));
+}
+
 export function textoWhatsAppPresidencia(
   dados: DadosPresidencia,
   ate: string = hojeISO(),

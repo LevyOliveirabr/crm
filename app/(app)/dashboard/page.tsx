@@ -71,6 +71,14 @@ function dataValida(v: string | undefined): string | null {
   return Number.isNaN(Date.parse(`${v}T12:00:00Z`)) ? null : v;
 }
 
+function paramLista(valor: string | string[] | undefined): string[] {
+  const bruto = Array.isArray(valor) ? valor : valor ? [valor] : [];
+  return bruto
+    .flatMap((v) => v.split(","))
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function uuidValido(v: string | undefined): string | null {
   if (!v) return null;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
@@ -110,15 +118,6 @@ export default async function DashboardPage({
     ? (metricaParam as MetricaDashboard)
     : "potencial";
 
-  const segmentoParam = paramUnico(sp.segmento);
-  const segmento: TipoSegmento | null = TIPOS_SEGMENTO.some(
-    (t) => t.id === segmentoParam,
-  )
-    ? (segmentoParam as TipoSegmento)
-    : null;
-
-  const ufParam = paramUnico(sp.uf)?.trim().toUpperCase();
-
   const supabase = await createClient();
   const vendedores = await listarVendedoresVisiveis(supabase, usuario, escopo);
   const vendedorFiltro = resolverFiltroVendedor(
@@ -132,16 +131,23 @@ export default async function DashboardPage({
     de,
     ate,
     vendedorId: vendedorFiltro,
-    etapaId: uuidValido(paramUnico(sp.etapa)),
+    etapaIds: paramLista(sp.etapa)
+      .map((id) => uuidValido(id))
+      .filter((id): id is string => Boolean(id)),
     visao,
     metrica,
-    uf: ufParam && /^[A-Z]{2}$/.test(ufParam) ? ufParam : null,
-    origem: paramUnico(sp.origem)?.trim() || null,
-    segmento,
+    ufs: paramLista(sp.uf)
+      .map((u) => u.toUpperCase())
+      .filter((u) => /^[A-Z]{2}$/.test(u)),
+    origens: paramLista(sp.origem),
+    segmentos: paramLista(sp.segmento).filter((s): s is TipoSegmento =>
+      TIPOS_SEGMENTO.some((t) => t.id === s),
+    ),
     tipoCliente: paramUnico(sp.tipo_cliente)?.trim() || null,
     isDiretor,
     equipeIds: idsEquipeVisivel(usuario, vendedores, escopo),
     emitenteId: escopo.emitenteId,
+    usuarioId: usuario.id,
   };
 
   const [opcoes, dados, dadosNova] = await Promise.all([
@@ -154,12 +160,12 @@ export default async function DashboardPage({
   if (de !== inicioMes) qs.set("de", de);
   if (ate !== fimMes) qs.set("ate", ate);
   if (filtros.vendedorId) qs.set("vendedor", filtros.vendedorId);
-  if (filtros.etapaId) qs.set("etapa", filtros.etapaId);
+  if (filtros.etapaIds.length) qs.set("etapa", filtros.etapaIds.join(","));
   if (filtros.visao !== "previsao") qs.set("visao", filtros.visao);
   if (filtros.metrica !== "potencial") qs.set("metrica", filtros.metrica);
-  if (filtros.uf) qs.set("uf", filtros.uf);
-  if (filtros.origem) qs.set("origem", filtros.origem);
-  if (filtros.segmento) qs.set("segmento", filtros.segmento);
+  if (filtros.ufs.length) qs.set("uf", filtros.ufs.join(","));
+  if (filtros.origens.length) qs.set("origem", filtros.origens.join(","));
+  if (filtros.segmentos.length) qs.set("segmento", filtros.segmentos.join(","));
   if (filtros.tipoCliente) qs.set("tipo_cliente", filtros.tipoCliente);
   if (escopo.emitenteId) qs.set("emitente", escopo.emitenteId);
   const qsStr = qs.toString();
@@ -219,6 +225,7 @@ export default async function DashboardPage({
           <QuebrasDashboard
             porTipoCliente={dados.porTipoCliente}
             porOrigem={dados.porOrigem}
+            porUf={dados.porUf}
             qs={qsStr}
           />
         </div>
@@ -235,6 +242,13 @@ export default async function DashboardPage({
                 Ver relatório
               </Link>
             </div>
+            <p className="mb-3 text-sm text-muted-foreground">
+              As 10 maiores oportunidades abertas representam{" "}
+              <span className="font-semibold text-foreground">
+                {dados.kpis.top10Pct.toLocaleString("pt-BR")}%
+              </span>{" "}
+              do pipeline.
+            </p>
             {dados.top10.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum negócio aberto.</p>
             ) : (

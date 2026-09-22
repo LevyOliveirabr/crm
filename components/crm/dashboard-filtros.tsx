@@ -45,6 +45,13 @@ export function DashboardFiltros({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  function setLista(chave: string, atual: string[], valor: string, marcado: boolean) {
+    const prox = marcado
+      ? [...new Set([...atual, valor])]
+      : atual.filter((v) => v !== valor);
+    setParams({ [chave]: prox.length ? prox.join(",") : null });
+  }
+
   function setParams(entries: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
     for (const [k, v] of Object.entries(entries)) {
@@ -59,12 +66,12 @@ export function DashboardFiltros({
     filtros.de !== padrao.de ||
     filtros.ate !== padrao.ate ||
     filtros.vendedorId ||
-    filtros.etapaId ||
+    filtros.etapaIds.length > 0 ||
     filtros.visao !== "previsao" ||
     filtros.metrica !== "potencial" ||
-    filtros.uf ||
-    filtros.origem ||
-    filtros.segmento ||
+    filtros.ufs.length > 0 ||
+    filtros.origens.length > 0 ||
+    filtros.segmentos.length > 0 ||
     filtros.tipoCliente;
 
   return (
@@ -120,26 +127,23 @@ export function DashboardFiltros({
         </Campo>
       ) : null}
 
-      <Campo id="dash-etapa" label="Fase / estágio">
-        <select
-          id="dash-etapa"
-          value={filtros.etapaId ?? ""}
-          onChange={(e) => setParams({ etapa: e.target.value || null })}
-          className={campoClass}
-        >
-          <option value="">Todas</option>
-          {opcoes.etapas.map((et) => (
-            <option key={et.id} value={et.id}>
-              {et.nome}
-              {opcoes.etapas.some(
-                (o) => o.nome === et.nome && o.funil !== et.funil,
-              )
-                ? ` (${et.funil})`
-                : ""}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <MultiCampo
+        id="dash-etapa"
+        label="Fase / estágio"
+        vazio="Todas"
+        opcoes={opcoes.etapas.map((et) => ({
+          id: et.id,
+          label: opcoes.etapas.some(
+            (o) => o.nome === et.nome && o.funil !== et.funil,
+          )
+            ? `${et.nome} (${et.funil})`
+            : et.nome,
+        }))}
+        selecionados={filtros.etapaIds}
+        onToggle={(id, marcado) =>
+          setLista("etapa", filtros.etapaIds, id, marcado)
+        }
+      />
 
       <Campo id="dash-visao" label="Visão data">
         <select
@@ -179,37 +183,25 @@ export function DashboardFiltros({
         </select>
       </Campo>
 
-      <Campo id="dash-uf" label="Região (UF)">
-        <select
-          id="dash-uf"
-          value={filtros.uf ?? ""}
-          onChange={(e) => setParams({ uf: e.target.value || null })}
-          className={campoClass}
-        >
-          <option value="">Todas</option>
-          {opcoes.ufs.map((uf) => (
-            <option key={uf} value={uf}>
-              {uf}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <MultiCampo
+        id="dash-uf"
+        label="Região (UF)"
+        vazio="Todas"
+        opcoes={opcoes.ufs.map((uf) => ({ id: uf, label: uf }))}
+        selecionados={filtros.ufs}
+        onToggle={(id, marcado) => setLista("uf", filtros.ufs, id, marcado)}
+      />
 
-      <Campo id="dash-origem" label="Fonte">
-        <select
-          id="dash-origem"
-          value={filtros.origem ?? ""}
-          onChange={(e) => setParams({ origem: e.target.value || null })}
-          className={campoClass}
-        >
-          <option value="">Todas</option>
-          {opcoes.origens.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <MultiCampo
+        id="dash-origem"
+        label="Fonte"
+        vazio="Todas"
+        opcoes={opcoes.origens.map((o) => ({ id: o, label: o }))}
+        selecionados={filtros.origens}
+        onToggle={(id, marcado) =>
+          setLista("origem", filtros.origens, id, marcado)
+        }
+      />
 
       <Campo id="dash-tipo-cliente" label="Tipo de cliente">
         <select
@@ -227,21 +219,16 @@ export function DashboardFiltros({
         </select>
       </Campo>
 
-      <Campo id="dash-segmento" label="Natureza">
-        <select
-          id="dash-segmento"
-          value={filtros.segmento ?? ""}
-          onChange={(e) => setParams({ segmento: e.target.value || null })}
-          className={campoClass}
-        >
-          <option value="">Todos</option>
-          {TIPOS_SEGMENTO.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <MultiCampo
+        id="dash-segmento"
+        label="Natureza"
+        vazio="Todas"
+        opcoes={TIPOS_SEGMENTO.map((t) => ({ id: t.id, label: t.label }))}
+        selecionados={filtros.segmentos}
+        onToggle={(id, marcado) =>
+          setLista("segmento", filtros.segmentos, id, marcado)
+        }
+      />
 
       {temFiltro ? (
         <div className="col-span-2 sm:col-span-3 xl:col-span-9">
@@ -255,5 +242,59 @@ export function DashboardFiltros({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function MultiCampo({
+  id,
+  label,
+  vazio,
+  opcoes,
+  selecionados,
+  onToggle,
+}: {
+  id: string;
+  label: string;
+  vazio: string;
+  opcoes: { id: string; label: string }[];
+  selecionados: string[];
+  onToggle: (id: string, marcado: boolean) => void;
+}) {
+  const resumo =
+    selecionados.length === 0
+      ? vazio
+      : selecionados.length === 1
+        ? (opcoes.find((o) => o.id === selecionados[0])?.label ?? selecionados[0])
+        : `${selecionados.length} selecionados`;
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span id={id} className="eyebrow">
+        {label}
+      </span>
+      <details className="relative">
+        <summary className={`${campoClass} flex cursor-pointer list-none items-center`}>
+          {resumo}
+        </summary>
+        <div className="absolute z-20 mt-1 max-h-56 w-full min-w-[12rem] overflow-auto rounded-lg border border-input bg-card p-2 shadow-md">
+          {opcoes.length === 0 ? (
+            <p className="px-1 text-xs text-muted-foreground">Nenhuma opção</p>
+          ) : (
+            opcoes.map((o) => (
+              <label
+                key={o.id}
+                className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted"
+              >
+                <input
+                  type="checkbox"
+                  checked={selecionados.includes(o.id)}
+                  onChange={(e) => onToggle(o.id, e.target.checked)}
+                />
+                {o.label}
+              </label>
+            ))
+          )}
+        </div>
+      </details>
+    </div>
   );
 }

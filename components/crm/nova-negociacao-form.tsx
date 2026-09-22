@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Building2, ChevronDown, Plus } from "lucide-react";
 
+import { criarContato } from "@/lib/actions/contatos";
 import {
   buscarEmpresas,
   criarEmpresa,
@@ -60,7 +61,13 @@ export function NovaNegociacaoForm({
   const [novaEmpresa, setNovaEmpresa] = useState({
     nome: "",
     cidade: "",
+    uf: "",
     segmento: "",
+  });
+  const [contatoNovo, setContatoNovo] = useState({
+    nome: "",
+    whatsapp: "",
+    cargo: "",
   });
 
   const [valorTexto, setValorTexto] = useState("");
@@ -139,7 +146,7 @@ export function NovaNegociacaoForm({
         nome: novaEmpresa.nome || buscaEmpresa,
         cidade: novaEmpresa.cidade || null,
         segmento: novaEmpresa.segmento || null,
-        uf: null,
+        uf: novaEmpresa.uf.trim().toUpperCase() || null,
         cnpj: null,
         responsavel_id: null,
         observacoes: null,
@@ -173,6 +180,23 @@ export function NovaNegociacaoForm({
     }
 
     startTransition(async () => {
+      let contatoSalvo = contatoId || null;
+      if (contatoNovo.nome.trim()) {
+        const whatsapp = contatoNovo.whatsapp.replace(/\D/g, "");
+        const criado = await criarContato({
+          empresa_id: empresa.id,
+          nome: contatoNovo.nome.trim(),
+          whatsapp: whatsapp || null,
+          email: null,
+          cargo: contatoNovo.cargo.trim() || null,
+          decisor: false,
+        });
+        if (!criado.ok) {
+          setErro(criado.error);
+          return;
+        }
+        contatoSalvo = criado.contato.id;
+      }
       const res = await criarNegociacao({
         empresa_id: empresa.id,
         emitente_id: emitenteId,
@@ -184,7 +208,7 @@ export function NovaNegociacaoForm({
         temperatura,
           previsao_mes: previsaoData ? `${previsaoData.slice(0, 7)}-01` : null,
           previsao_data: previsaoData || null,
-          contato_id: contatoId || null,
+          contato_id: contatoSalvo,
           proxima_acao:
           !pularAcao && acaoDesc.trim()
             ? { descricao: acaoDesc.trim(), data: acaoData, tipo: "ligar" }
@@ -323,6 +347,18 @@ export function NovaNegociacaoForm({
                 setNovaEmpresa((n) => ({ ...n, cidade: e.target.value }))
               }
               placeholder="Cidade"
+              disabled={pending}
+            />
+            <Input
+              value={novaEmpresa.uf}
+              onChange={(e) =>
+                setNovaEmpresa((n) => ({
+                  ...n,
+                  uf: e.target.value.toUpperCase().slice(0, 2),
+                }))
+              }
+              placeholder="UF"
+              maxLength={2}
               disabled={pending}
             />
             <select
@@ -483,6 +519,39 @@ export function NovaNegociacaoForm({
             A negociação ficará marcada como sem próxima ação.
           </p>
         )}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+        <p className="text-sm font-medium">Contato</p>
+        <p className="text-xs text-muted-foreground">
+          Preencha para cadastrar junto. Deixe em branco se ainda não tiver o contato.
+        </p>
+        <Input
+          value={contatoNovo.nome}
+          onChange={(e) =>
+            setContatoNovo((c) => ({ ...c, nome: e.target.value }))
+          }
+          placeholder="Nome do contato"
+          disabled={pending || !empresa}
+        />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Input
+            value={contatoNovo.whatsapp}
+            onChange={(e) =>
+              setContatoNovo((c) => ({ ...c, whatsapp: e.target.value }))
+            }
+            placeholder="WhatsApp"
+            disabled={pending || !empresa}
+          />
+          <Input
+            value={contatoNovo.cargo}
+            onChange={(e) =>
+              setContatoNovo((c) => ({ ...c, cargo: e.target.value }))
+            }
+            placeholder="Cargo"
+            disabled={pending || !empresa}
+          />
+        </div>
       </div>
 
       {/* Mais detalhes */}

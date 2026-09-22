@@ -10,7 +10,7 @@ import type {
   QuebraItem,
   VisaoData,
 } from "@/lib/dashboard/tipos";
-import { formatarData, formatarMoedaCurta, mesPorExtenso } from "@/lib/format";
+import { formatarData, formatarMoeda, formatarMoedaCurta, mesPorExtenso } from "@/lib/format";
 import { Tile } from "@/components/crm/pagina";
 import { cn } from "@/lib/utils";
 
@@ -140,24 +140,56 @@ export function KpisDashboard({
         }
         tom={deltaTri == null ? undefined : deltaTri >= 0 ? "ok" : "ruim"}
       />
-      <MetaDoMes kpis={kpis} />
+      <KpiLink href={linkRelatorio(qs, "faturado")}>
+        <Tile
+          label="Faturado no mês"
+          valor={formatarMoeda(kpis.faturadoMes)}
+          detalhe="Valor já faturado · clique para ver"
+          tom="ok"
+        />
+      </KpiLink>
+      <KpiLink href={linkRelatorio(qs, "vencida")}>
+        <Tile
+          label="Previsão vencida"
+          valor={formatarMoedaCurta(kpis.previsaoVencida)}
+          detalhe={`${kpis.qtdPrevisaoVencida} em aberto com previsão passada`}
+          tom={kpis.qtdPrevisaoVencida > 0 ? "ruim" : undefined}
+        />
+      </KpiLink>
+      <Tile
+        label="Pipeline gerado"
+        valor={formatarMoedaCurta(kpis.pipelineGerado)}
+        detalhe={
+          kpis.metaPipeline > 0
+            ? `${formatarMoedaCurta(kpis.pipelineGerado)} de ${formatarMoedaCurta(kpis.metaPipeline)}`
+            : "Negócios criados no mês · sem meta de pipeline"
+        }
+      />
+      <KpiLink href={linkRelatorio(qs, "vendido")}>
+        <Tile
+          label="Vendido no mês"
+          valor={formatarMoeda(kpis.vendidoMes)}
+          detalhe={`${mesCurto(kpis.mesAtual)} · clique para ver as vendas`}
+          tom="ok"
+        />
+      </KpiLink>
+      <MetaDoMes kpis={kpis} hrefVendido={linkRelatorio(qs, "vendido")} />
     </div>
   );
 }
 
-function MetaDoMes({ kpis }: { kpis: Kpis }) {
-  const pct = kpis.metaMes > 0 ? Math.round((kpis.vendidoMes / kpis.metaMes) * 100) : null;
+function MetaDoMes({ kpis, hrefVendido }: { kpis: Kpis; hrefVendido: string }) {
+  const temMeta = kpis.metaMes > 0;
+  const pct = temMeta ? Math.round((kpis.vendidoMes / kpis.metaMes) * 100) : null;
   const largura = pct == null ? 0 : Math.min(100, pct);
-  return (
+  const corpo = (
     <div role="listitem" className="card-surface flex flex-col justify-center px-4 py-3.5">
       <p className="eyebrow">Meta do mês</p>
-      <p className="mt-1 font-heading text-2xl font-semibold tracking-tight tabular-nums">
-        {pct == null ? formatarMoedaCurta(kpis.vendidoMes) : `${pct}%`}
-      </p>
-      {pct == null ? (
-        <p className="mt-0.5 text-xs text-muted-foreground">vendido · sem meta cadastrada</p>
-      ) : (
+      {temMeta && pct != null ? (
         <>
+          <p className="mt-1 font-heading text-2xl font-semibold tracking-tight tabular-nums">
+            {pct}%
+          </p>
           <div
             className="mt-2 h-2 w-full rounded-full bg-muted"
             role="progressbar"
@@ -172,25 +204,43 @@ function MetaDoMes({ kpis }: { kpis: Kpis }) {
             />
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
-            {formatarMoedaCurta(kpis.vendidoMes)} de {formatarMoedaCurta(kpis.metaMes)}
+            {formatarMoeda(kpis.vendidoMes)} de {formatarMoeda(kpis.metaMes)}
+          </p>
+          {kpis.metaPessoal > 0 && kpis.metaPessoal !== kpis.metaMes ? (
+            <p className="text-xs text-muted-foreground">
+              Sua meta: {formatarMoeda(kpis.metaPessoal)} · equipe é a soma
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <p className="mt-1 font-heading text-lg font-semibold tracking-tight">
+            Sem meta cadastrada
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Cadastre em Configurações → Metas
           </p>
         </>
       )}
     </div>
   );
+  if (!temMeta) return corpo;
+  return <KpiLink href={hrefVendido}>{corpo}</KpiLink>;
 }
 
 export function QuebrasDashboard({
   porTipoCliente,
   porOrigem,
+  porUf,
   qs,
 }: {
   porTipoCliente: QuebraItem[];
   porOrigem: QuebraItem[];
+  porUf: QuebraItem[];
   qs: string;
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-3">
       <ListaQuebra
         titulo="Por tipo de cliente"
         itens={porTipoCliente}
@@ -202,6 +252,12 @@ export function QuebrasDashboard({
         itens={porOrigem}
         qs={qs}
         fonte="origem"
+      />
+      <ListaQuebra
+        titulo="Por estado"
+        itens={porUf}
+        qs={qs}
+        fonte="uf"
       />
     </div>
   );
