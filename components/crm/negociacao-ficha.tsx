@@ -823,14 +823,14 @@ export function NegociacaoFicha({
             <div className="grid grid-cols-2 gap-3">
               <div className="flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Valor potencial</span>
-                <div className="flex items-center gap-1">
+                <div className="flex min-w-0 items-center gap-1">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <Input
                     value={valorLocal}
                     onChange={(e) => setValorLocal(e.target.value)}
                     onBlur={onBlurValor}
                     disabled={pending || !aberta}
-                    className="h-8 w-36 tabular-nums"
+                    className="h-8 w-full min-w-0 tabular-nums"
                     inputMode="decimal"
                   />
                 </div>
@@ -838,14 +838,14 @@ export function NegociacaoFicha({
 
               <div className="flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Valor previsão</span>
-                <div className="flex items-center gap-1">
+                <div className="flex min-w-0 items-center gap-1">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <Input
                     value={valorPrevisaoLocal}
                     onChange={(e) => setValorPrevisaoLocal(e.target.value)}
                     onBlur={onBlurValorPrevisao}
                     disabled={pending || !aberta}
-                    className="h-8 w-36 tabular-nums"
+                    className="h-8 w-full min-w-0 tabular-nums"
                     inputMode="decimal"
                     placeholder="= potencial"
                   />
@@ -884,7 +884,7 @@ export function NegociacaoFicha({
                 parcelas={parcelas}
               />
 
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Temperatura</span>
                 <div className="flex gap-1">
                   {([1, 2, 3] as const).map((t) => (
@@ -894,6 +894,7 @@ export function NegociacaoFicha({
                       size="xs"
                       variant={n.temperatura === t ? "default" : "outline"}
                       disabled={pending || !aberta}
+                      className="flex-1"
                       onClick={() =>
                         salvarCampo("temperatura", t, (p) => ({
                           ...p,
@@ -907,7 +908,7 @@ export function NegociacaoFicha({
                 </div>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Responsável</span>
                 {isDiretor && aberta ? (
                   <select
@@ -922,7 +923,7 @@ export function NegociacaoFicha({
                             ?.nome ?? p.responsavelNome,
                       }))
                     }
-                    className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                    className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2 text-sm"
                   >
                     {vendedores.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -935,7 +936,7 @@ export function NegociacaoFicha({
                 )}
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Linha</span>
                 <select
                   value={n.linha ?? ""}
@@ -946,7 +947,7 @@ export function NegociacaoFicha({
                       linha: e.target.value || null,
                     }))
                   }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                  className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2 text-sm"
                 >
                   <option value="">—</option>
                   {linhas.map((l) => (
@@ -957,7 +958,7 @@ export function NegociacaoFicha({
                 </select>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Origem</span>
                 <select
                   value={n.origem ?? ""}
@@ -968,7 +969,7 @@ export function NegociacaoFicha({
                       origem: e.target.value || null,
                     }))
                   }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                  className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2 text-sm"
                 >
                   <option value="">—</option>
                   {origens.map((o) => (
@@ -979,15 +980,13 @@ export function NegociacaoFicha({
                 </select>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <span className="eyebrow">
-                  Fechamento previsto
-                  {!n.previsaoData && n.previsaoMes ? (
-                    <span className="ml-1 opacity-70">
-                      ({mesPorExtenso(n.previsaoMes)})
-                    </span>
-                  ) : null}
-                </span>
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
+                <span className="eyebrow">Fechamento previsto</span>
+                {!n.previsaoData && n.previsaoMes ? (
+                  <span className="text-xs text-muted-foreground">
+                    {mesPorExtenso(n.previsaoMes)}
+                  </span>
+                ) : null}
                 <Input
                   type="date"
                   value={n.previsaoData ?? ""}
@@ -1000,11 +999,11 @@ export function NegociacaoFicha({
                       previsaoMes: v ? `${v.slice(0, 7)}-01` : p.previsaoMes,
                     }));
                   }}
-                  className="h-8 w-40"
+                  className="h-8 w-full"
                 />
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Forecast</span>
                 <select
                   value={n.categoriaForecast ?? ""}
@@ -1020,7 +1019,7 @@ export function NegociacaoFicha({
                       categoriaForecast: v,
                     }));
                   }}
-                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+                  className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2 text-sm"
                 >
                   <option value="">—</option>
                   <option value="compromisso">Compromisso</option>
@@ -1029,7 +1028,7 @@ export function NegociacaoFicha({
                 </select>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
                 <span className="eyebrow">Faturamento</span>
                 <Input
                   type="date"
@@ -1042,7 +1041,7 @@ export function NegociacaoFicha({
                       dataFaturamento: v,
                     }));
                   }}
-                  className="h-8 w-40"
+                  className="h-8 w-full"
                 />
               </div>
             </div>
