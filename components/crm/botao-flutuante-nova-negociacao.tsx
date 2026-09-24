@@ -32,7 +32,7 @@ export function BotaoFlutuanteNovaNegociacao({
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[min(90dvh,calc(100dvh-2rem))] w-[calc(100%-2rem)] max-w-lg min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nova negociação</DialogTitle>
           </DialogHeader>

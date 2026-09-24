@@ -222,7 +222,7 @@ export function NovaNegociacaoForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex min-w-0 max-w-full flex-col gap-4", className)}>
       {/* Empresa vendedora (só quando o usuário participa de mais de uma) */}
       {dados.emitentes.length > 1 ? (
         <div className="flex flex-col gap-1.5">
@@ -234,7 +234,7 @@ export function NovaNegociacaoForm({
             value={emitenteId}
             onChange={(e) => setEmitenteId(e.target.value)}
             disabled={pending}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-8 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="">Selecione…</option>
             {dados.emitentes.map((e) => (
@@ -278,7 +278,7 @@ export function NovaNegociacaoForm({
             </Button>
           </div>
         ) : (
-          <div className="relative">
+          <div className="relative min-w-0">
             <Input
               id="neg-empresa"
               value={buscaEmpresa}
@@ -289,27 +289,27 @@ export function NovaNegociacaoForm({
             />
             {(sugestoesVisiveis.length > 0 ||
               (buscaEmpresa.trim().length >= 2 && !buscando && !empresa)) && (
-              <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-border bg-popover shadow-md">
+              <ul className="absolute z-20 mt-1 max-h-56 w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover shadow-md">
                 {sugestoesVisiveis.map((s) => (
-                  <li key={s.id}>
+                  <li key={s.id} className="min-w-0">
                     <button
                       type="button"
-                      className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-muted"
+                      className="flex w-full min-w-0 flex-col items-start px-3 py-2 text-left text-sm break-words hover:bg-muted"
                       onClick={() => selecionarEmpresa(s)}
                     >
-                      <span className="font-medium">{s.nome}</span>
+                      <span className="min-w-0 break-words font-medium">{s.nome}</span>
                       {(s.cidade || s.segmento) && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="min-w-0 break-words text-xs text-muted-foreground">
                           {[s.cidade, s.segmento].filter(Boolean).join(" · ")}
                         </span>
                       )}
                     </button>
                   </li>
                 ))}
-                <li>
+                <li className="min-w-0">
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-sm text-primary hover:bg-muted"
+                    className="flex w-full min-w-0 items-start gap-2 border-t border-border px-3 py-2 text-left text-sm break-words text-primary hover:bg-muted"
                     onClick={() => {
                       setNovaEmpresaAberta(true);
                       setNovaEmpresa((n) => ({
@@ -318,11 +318,13 @@ export function NovaNegociacaoForm({
                       }));
                     }}
                   >
-                    <Plus className="size-4" />
-                    Nova empresa
-                    {buscaEmpresa.trim()
-                      ? `: “${buscaEmpresa.trim()}”`
-                      : ""}
+                    <Plus className="mt-0.5 size-4 shrink-0" />
+                    <span className="min-w-0 break-words">
+                      Nova empresa
+                      {buscaEmpresa.trim()
+                        ? `: “${buscaEmpresa.trim()}”`
+                        : ""}
+                    </span>
                   </button>
                 </li>
               </ul>
@@ -331,7 +333,7 @@ export function NovaNegociacaoForm({
         )}
 
         {novaEmpresaAberta && !empresa ? (
-          <div className="mt-2 flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+          <div className="mt-2 flex min-w-0 max-w-full flex-col gap-2 rounded-lg border border-dashed border-border p-3">
             <p className="text-sm font-medium">Nova empresa</p>
             <Input
               value={novaEmpresa.nome}
@@ -367,7 +369,7 @@ export function NovaNegociacaoForm({
                 setNovaEmpresa((n) => ({ ...n, segmento: e.target.value }))
               }
               disabled={pending}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-8 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <option value="">Segmento</option>
               {dados.segmentos.map((s) => (
@@ -415,8 +417,8 @@ export function NovaNegociacaoForm({
       </div>
 
       {/* Funil + Linha */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <label className="text-sm font-medium" htmlFor="neg-funil">
             Funil
           </label>
@@ -425,7 +427,7 @@ export function NovaNegociacaoForm({
             value={funilId}
             onChange={(e) => setFunilId(e.target.value)}
             disabled={pending}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-8 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {dados.funis.map((f) => (
               <option key={f.id} value={f.id}>
@@ -434,7 +436,7 @@ export function NovaNegociacaoForm({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <label className="text-sm font-medium" htmlFor="neg-linha">
             Linha
           </label>
@@ -443,7 +445,7 @@ export function NovaNegociacaoForm({
             value={linha}
             onChange={(e) => setLinha(e.target.value)}
             disabled={pending}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-8 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="">—</option>
             {dados.linhas.map((l) => (
@@ -534,7 +536,7 @@ export function NovaNegociacaoForm({
           placeholder="Nome do contato"
           disabled={pending || !empresa}
         />
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
           <Input
             value={contatoNovo.whatsapp}
             onChange={(e) =>
@@ -595,7 +597,7 @@ export function NovaNegociacaoForm({
                 value={origem}
                 onChange={(e) => setOrigem(e.target.value)}
                 disabled={pending}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-8 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <option value="">—</option>
                 {dados.origens.map((o) => (
@@ -607,7 +609,7 @@ export function NovaNegociacaoForm({
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">Temperatura</span>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 {(
                   [
                     [1, "Fria"],
@@ -649,7 +651,7 @@ export function NovaNegociacaoForm({
                 value={contatoId}
                 onChange={(e) => setContatoId(e.target.value)}
                 disabled={pending || !empresa}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-8 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <option value="">—</option>
                 {contatosVisiveis.map((c) => (
