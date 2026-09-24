@@ -848,7 +848,7 @@ export function EmpresaFicha({
                             {item.tipo}
                           </p>
                           {item.texto ? (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                               {item.texto}
                             </p>
                           ) : null}

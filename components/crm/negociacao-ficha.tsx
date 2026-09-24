@@ -48,6 +48,7 @@ import {
   parseMoedaBR,
 } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
+import { aplicarColagemHtml } from "@/lib/html-para-texto";
 import { MiniFormProximaAcao } from "@/components/crm/mini-form-proxima-acao";
 import {
   NegociacaoComplementos,
@@ -694,56 +695,77 @@ export function NegociacaoFicha({
               titulo="Registrar interação"
               meta="um toque para gravar na linha do tempo"
             >
-              <div className="flex flex-wrap gap-1.5">
-                {INTERACAO_BTN.map(({ tipo, label, icon: Icon }) => (
-                  <Button
-                    key={tipo}
-                    type="button"
-                    size="sm"
-                    variant={rapidoTipo === tipo ? "default" : "outline"}
-                    disabled={pending}
-                    onClick={() =>
-                      setRapidoTipo((t) => (t === tipo ? null : tipo))
-                    }
-                  >
-                    <Icon className="size-3.5" />
-                    {label}
-                  </Button>
-                ))}
-              </div>
-              {rapidoTipo ? (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <Textarea
-                    value={rapidoTexto}
-                    onChange={(e) => setRapidoTexto(e.target.value)}
-                    placeholder="Texto opcional…"
-                    rows={2}
-                    className="flex-1"
-                    disabled={pending}
-                  />
-                  <Button
-                    type="button"
-                    disabled={pending}
-                    onClick={() =>
-                      run(async () => {
-                        const res = await registrarInteracao(
-                          n.id,
-                          rapidoTipo,
-                          rapidoTexto.trim() || null,
-                        );
-                        if (!res.ok) {
-                          setErro(res.error);
-                          return;
-                        }
-                        setRapidoTipo(null);
-                        setRapidoTexto("");
-                      })
-                    }
-                  >
-                    Salvar
-                  </Button>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {INTERACAO_BTN.map(({ tipo, label, icon: Icon }) => (
+                    <Button
+                      key={tipo}
+                      type="button"
+                      size="sm"
+                      variant={rapidoTipo === tipo ? "default" : "outline"}
+                      disabled={pending}
+                      onClick={() =>
+                        setRapidoTipo((t) => (t === tipo ? null : tipo))
+                      }
+                    >
+                      <Icon className="size-3.5" />
+                      {label}
+                    </Button>
+                  ))}
                 </div>
-              ) : null}
+                {rapidoTipo ? (
+                  <div className="flex flex-col gap-3">
+                    <Textarea
+                      value={rapidoTexto}
+                      onChange={(e) => setRapidoTexto(e.target.value)}
+                      onPaste={(e) => {
+                        const colado = aplicarColagemHtml(
+                          rapidoTexto,
+                          e.currentTarget.selectionStart ?? rapidoTexto.length,
+                          e.currentTarget.selectionEnd ?? rapidoTexto.length,
+                          e.clipboardData.getData("text/html"),
+                        );
+                        if (!colado) return;
+                        e.preventDefault();
+                        setRapidoTexto(colado.texto);
+                        const campo = e.currentTarget;
+                        const cursor = colado.cursor;
+                        requestAnimationFrame(() => {
+                          campo.selectionStart = cursor;
+                          campo.selectionEnd = cursor;
+                        });
+                      }}
+                      placeholder="Texto opcional…"
+                      rows={10}
+                      className="field-sizing-fixed min-h-60 w-full"
+                      disabled={pending}
+                    />
+                    <div>
+                      <Button
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          run(async () => {
+                            const res = await registrarInteracao(
+                              n.id,
+                              rapidoTipo,
+                              rapidoTexto.trim() || null,
+                            );
+                            if (!res.ok) {
+                              setErro(res.error);
+                              return;
+                            }
+                            setRapidoTipo(null);
+                            setRapidoTexto("");
+                          })
+                        }
+                      >
+                        Salvar
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </Secao>
           ) : null}
 
@@ -769,7 +791,7 @@ export function NegociacaoFicha({
                               {item.usuarioNome ? ` · ${item.usuarioNome}` : ""}
                             </p>
                             {item.texto ? (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                                 {item.texto}
                               </p>
                             ) : null}
