@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
-import { adicionarDiasISO } from "@/lib/format";
+import { dataAdiadaISO, hojeISO } from "@/lib/format";
 import { acaoSchema, tipoAcaoSchema } from "@/lib/schemas/acao";
 import { createClient } from "@/lib/supabase/server";
 
@@ -83,7 +83,7 @@ export async function concluirAcao(id: string): Promise<AcaoActionResult> {
   };
 }
 
-/** Adia a data da ação em `dias` dias. */
+/** Adia a ação. Atrasada ou de hoje vai para o dia seguinte a hoje. */
 export async function adiarAcao(
   id: string,
   dias: number,
@@ -112,7 +112,7 @@ export async function adiarAcao(
     return { ok: false, error: "Ação já concluída." };
   }
 
-  const novaData = adicionarDiasISO(acao.data, diasParsed.data);
+  const novaData = dataAdiadaISO(acao.data, diasParsed.data, hojeISO());
 
   const { error: erroUpdate } = await supabase
     .from("acoes")

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   adicionarDiasISO,
+  dataAdiadaISO,
   formatarMoeda,
   formatarMoedaCurta,
   inicioMesISO,
@@ -40,6 +41,18 @@ describe("datas", () => {
   it("calcula início do mês e do próximo", () => {
     expect(inicioMesISO("2026-09-19")).toBe("2026-09-01");
     expect(inicioProximoMesISO("2026-12-05")).toBe("2027-01-01");
+  });
+
+  it("adia ação atrasada para o dia seguinte a hoje", () => {
+    expect(dataAdiadaISO("2026-09-25", 1, "2026-09-30")).toBe("2026-10-01");
+  });
+
+  it("adia ação de hoje para amanhã", () => {
+    expect(dataAdiadaISO("2026-09-30", 1, "2026-09-30")).toBe("2026-10-01");
+  });
+
+  it("adia ação futura a partir da própria data", () => {
+    expect(dataAdiadaISO("2026-10-10", 1, "2026-09-30")).toBe("2026-10-11");
   });
 });
 
