@@ -12,6 +12,7 @@ import {
   MotivosPerdaPainel,
   QuebrasDashboard,
   linkRelatorio,
+  rotuloPeriodo,
 } from "@/components/crm/dashboard-paineis";
 import { carregarDadosFormNegociacao } from "@/lib/actions/form-negociacao";
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
@@ -169,6 +170,7 @@ export default async function DashboardPage({
   if (filtros.tipoCliente) qs.set("tipo_cliente", filtros.tipoCliente);
   if (escopo.emitenteId) qs.set("emitente", escopo.emitenteId);
   const qsStr = qs.toString();
+  const periodo = { de, ate };
 
   return (
     <div className="mx-auto w-full max-w-[1400px]">
@@ -198,7 +200,7 @@ export default async function DashboardPage({
           <GraficoTrimestres barras={dados.trimestres} visao={filtros.visao} />
         </div>
         <div className="min-w-0 xl:[grid-area:kpis]">
-          <KpisDashboard kpis={dados.kpis} qs={qsStr} />
+          <KpisDashboard kpis={dados.kpis} qs={qsStr} periodo={periodo} />
         </div>
         <div className="min-w-0 xl:[grid-area:funil]">
           <FunilEstagios funis={dados.funis} qs={qsStr} />
@@ -293,9 +295,12 @@ export default async function DashboardPage({
                 Ver relatório
               </Link>
             </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Ganhos e perdas fechados de {rotuloPeriodo(periodo)}.
+            </p>
             {dados.fechadosPeriodo.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhum ganho ou perda no período.
+                Nenhum ganho ou perda de {rotuloPeriodo(periodo)}.
               </p>
             ) : (
               <ul className="divide-y divide-border">
@@ -329,7 +334,11 @@ export default async function DashboardPage({
           </section>
         </div>
         <div className="min-w-0 xl:[grid-area:motivos]">
-          <MotivosPerdaPainel itens={dados.motivosPerda} qs={qsStr} />
+          <MotivosPerdaPainel
+            itens={dados.motivosPerda}
+            qs={qsStr}
+            periodo={periodo}
+          />
         </div>
         <div className="min-w-0 xl:[grid-area:base]">
           <DashboardBase linhas={dados.base} />

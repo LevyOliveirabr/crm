@@ -29,6 +29,13 @@ function fmtPct(v: number): string {
   return `${v > 0 ? "▲" : "▼"} ${s}%`;
 }
 
+export type PeriodoDashboard = { de: string; ate: string };
+
+/** "01/10/2026 a 31/10/2026" — rótulo do período dos fechamentos. */
+export function rotuloPeriodo(periodo: PeriodoDashboard): string {
+  return `${formatarData(periodo.de)} a ${formatarData(periodo.ate)}`;
+}
+
 /** Link de relatório construído no servidor a partir dos search params atuais. */
 export function linkRelatorio(
   qs: string,
@@ -66,9 +73,11 @@ function KpiLink({
 export function KpisDashboard({
   kpis,
   qs,
+  periodo,
 }: {
   kpis: Kpis;
   qs: string;
+  periodo: PeriodoDashboard;
 }) {
   const deltaWin =
     kpis.winRate != null && kpis.winRateAnterior != null
@@ -116,9 +125,9 @@ export function KpisDashboard({
           detalhe={
             deltaWin == null
               ? kpis.winRate == null
-                ? "sem fechamentos no período"
-                : `Por valor · ${kpis.winRateNegocio?.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) ?? "—"}% por negócio`
-              : `${fmtPts(deltaWin)} vs. período anterior · ${kpis.qtdVendidas} ganhas · ${kpis.qtdPerdidas} perdidas`
+                ? `Sem fechamentos de ${rotuloPeriodo(periodo)}`
+                : `${rotuloPeriodo(periodo)} · ${kpis.winRateNegocio?.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) ?? "—"}% por negócio`
+              : `${rotuloPeriodo(periodo)} · ${fmtPts(deltaWin)} vs. período anterior · ${kpis.qtdVendidas} ganhas · ${kpis.qtdPerdidas} perdidas`
           }
           tom={deltaWin == null ? undefined : deltaWin >= 0 ? "ok" : "ruim"}
         />
@@ -315,18 +324,25 @@ function ListaQuebra({
 export function MotivosPerdaPainel({
   itens,
   qs,
+  periodo,
 }: {
   itens: MotivoPerdaItem[];
   qs: string;
+  periodo: PeriodoDashboard;
 }) {
   return (
     <section className="card-surface p-4">
-      <h2 className="font-heading text-base font-semibold">
-        Motivos de perda consolidados
-      </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-heading text-base font-semibold">
+          Motivos de perda consolidados
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          perdas de {rotuloPeriodo(periodo)}
+        </span>
+      </div>
       {itens.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          Nenhuma perda no período.
+          Nenhuma perda de {rotuloPeriodo(periodo)}.
         </p>
       ) : (
         <ul className="mt-3 divide-y divide-border">

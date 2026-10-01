@@ -80,12 +80,13 @@ export function DashboardFiltros({
       className="card-surface mb-4 grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 xl:grid-cols-[1.6fr_repeat(8,1fr)]"
     >
       <div className="col-span-2 flex min-w-0 flex-col gap-1.5 sm:col-span-3 xl:col-span-1">
-        <span className="eyebrow">Período</span>
+        <span className="eyebrow">Período dos fechamentos</span>
         <div className="grid grid-cols-2 gap-2">
           <input
             id="dash-de"
             type="date"
             aria-label="Início do período"
+            aria-describedby="dash-periodo-ajuda"
             value={filtros.de}
             max={filtros.ate}
             onChange={(e) =>
@@ -97,6 +98,7 @@ export function DashboardFiltros({
             id="dash-ate"
             type="date"
             aria-label="Fim do período"
+            aria-describedby="dash-periodo-ajuda"
             value={filtros.ate}
             min={filtros.de}
             onChange={(e) =>
@@ -107,6 +109,10 @@ export function DashboardFiltros({
             className={campoClass}
           />
         </div>
+        <p id="dash-periodo-ajuda" className="text-[11px] leading-snug text-muted-foreground">
+          Vale para taxa de ganho, negócios fechados e motivos de perda. Pipeline,
+          previsão e &ldquo;no mês&rdquo; não dependem dele.
+        </p>
       </div>
 
       {filtros.isDiretor ? (
