@@ -673,6 +673,7 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 ### 3.9 Faturamento, metas, parcelas e renovação (migration 0011)
 
 - `negociacoes.faturado boolean not null default false`, `valor_faturado numeric(14,2)`, `faturado_em date`. Faturar é um passo **depois** de `status = vendida`. `data_faturamento` continua sendo a data prevista; `faturado_em` é a data real.
+- `negociacoes.entregue boolean not null default false`, `entregue_em date`, `pago boolean not null default false`, `pago_em date` (migration 0012). Entrega e pagamento são passos **depois** da venda, no mesmo espírito do faturamento. A venda **não** conclui as ações abertas. A negociação vendida permanece no acompanhamento diário (Hoje e lembrete) até `faturado`, `entregue` e `pago` estarem marcados **e** não haver ação aberta. Vendas antigas já faturadas entram com entrega e pagamento em aberto.
 - `negociacoes.negociacao_origem_id uuid` (null ou outra negociação): renovação cria uma negociação nova ligada à original.
 - `metas.tipo text not null default 'faturamento'` (`faturamento` ou `pipeline`). Única por (responsável, empresa, mês, tipo). A meta da equipe **não é um registro**: é a soma das metas das pessoas. Quem também vende vê a própria meta e a soma.
 - `negociacao_parcelas (id, negociacao_id, mes date dia 1, valor numeric, ordem)`: várias previsões no tempo para o mesmo negócio. RLS igual às ações da negociação.
@@ -691,7 +692,7 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 | R5 | Registrar interação de um toque: insere `interacoes` com `tipo` e `texto` opcional. Botões: Liguei, WhatsApp, Visitei, Reunião. | Server Action `registrarInteracao` |
 | R6 | Criar orçamento (upload ou gerado): se a etapa atual tem `ordem` menor que a primeira etapa do funil com `conta_como_proposta = true`, move a negociação para essa etapa. Oferece atualizar `valor_estimado` com o valor do orçamento (checkbox marcado por padrão). Orçamentos anteriores da mesma negociação com `situacao = 'enviado'` passam para `substituido`. | Server Action `criarOrcamento` |
 | R6a | Orçamento gerado (`origem='gerado'`): `numero` vem de `proximo_numero_orcamento()`; `valor` e `subtotal` são calculados pelos itens (trigger), nunca digitados; `preco_unitario` de cada item nasce igual a `produtos.preco_base` e é sempre editável; item sem `produto_id` é permitido (item livre). Ao gerar o PDF/Excel, os arquivos são salvos no Storage e os paths gravados. Alterar um item após gerar exige "Gerar novamente" (arquivos antigos são sobrescritos). | Server Actions `salvarItens`, `gerarArquivosOrcamento` |
-| R7 | Marcar venda: exige `valor_final` (default `valor_estimado`) e `previsao_mes` (default mês atual, vira o mês da venda). Seta `status='vendida'`, `fechado_em=now()`, conclui todas as ações abertas, orçamento mais recente → `aprovado`. | Server Action `marcarVenda` |
+| R7 | Marcar venda: exige `valor_final` (default `valor_estimado`) e `previsao_mes` (default mês atual, vira o mês da venda). Seta `status='vendida'`, `fechado_em=now()`, orçamento mais recente → `aprovado`. **Não** conclui as ações abertas. Se não houver ação pendente, a UI abre o mini-form "Próxima ação?" (pode pular). O acompanhamento diário continua até faturar, entregar e receber o pagamento, ou enquanto houver ação aberta. | Server Action `marcarVenda` |
 | R8 | Marcar perda: exige `motivo_perda` (da lista) e aceita `anotacao_fechamento`. Seta `status='perdida'`, `fechado_em=now()`, conclui ações abertas, orçamento mais recente → `recusado`. | Server Action `marcarPerda` |
 | R9 | Reabrir: só diretor ou responsável. Volta `status='aberta'`, limpa `fechado_em`, mantém etapa. | Server Action `reabrir` |
 | R10 | Alertas no cartão (calculados em `v_negociacoes`): `acao_atrasada` (vermelho), `sem_acao` (amarelo), `dias_sem_interacao >= config.dias_parada_negociacao` (cinza "parada"). | View + UI |
@@ -703,6 +704,7 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 | R17 | Perfil por empresa: diretor de A não tem poder em B. Recursos globais (funis, listas, parâmetros, usuários, clientes, importação) exigem ser diretor em alguma empresa; recursos da empresa exigem ser diretor dela. | `perfilEm`, `exigirDiretorDe`, RLS |
 | R18 | Todo relatório, dashboard, listagem, exportação e tool MCP respeita o escopo (uma empresa ou todas). "Todas" = sem filtro (a RLS limita às empresas do usuário). | `getEscopoEmpresa`, `aplicarEscopoEmitente` |
 | R19 | Marcar faturado só em negociação `vendida`: exige `valor_faturado` (default `valor_final`) e `faturado_em` (default hoje). | Server Action `marcarFaturado` |
+| R24 | Marcar entrega e marcar pagamento só em negociação `vendida`. Grava `entregue` + `entregue_em` ou `pago` + `pago_em` (data default hoje). | Server Actions `marcarEntregue`, `marcarPago` |
 | R20 | Meta é por pessoa, empresa, mês e tipo (`faturamento` ou `pipeline`). Meta da equipe = soma. Pipeline realizado = soma de `valor_estimado` das negociações criadas no mês. | `salvarMeta`, Dashboard |
 | R21 | Parcelas substituem a previsão única no mês em que existirem: o valor do mês é a soma das parcelas daquele mês. | `negociacao_parcelas`, Dashboard |
 | R22 | Renovar cria negociação aberta copiando empresa, contato, funil, valor e linha, com `negociacao_origem_id` apontando para a original e título prefixado com "Renovação". | Server Action `clonarNegociacao` |
@@ -724,9 +726,10 @@ Supabase Auth com e-mail + senha (magic link opcional). Sem cadastro público; o
 Blocos, nesta ordem:
 1. Três números: **Aberto** (Σ valor_estimado abertas), **Vendido no mês**, **Perdido no mês**. Diretor vê consolidado com seletor de vendedor (default "Todos").
 2. **Ações atrasadas** (data < hoje) e **de hoje**, agrupadas. Cada linha: descrição, empresa, tipo, data; botões **Concluir** (abre mini-form próxima ação) e **Adiar 1 dia**.
-3. **Negociações sem próxima ação** (flag `sem_acao`), com botão "Definir ação".
-4. **Orçamentos vencendo** em até `config.alerta_validade_orcamento_dias` dias.
-5. Botão flutuante **+ Negociação**.
+3. **Negociações sem próxima ação** (flag `sem_acao`, só abertas), com botão "Definir ação".
+4. **Vendas em acompanhamento**: `status = vendida` ainda sem faturar, sem entregar ou sem pagamento, ou com ação aberta. Mostra a próxima tarefa ou o botão "Definir ação". Sai do bloco quando os três marcos estão feitos e não há ação aberta.
+5. **Orçamentos vencendo** em até `config.alerta_validade_orcamento_dias` dias.
+6. Botão flutuante **+ Negociação**.
 
 **Aceite:** concluir uma ação sem definir a próxima faz a negociação aparecer no bloco 3 imediatamente. Tudo utilizável em 390px.
 
@@ -742,8 +745,9 @@ Blocos, nesta ordem:
 ### 5.4 `/negociacoes/[id]`
 - Cabeçalho: título (editável inline), empresa (link), valor (editável), temperatura (3 botões), responsável, linha, origem, previsão (seletor de mês). Barra de etapas do funil clicável.
 - Botões grandes: **Marcar venda** · **Marcar perda** (modais R7/R8). Se fechada: badge de status + botão Reabrir.
-- **Próxima ação** em destaque com Concluir / Adiar / Editar; botão "+ Ação".
-- Barra de registro rápido: Liguei · WhatsApp · Visitei · Reunião · Anotação (campo de texto opcional que aparece ao tocar).
+- **Próxima ação** em destaque com Concluir / Adiar / Editar; botão "+ Ação". Em negociação **vendida** esses controles continuam disponíveis (R7). Em **perdida**, ficam só leitura.
+- Barra de registro rápido: Liguei · WhatsApp · Visitei · Reunião · Anotação (campo de texto opcional que aparece ao tocar). Também disponível na vendida.
+- Na vendida: marcos **Faturado** (R19), **Entrega** e **Pagamento** (R24), cada um com data.
 - **Timeline** única, ordem decrescente: interações, ações concluídas, orçamentos, eventos de sistema.
 - Lateral (desktop) / abaixo (mobile): contato principal com link `https://wa.me/<whatsapp>`, seletor para trocar/adicionar contato; lista de orçamentos com "+ Orçamento" (valor, data, validade, PDF); arquivos.
 

@@ -537,11 +537,13 @@ export async function marcarVenda(
 
   if (erroUpdate) return { ok: false, error: erroUpdate.message };
 
-  await supabase
+  const { count, error: erroCount } = await supabase
     .from("acoes")
-    .update({ concluida_em: agora })
+    .select("id", { count: "exact", head: true })
     .eq("negociacao_id", negociacao.id)
     .is("concluida_em", null);
+
+  if (erroCount) return { ok: false, error: erroCount.message };
 
   const { data: orcRecente } = await supabase
     .from("orcamentos")
@@ -559,7 +561,11 @@ export async function marcarVenda(
   }
 
   revalidarNegociacao(negociacao.id);
-  return { ok: true, negociacaoId: negociacao.id };
+  return {
+    ok: true,
+    negociacaoId: negociacao.id,
+    precisaProximaAcao: (count ?? 0) === 0,
+  };
 }
 
 /** Marcar perda (R8). */
@@ -850,8 +856,83 @@ export async function marcarFaturado(
 
   revalidatePath(`/negociacoes/${neg.id}`);
   revalidatePath("/dashboard");
+  revalidatePath("/hoje");
   revalidatePath("/relatorios");
   return { ok: true, negociacaoId: neg.id };
+}
+
+async function exigirVendida(
+  negociacaoId: string,
+): Promise<
+  | { ok: true; id: string }
+  | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const { data: neg, error } = await supabase
+    .from("negociacoes")
+    .select("id, status, arquivado_em")
+    .eq("id", negociacaoId)
+    .maybeSingle();
+  if (error || !neg) return { ok: false, error: "Negociação não encontrada." };
+  if (neg.arquivado_em) return { ok: false, error: "Negociação arquivada." };
+  if (neg.status !== "vendida") {
+    return { ok: false, error: "Só é possível em uma venda já marcada." };
+  }
+  return { ok: true, id: neg.id };
+}
+
+function dataMarco(valor: string | null | undefined): string | { error: string } {
+  if (valor == null || valor === "") return hojeISO();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return { error: "Data inválida." };
+  return valor;
+}
+
+/** Marca a entrega de uma venda (R24). */
+export async function marcarEntregue(
+  negociacaoId: string,
+  entregueEm?: string | null,
+): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+  const data = dataMarco(entregueEm);
+  if (typeof data !== "string") return { ok: false, error: data.error };
+
+  const venda = await exigirVendida(negociacaoId);
+  if (!venda.ok) return venda;
+
+  const supabase = await createClient();
+  const { error: erroUp } = await supabase
+    .from("negociacoes")
+    .update({ entregue: true, entregue_em: data })
+    .eq("id", venda.id);
+  if (erroUp) return { ok: false, error: erroUp.message };
+
+  revalidarNegociacao(venda.id);
+  return { ok: true, negociacaoId: venda.id };
+}
+
+/** Marca o pagamento do cliente de uma venda (R24). */
+export async function marcarPago(
+  negociacaoId: string,
+  pagoEm?: string | null,
+): Promise<NegociacaoActionResult> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return { ok: false, error: "Não autenticado." };
+  const data = dataMarco(pagoEm);
+  if (typeof data !== "string") return { ok: false, error: data.error };
+
+  const venda = await exigirVendida(negociacaoId);
+  if (!venda.ok) return venda;
+
+  const supabase = await createClient();
+  const { error: erroUp } = await supabase
+    .from("negociacoes")
+    .update({ pago: true, pago_em: data })
+    .eq("id", venda.id);
+  if (erroUp) return { ok: false, error: erroUp.message };
+
+  revalidarNegociacao(venda.id);
+  return { ok: true, negociacaoId: venda.id };
 }
 
 export async function salvarParcela(input: {

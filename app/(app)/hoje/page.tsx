@@ -25,7 +25,9 @@ import {
   HojeInterativo,
   type AcaoHojeItem,
   type NegociacaoSemAcaoItem,
+  type VendaAcompanhamentoItem,
 } from "@/components/crm/hoje-interativo";
+import { marcosPendentes, vendaEmAcompanhamento } from "@/lib/pos-venda";
 import {
   BarraFiltros,
   CampoFiltro,
@@ -235,7 +237,7 @@ export default async function HojePage({
     )
     .is("concluida_em", null)
     .lte("data", janela.ate)
-    .eq("negociacoes.status", "aberta")
+    .in("negociacoes.status", ["aberta", "vendida"])
     .is("negociacoes.arquivado_em", null)
     .order("data", { ascending: true });
 
@@ -334,6 +336,30 @@ export default async function HojePage({
     empresaNome: n.empresa_nome ?? "—",
   }));
 
+  let acompQuery = supabase
+    .from("v_negociacoes")
+    .select(
+      "id, titulo, empresa_nome, faturado, entregue, pago, sem_acao, proxima_acao_descricao, responsavel_id, fechado_em",
+    )
+    .eq("status", "vendida")
+    .order("fechado_em", { ascending: false });
+  acompQuery = aplicarEscopoEmitente(acompQuery, escopo);
+  if (filtrarVendedor) {
+    acompQuery = acompQuery.eq("responsavel_id", filtrarVendedor);
+  }
+  const { data: acompRaw, error: acompErro } = await acompQuery;
+  const acompanhamento: VendaAcompanhamentoItem[] = acompErro
+    ? []
+    : (acompRaw ?? [])
+        .filter((n) => n.id && vendaEmAcompanhamento(n))
+        .map((n) => ({
+          id: n.id!,
+          titulo: n.titulo ?? "Sem título",
+          empresaNome: n.empresa_nome ?? "—",
+          proximaAcao: n.proxima_acao_descricao,
+          faltando: marcosPendentes(n),
+        }));
+
   // --- Orçamentos vencendo ---
   let orcQuery = supabase
     .from("orcamentos")
@@ -421,7 +447,7 @@ export default async function HojePage({
       <PaginaCabecalho
         titulo="Meu dia"
         subtitulo={dataHoje}
-        descricao="Ações atrasadas, ações do prazo escolhido, negociações sem próximo passo e orçamentos vencendo."
+        descricao="Ações atrasadas, ações do prazo escolhido, vendas em acompanhamento, negociações sem próximo passo e orçamentos vencendo."
         acoes={<BotaoExportar tela="acoes" filtros={{ vendedor: filtrarVendedor }} />}
       />
 
@@ -470,6 +496,7 @@ export default async function HojePage({
           atrasadas={atrasadas}
           deHoje={noPeriodo}
           semAcao={semAcao}
+          acompanhamento={acompanhamento}
           tituloPeriodo={tituloPeriodo}
           vazioPeriodo={vazioPeriodo}
         />
