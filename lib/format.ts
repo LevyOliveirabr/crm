@@ -123,6 +123,20 @@ export function adicionarDiasISO(dataISO: string, dias: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+/**
+ * Nova data ao adiar uma ação.
+ * Se a data já passou ou é hoje, parte de hoje (atrasada vai para amanhã).
+ * Se ainda é futura, soma os dias à própria data.
+ */
+export function dataAdiadaISO(
+  dataAcao: string,
+  dias: number,
+  hoje: string = hojeISO(),
+): string {
+  const base = dataAcao < hoje ? hoje : dataAcao;
+  return adicionarDiasISO(base, dias);
+}
+
 /** Início do mês corrente (yyyy-mm-01) em America/Sao_Paulo. */
 export function inicioMesAtualISO(): string {
   return `${hojeISO().slice(0, 7)}-01`;
