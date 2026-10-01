@@ -74,6 +74,7 @@ const TITULOS: Record<string, string> = {
   vencida: "Previsão vencida em aberto",
   pipeline_gerado: "Pipeline gerado no mês",
   uf: "Por estado",
+  emitente: "Por empresa vendedora",
   fechados: "Negócios fechados no período",
   motivo: "Perdas por motivo",
   risco: "Oportunidades em risco",
@@ -277,6 +278,25 @@ export default async function DashboardRelatorioPage({
         previsaoData: b.previsaoData,
       }));
     titulo = `Estado: ${chave}`;
+  } else if (fonte === "emitente" && chave) {
+    const daEmpresa = dados.base.filter((b) => b.emitenteId === chave);
+    itens = daEmpresa.map((b) => ({
+      id: b.id,
+      titulo: b.titulo,
+      empresaNome: b.empresaNome,
+      empresaId: b.empresaId,
+      responsavelNome: b.responsavelNome,
+      etapaNome: b.etapaNome,
+      valor: b.valor,
+      valorPrevisao: b.valorPrevisao,
+      previsaoMes: b.previsaoMes,
+      previsaoData: b.previsaoData,
+    }));
+    const nomeEmpresa =
+      daEmpresa.find((b) => b.emitenteNome)?.emitenteNome ??
+      escopo.empresas.find((e) => e.id === chave)?.nome ??
+      "—";
+    titulo = `Empresa vendedora: ${nomeEmpresa}`;
   } else if (fonte === "motivo" && chave) {
     itens = dados.fechadosPeriodo.filter(
       (n) =>

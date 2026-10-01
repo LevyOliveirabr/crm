@@ -678,6 +678,7 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 - `negociacao_parcelas (id, negociacao_id, mes date dia 1, valor numeric, ordem)`: várias previsões no tempo para o mesmo negócio. RLS igual às ações da negociação.
 - Formulário `/negociacoes/nova`: numa página, empresa (nova com UF), contato novo, negociação e próxima ação.
 - Dashboard: filtros de UF, origem, etapa e segmento aceitam várias opções. Relatórios: Negócios/ticket, Vendido e Aberto abrem a lista que forma o número.
+- Dashboard no escopo "Todas" (usuário com mais de uma empresa vendedora): painel "Por empresa vendedora" com uma linha por empresa — pipeline potencial (qtd) e participação %, previsão, forecast ponderado do mês, vendido vs meta de faturamento do mês, win rate do período e negócios em risco — mais a linha Total, que bate com os KPIs consolidados. Respeita os filtros atuais. Clicar na empresa abre `/dashboard?emitente=<id>` (override da URL, sem gravar o cookie `crm_emitente`); o valor do pipeline abre `/dashboard/relatorio?fonte=emitente&chave=<id>`. Com uma só empresa ou escopo fixo o painel não aparece. Sem mudança de banco: usa `emitente_id`/`emitente_nome` de `v_negociacoes` e `metas.emitente_id`.
 
 ## 4. Regras de negócio
 

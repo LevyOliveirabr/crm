@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { DashboardBase } from "@/components/crm/dashboard-base";
 import { DashboardCabecalho } from "@/components/crm/dashboard-cabecalho";
+import { ComparativoEmpresas } from "@/components/crm/dashboard-empresas";
 import { DashboardFiltros } from "@/components/crm/dashboard-filtros";
 import {
   FunilEstagios,
@@ -147,8 +148,10 @@ export default async function DashboardPage({
     isDiretor,
     equipeIds: idsEquipeVisivel(usuario, vendedores, escopo),
     emitenteId: escopo.emitenteId,
+    empresas: escopo.empresas.map((e) => ({ id: e.id, nome: e.nome })),
     usuarioId: usuario.id,
   };
+  const mostrarPorEmpresa = !escopo.emitenteId && escopo.empresas.length > 1;
 
   const [opcoes, dados, dadosNova] = await Promise.all([
     carregarOpcoesDashboard(supabase, vendedores),
@@ -193,7 +196,13 @@ export default async function DashboardPage({
         />
       </Suspense>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_232px] xl:[grid-template-areas:'pipeline_funil_kpis'_'fechamentos_risco_kpis'_'quebras_quebras_quebras'_'top_fechados_motivos'_'base_base_base']">
+      <div
+        className={
+          mostrarPorEmpresa
+            ? "grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_232px] xl:[grid-template-areas:'pipeline_funil_kpis'_'empresas_empresas_kpis'_'fechamentos_risco_kpis'_'quebras_quebras_quebras'_'top_fechados_motivos'_'base_base_base']"
+            : "grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_232px] xl:[grid-template-areas:'pipeline_funil_kpis'_'fechamentos_risco_kpis'_'quebras_quebras_quebras'_'top_fechados_motivos'_'base_base_base']"
+        }
+      >
         <div className="min-w-0 xl:[grid-area:pipeline]">
           <GraficoTrimestres barras={dados.trimestres} visao={filtros.visao} />
         </div>
@@ -203,6 +212,11 @@ export default async function DashboardPage({
         <div className="min-w-0 xl:[grid-area:funil]">
           <FunilEstagios funis={dados.funis} qs={qsStr} />
         </div>
+        {mostrarPorEmpresa ? (
+          <div className="min-w-0 xl:[grid-area:empresas]">
+            <ComparativoEmpresas itens={dados.porEmpresa} qs={qsStr} />
+          </div>
+        ) : null}
         <div className="min-w-0 xl:[grid-area:fechamentos]">
           <ListaNegociacoes
             titulo="Próximos fechamentos"
