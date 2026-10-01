@@ -46,6 +46,8 @@ export type FiltrosDashboard = {
   equipeIds?: string[] | null;
   /** Empresa vendedora selecionada; null = todas. */
   emitenteId?: string | null;
+  /** Empresas do escopo do usuário — base do comparativo quando "Todas". */
+  empresas?: { id: string; nome: string }[];
   /** Usuário logado — para separar meta pessoal da soma da equipe. */
   usuarioId?: string | null;
 };
@@ -166,6 +168,31 @@ export type MotivoPerdaItem = {
   valor: number;
 };
 
+/**
+ * Linha do comparativo por empresa vendedora (escopo "Todas"). Os valores
+ * seguem as mesmas regras dos KPIs consolidados; a soma das linhas é o total.
+ */
+export type EmpresaComparativo = {
+  emitenteId: string;
+  nome: string;
+  /** Pipeline potencial = Σ valor_estimado abertas. */
+  pipeline: number;
+  qtdAbertas: number;
+  /** Participação no pipeline potencial do grupo (0–100, uma casa). */
+  participacaoPct: number;
+  /** Previsão de faturamento = Σ valor_previsao efetivo. */
+  previsao: number;
+  /** Forecast ponderado do mês atual. */
+  forecastMes: number;
+  /** Vendido (valor final) no mês atual. */
+  vendidoMes: number;
+  /** Soma das metas de faturamento do mês na empresa. */
+  metaMes: number;
+  /** Win rate por valor no período; null sem fechamentos. */
+  winRate: number | null;
+  qtdEmRisco: number;
+};
+
 export type LinhaBase = {
   id: string;
   titulo: string;
@@ -173,6 +200,8 @@ export type LinhaBase = {
   empresaId: string;
   empresaNome: string;
   empresaUf: string | null;
+  emitenteId: string | null;
+  emitenteNome: string | null;
   responsavelNome: string;
   etapaNome: string;
   segmento: TipoSegmento | null;
@@ -195,6 +224,8 @@ export type DadosDashboard = {
   porTipoCliente: QuebraItem[];
   porOrigem: QuebraItem[];
   porUf: QuebraItem[];
+  /** Comparativo por empresa vendedora (ordenado por pipeline desc). */
+  porEmpresa: EmpresaComparativo[];
   previsaoVencidaLista: NegociacaoResumo[];
   top10: NegociacaoResumo[];
   /** Vendas do mês corrente (valor final) que formam o KPI Vendido no mês. */
@@ -224,6 +255,7 @@ export type FonteRelatorio =
   | "vencida"
   | "pipeline_gerado"
   | "uf"
+  | "emitente"
   | "fechados"
   | "motivo"
   | "risco"

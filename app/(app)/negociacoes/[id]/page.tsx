@@ -223,9 +223,15 @@ export default async function NegociacaoPage({
   let faturado = false;
   let valorFaturado: number | null = null;
   let faturadoEm: string | null = null;
+  let entregue = false;
+  let entregueEm: string | null = null;
+  let pago = false;
+  let pagoEm: string | null = null;
   const fatRes = await supabase
     .from("negociacoes")
-    .select("faturado, valor_faturado, faturado_em")
+    .select(
+      "faturado, valor_faturado, faturado_em, entregue, entregue_em, pago, pago_em",
+    )
     .eq("id", id)
     .maybeSingle();
   if (!fatRes.error && fatRes.data) {
@@ -233,6 +239,22 @@ export default async function NegociacaoPage({
     valorFaturado =
       fatRes.data.valor_faturado != null ? Number(fatRes.data.valor_faturado) : null;
     faturadoEm = fatRes.data.faturado_em;
+    entregue = Boolean(fatRes.data.entregue);
+    entregueEm = fatRes.data.entregue_em;
+    pago = Boolean(fatRes.data.pago);
+    pagoEm = fatRes.data.pago_em;
+  } else {
+    const legado = await supabase
+      .from("negociacoes")
+      .select("faturado, valor_faturado, faturado_em")
+      .eq("id", id)
+      .maybeSingle();
+    if (!legado.error && legado.data) {
+      faturado = Boolean(legado.data.faturado);
+      valorFaturado =
+        legado.data.valor_faturado != null ? Number(legado.data.valor_faturado) : null;
+      faturadoEm = legado.data.faturado_em;
+    }
   }
   const parcRes = await supabase
     .from("negociacao_parcelas")
@@ -299,6 +321,10 @@ export default async function NegociacaoPage({
       faturado={faturado}
       valorFaturado={valorFaturado}
       faturadoEm={faturadoEm}
+      entregue={entregue}
+      entregueEm={entregueEm}
+      pago={pago}
+      pagoEm={pagoEm}
       parcelas={parcelas}
     />
   );

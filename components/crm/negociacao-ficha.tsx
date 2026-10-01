@@ -232,6 +232,10 @@ export function NegociacaoFicha({
   faturado = false,
   valorFaturado = null,
   faturadoEm = null,
+  entregue = false,
+  entregueEm = null,
+  pago = false,
+  pagoEm = null,
   parcelas = [],
 }: {
   negociacao: NegociacaoFichaData;
@@ -249,6 +253,10 @@ export function NegociacaoFicha({
   faturado?: boolean;
   valorFaturado?: number | null;
   faturadoEm?: string | null;
+  entregue?: boolean;
+  entregueEm?: string | null;
+  pago?: boolean;
+  pagoEm?: string | null;
   parcelas?: ParcelaFicha[];
 }) {
   const router = useRouter();
@@ -302,6 +310,7 @@ export function NegociacaoFicha({
   });
 
   const aberta = n.status === "aberta";
+  const acompanha = aberta || n.status === "vendida";
 
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];
@@ -606,7 +615,7 @@ export function NegociacaoFicha({
             titulo="Próxima ação"
             destaque={Boolean(proximaAcao && proximaAcao.data < hojeISO())}
             acoes={
-              aberta ? (
+              acompanha ? (
                 <Button
                   type="button"
                   size="sm"
@@ -629,7 +638,7 @@ export function NegociacaoFicha({
                     <span className="ml-1.5 text-destructive">atrasada</span>
                   ) : null}
                 </p>
-                {aberta ? (
+                {acompanha ? (
                   <div className="flex flex-wrap gap-1.5">
                     <Button
                       type="button"
@@ -683,14 +692,18 @@ export function NegociacaoFicha({
               </div>
             ) : (
               <EstadoVazio
-                texto="Nenhuma ação pendente. Toda negociação aberta deveria ter um próximo passo."
+                texto={
+                  n.status === "vendida"
+                    ? "Nenhuma ação pendente. Defina o próximo passo do faturamento, da entrega ou do pagamento."
+                    : "Nenhuma ação pendente. Toda negociação aberta deveria ter um próximo passo."
+                }
                 compacto
               />
             )}
           </Secao>
 
           {/* Registro rápido */}
-          {aberta ? (
+          {acompanha ? (
             <Secao
               titulo="Registrar interação"
               meta="um toque para gravar na linha do tempo"
@@ -903,6 +916,10 @@ export function NegociacaoFicha({
                 faturado={faturado}
                 valorFaturado={valorFaturado}
                 faturadoEm={faturadoEm}
+                entregue={entregue}
+                entregueEm={entregueEm}
+                pago={pago}
+                pagoEm={pagoEm}
                 parcelas={parcelas}
               />
 
@@ -1256,6 +1273,7 @@ export function NegociacaoFicha({
                     valorFinal: v,
                     fechadoEm: new Date().toISOString(),
                   }));
+                  if (res.precisaProximaAcao) setMiniOpen(true);
                 })
               }
             >

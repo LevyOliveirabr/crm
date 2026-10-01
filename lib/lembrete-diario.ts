@@ -4,6 +4,7 @@ import { getAppUrl } from "@/lib/app-url";
 import type { Database } from "@/lib/database.types";
 import { emailHabilitado, enviarEmail, escaparHtml } from "@/lib/email";
 import { formatarData, formatarMoeda, hojeISO } from "@/lib/format";
+import { vendaEmAcompanhamento } from "@/lib/pos-venda";
 
 type Client = SupabaseClient<Database>;
 
@@ -32,6 +33,8 @@ export type ResumoLembrete = {
     atrasadas: AcaoLembrete[];
     deHoje: AcaoLembrete[];
     semAcao: number;
+    /** Vendas ainda sem faturar, entregar ou receber, ou com tarefa aberta. */
+    emAcompanhamento: number;
   }[];
 };
 
@@ -54,7 +57,13 @@ export async function montarResumoDiario(
 ): Promise<ResumoLembrete> {
   const hoje = hojeISO();
 
-  const [{ data: usuarios }, { data: acoesRaw }, { data: semAcaoRaw }, { data: diretoresRaw }] =
+  const [
+    { data: usuarios },
+    { data: acoesRaw },
+    { data: semAcaoRaw },
+    { data: diretoresRaw },
+    { data: acompRaw, error: acompErro },
+  ] =
     await Promise.all([
       supabase
         .from("usuarios")
@@ -69,7 +78,7 @@ export async function montarResumoDiario(
         )
         .is("concluida_em", null)
         .lte("data", hoje)
-        .eq("negociacoes.status", "aberta")
+        .in("negociacoes.status", ["aberta", "vendida"])
         .is("negociacoes.arquivado_em", null)
         .order("data", { ascending: true }),
       supabase
@@ -78,6 +87,10 @@ export async function montarResumoDiario(
         .eq("status", "aberta")
         .eq("sem_acao", true),
       supabase.from("usuario_emitentes").select("usuario_id").eq("perfil", "diretor"),
+      supabase
+        .from("v_negociacoes")
+        .select("id, responsavel_id, faturado, entregue, pago, sem_acao")
+        .eq("status", "vendida"),
     ]);
   const diretores = new Set((diretoresRaw ?? []).map((d) => d.usuario_id));
 
@@ -136,6 +149,14 @@ export async function montarResumoDiario(
     semAcaoPor.set(n.responsavel_id, (semAcaoPor.get(n.responsavel_id) ?? 0) + 1);
   }
 
+  const acompPor = new Map<string, number>();
+  if (!acompErro) {
+    for (const n of acompRaw ?? []) {
+      if (!n.responsavel_id || !vendaEmAcompanhamento(n)) continue;
+      acompPor.set(n.responsavel_id, (acompPor.get(n.responsavel_id) ?? 0) + 1);
+    }
+  }
+
   return {
     hoje,
     usuarios: (usuarios ?? []).map((u) => ({
@@ -146,6 +167,7 @@ export async function montarResumoDiario(
       atrasadas: acoes.filter((a) => a.responsavelId === u.id && a.atrasada),
       deHoje: acoes.filter((a) => a.responsavelId === u.id && !a.atrasada),
       semAcao: semAcaoPor.get(u.id) ?? 0,
+      emAcompanhamento: acompPor.get(u.id) ?? 0,
     })),
   };
 }
@@ -190,6 +212,9 @@ export function htmlLembreteVendedor(
   if (u.semAcao > 0) {
     partes.push(`<p style="margin:18px 0 0;color:#666;font-size:13px">${u.semAcao} negociação(ões) aberta(s) sem próxima ação. <a href="${appUrl}/hoje" style="color:#111">Definir agora</a>.</p>`);
   }
+  if (u.emAcompanhamento > 0) {
+    partes.push(`<p style="margin:18px 0 0;color:#666;font-size:13px">${u.emAcompanhamento} venda(s) em acompanhamento (faturamento, entrega ou pagamento). <a href="${appUrl}/hoje" style="color:#111">Abrir Meu dia</a>.</p>`);
+  }
   if (partes.length === 0) {
     partes.push(`<p style="margin:18px 0 0">Nenhuma ação pendente. Bom dia de prospecção!</p>`);
   }
@@ -205,6 +230,9 @@ export function htmlLembreteVendedor(
     ...u.atrasadas.map((a) => `[ATRASADA ${formatarData(a.data)}] ${a.descricao} — ${a.empresaNome}`),
     ...u.deHoje.map((a) => `[HOJE] ${a.descricao} — ${a.empresaNome}`),
     u.semAcao > 0 ? `${u.semAcao} negociação(ões) sem próxima ação.` : "",
+    u.emAcompanhamento > 0
+      ? `${u.emAcompanhamento} venda(s) em acompanhamento.`
+      : "",
     `${appUrl}/hoje`,
   ]
     .filter(Boolean)
@@ -236,6 +264,7 @@ export function htmlResumoDiretor(
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 8);
 
+  const totalAcomp = resumo.usuarios.reduce((s, u) => s + u.emAcompanhamento, 0);
   const subject = `Equipe hoje · ${formatarData(resumo.hoje)}: ${totalAtrasadas} atrasada(s), ${totalHoje} para hoje`;
   const html = envelope(
     cabecalho("Resumo da equipe", `Ações pendentes em ${formatarData(resumo.hoje)}`) +
@@ -257,12 +286,20 @@ export function htmlResumoDiretor(
                .join("")}</ul>`
           : ""
       }
+      ${
+        totalAcomp > 0
+          ? `<p style="margin:18px 0 0;color:#666;font-size:13px">${totalAcomp} venda(s) em acompanhamento (faturamento, entrega ou pagamento).</p>`
+          : ""
+      }
       <p style="margin:22px 0 0"><a href="${appUrl}/dashboard" style="display:inline-block;background:#111;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none;font-weight:600">Abrir dashboard</a></p>
       </div>`,
   );
   const text = [
     `Resumo da equipe ${formatarData(resumo.hoje)}`,
-    ...vendedores.map((u) => `${u.nome}: ${u.atrasadas.length} atrasadas, ${u.deHoje.length} hoje, ${u.semAcao} sem ação`),
+    ...vendedores.map(
+      (u) =>
+        `${u.nome}: ${u.atrasadas.length} atrasadas, ${u.deHoje.length} hoje, ${u.semAcao} sem ação, ${u.emAcompanhamento} em acompanhamento`,
+    ),
     `${appUrl}/dashboard`,
   ].join("\n");
   return { subject, html, text };
@@ -286,7 +323,8 @@ export async function executarLembreteDiario(supabase: Client): Promise<{
 
   for (const u of resumo.usuarios) {
     if (!u.email) continue;
-    const temPendencia = u.atrasadas.length + u.deHoje.length + u.semAcao > 0;
+    const temPendencia =
+      u.atrasadas.length + u.deHoje.length + u.semAcao + u.emAcompanhamento > 0;
     if (!temPendencia) {
       pulados += 1;
       continue;
