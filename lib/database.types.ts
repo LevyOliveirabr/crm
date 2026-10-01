@@ -292,6 +292,10 @@ export type Database = {
           faturado: boolean;
           valor_faturado: number | null;
           faturado_em: string | null;
+          entregue: boolean;
+          entregue_em: string | null;
+          pago: boolean;
+          pago_em: string | null;
           negociacao_origem_id: string | null;
           temperatura: number;
           previsao_mes: string | null;
@@ -325,6 +329,10 @@ export type Database = {
           faturado?: boolean;
           valor_faturado?: number | null;
           faturado_em?: string | null;
+          entregue?: boolean;
+          entregue_em?: string | null;
+          pago?: boolean;
+          pago_em?: string | null;
           negociacao_origem_id?: string | null;
           temperatura?: number;
           previsao_mes?: string | null;
@@ -359,6 +367,10 @@ export type Database = {
           faturado?: boolean;
           valor_faturado?: number | null;
           faturado_em?: string | null;
+          entregue?: boolean;
+          entregue_em?: string | null;
+          pago?: boolean;
+          pago_em?: string | null;
           negociacao_origem_id?: string | null;
           temperatura?: number;
           previsao_mes?: string | null;
@@ -1151,6 +1163,10 @@ export type Database = {
           faturado: boolean | null;
           valor_faturado: number | null;
           faturado_em: string | null;
+          entregue: boolean | null;
+          entregue_em: string | null;
+          pago: boolean | null;
+          pago_em: string | null;
           negociacao_origem_id: string | null;
           temperatura: number | null;
           previsao_mes: string | null;

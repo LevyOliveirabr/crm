@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   clonarNegociacao,
   excluirParcela,
+  marcarEntregue,
   marcarFaturado,
+  marcarPago,
   salvarParcela,
 } from "@/lib/actions/negociacoes";
 import { formatarMoeda, hojeISO, parseMoedaBR } from "@/lib/format";
@@ -26,6 +28,10 @@ export function NegociacaoComplementos({
   faturado,
   valorFaturado,
   faturadoEm,
+  entregue,
+  entregueEm,
+  pago,
+  pagoEm,
   parcelas,
 }: {
   negociacaoId: string;
@@ -34,6 +40,10 @@ export function NegociacaoComplementos({
   faturado: boolean;
   valorFaturado: number | null;
   faturadoEm: string | null;
+  entregue: boolean;
+  entregueEm: string | null;
+  pago: boolean;
+  pagoEm: string | null;
   parcelas: ParcelaFicha[];
 }) {
   const router = useRouter();
@@ -47,6 +57,8 @@ export function NegociacaoComplementos({
         : "",
   );
   const [dataFat, setDataFat] = useState(faturadoEm ?? hojeISO());
+  const [dataEnt, setDataEnt] = useState(entregueEm ?? hojeISO());
+  const [dataPag, setDataPag] = useState(pagoEm ?? hojeISO());
   const [mesParc, setMesParc] = useState(hojeISO().slice(0, 7));
   const [valorParc, setValorParc] = useState("");
 
@@ -58,6 +70,12 @@ export function NegociacaoComplementos({
     });
   }
 
+  function dataBR(iso: string | null): string {
+    if (!iso) return "";
+    const [y, m, d] = iso.slice(0, 10).split("-");
+    return d && m && y ? `${d}/${m}/${y}` : iso;
+  }
+
   function faturar() {
     const valor = parseMoedaBR(valorFat) ?? Number(valorFat.replace(",", "."));
     if (valor == null || Number.isNaN(valor)) {
@@ -67,6 +85,24 @@ export function NegociacaoComplementos({
     setErro(null);
     startTransition(async () => {
       const res = await marcarFaturado(negociacaoId, valor, dataFat);
+      if (!res.ok) setErro(res.error);
+      else router.refresh();
+    });
+  }
+
+  function entregar() {
+    setErro(null);
+    startTransition(async () => {
+      const res = await marcarEntregue(negociacaoId, dataEnt);
+      if (!res.ok) setErro(res.error);
+      else router.refresh();
+    });
+  }
+
+  function receber() {
+    setErro(null);
+    startTransition(async () => {
+      const res = await marcarPago(negociacaoId, dataPag);
       if (!res.ok) setErro(res.error);
       else router.refresh();
     });
@@ -123,6 +159,44 @@ export function NegociacaoComplementos({
             </label>
             <Button type="button" size="sm" disabled={pending} onClick={faturar}>
               {faturado ? "Atualizar faturamento" : "Marcar como faturado"}
+            </Button>
+          </div>
+          <p className="text-sm font-medium">
+            {entregue
+              ? `Entregue em ${dataBR(entregueEm)}`
+              : "Entrega ainda não marcada"}
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+              Data da entrega
+              <Input
+                type="date"
+                value={dataEnt}
+                onChange={(e) => setDataEnt(e.target.value)}
+                className="h-8"
+              />
+            </label>
+            <Button type="button" size="sm" disabled={pending} onClick={entregar}>
+              {entregue ? "Atualizar entrega" : "Marcar entrega"}
+            </Button>
+          </div>
+          <p className="text-sm font-medium">
+            {pago
+              ? `Pagamento recebido em ${dataBR(pagoEm)}`
+              : "Pagamento ainda não marcado"}
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+              Data do pagamento
+              <Input
+                type="date"
+                value={dataPag}
+                onChange={(e) => setDataPag(e.target.value)}
+                className="h-8"
+              />
+            </label>
+            <Button type="button" size="sm" disabled={pending} onClick={receber}>
+              {pago ? "Atualizar pagamento" : "Marcar pagamento"}
             </Button>
           </div>
         </div>

@@ -28,6 +28,7 @@ describe("lembrete diário", () => {
         atrasadas: [acao()],
         deHoje: [acao({ id: "a2", data: "2026-09-19", atrasada: false })],
         semAcao: 2,
+        emAcompanhamento: 1,
       },
       "2026-09-19",
     );
@@ -36,19 +37,21 @@ describe("lembrete diário", () => {
     expect(msg.html).not.toContain("<Engenharia>");
     expect(msg.html).toContain("/negociacoes/n1");
     expect(msg.text).toContain("[ATRASADA 18/09/2026]");
+    expect(msg.html).toContain("venda(s) em acompanhamento");
   });
 
   it("resumo do diretor lista cada vendedor", () => {
     const msg = htmlResumoDiretor({
       hoje: "2026-09-19",
       usuarios: [
-        { id: "u1", nome: "Ana", email: "a@x.com", diretor: false, atrasadas: [acao()], deHoje: [], semAcao: 0 },
-        { id: "u2", nome: "Bia", email: "b@x.com", diretor: false, atrasadas: [], deHoje: [], semAcao: 3 },
+        { id: "u1", nome: "Ana", email: "a@x.com", diretor: false, atrasadas: [acao()], deHoje: [], semAcao: 0, emAcompanhamento: 0 },
+        { id: "u2", nome: "Bia", email: "b@x.com", diretor: false, atrasadas: [], deHoje: [], semAcao: 3, emAcompanhamento: 1 },
       ],
     });
     expect(msg.subject).toContain("1 atrasada(s)");
     expect(msg.html).toContain("Ana");
     expect(msg.html).toContain("Bia");
-    expect(msg.text).toContain("Bia: 0 atrasadas, 0 hoje, 3 sem ação");
+    expect(msg.text).toContain("Bia: 0 atrasadas, 0 hoje, 3 sem ação, 1 em acompanhamento");
+    expect(msg.html).toContain("venda(s) em acompanhamento");
   });
 });

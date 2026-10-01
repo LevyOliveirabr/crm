@@ -39,6 +39,14 @@ export type NegociacaoSemAcaoItem = {
   empresaNome: string;
 };
 
+export type VendaAcompanhamentoItem = {
+  id: string;
+  titulo: string;
+  empresaNome: string;
+  proximaAcao: string | null;
+  faltando: string[];
+};
+
 const TIPO_ICONE: Record<
   TipoAcao,
   React.ComponentType<{ className?: string }>
@@ -64,6 +72,7 @@ export function HojeInterativo({
   atrasadas,
   deHoje,
   semAcao,
+  acompanhamento = [],
   tituloAtrasadas = "Ações atrasadas",
   tituloPeriodo = "Para hoje",
   vazioPeriodo = "Nenhuma ação agendada para hoje.",
@@ -71,6 +80,7 @@ export function HojeInterativo({
   atrasadas: AcaoHojeItem[];
   deHoje: AcaoHojeItem[];
   semAcao: NegociacaoSemAcaoItem[];
+  acompanhamento?: VendaAcompanhamentoItem[];
   tituloAtrasadas?: string;
   tituloPeriodo?: string;
   vazioPeriodo?: string;
@@ -147,6 +157,64 @@ export function HojeInterativo({
           onConcluir={onConcluir}
           onAdiar={onAdiar}
         />
+
+        <Secao
+          titulo="Vendas em acompanhamento"
+          meta={
+            acompanhamento.length > 0 ? (
+              <Contador valor={acompanhamento.length} tom="alerta" />
+            ) : undefined
+          }
+        >
+          {acompanhamento.length === 0 ? (
+            <EstadoVazio
+              texto="Nenhuma venda aguardando faturamento, entrega ou pagamento."
+              compacto
+            />
+          ) : (
+            <ul className="divide-y divide-border">
+              {acompanhamento.map((n) => (
+                <li
+                  key={n.id}
+                  className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/negociacoes/${n.id}`}
+                      className="block truncate text-sm font-medium hover:underline"
+                    >
+                      {n.titulo}
+                    </Link>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {n.empresaNome}
+                      {n.faltando.length > 0 ? (
+                        <>
+                          <span className="mx-1 opacity-50">·</span>
+                          {n.faltando.join(" · ")}
+                        </>
+                      ) : null}
+                    </p>
+                    {n.proximaAcao ? (
+                      <p className="truncate text-xs text-foreground">
+                        {n.proximaAcao}
+                      </p>
+                    ) : null}
+                  </div>
+                  {n.proximaAcao ? null : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => abrirMini(n.id)}
+                    >
+                      Definir ação
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Secao>
       </div>
 
       <Secao
