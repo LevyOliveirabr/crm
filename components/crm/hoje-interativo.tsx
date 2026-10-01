@@ -249,9 +249,12 @@ function SecaoAcoes({
                     <Icon className="size-3.5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
+                    <Link
+                      href={`/negociacoes/${acao.negociacaoId}`}
+                      className="block truncate text-sm font-medium hover:underline"
+                    >
                       {acao.descricao}
-                    </p>
+                    </Link>
                     <p className="truncate text-xs text-muted-foreground">
                       {acao.empresaNome}
                       <span className="mx-1 opacity-50">·</span>
