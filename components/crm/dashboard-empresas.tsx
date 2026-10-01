@@ -157,7 +157,7 @@ export function ComparativoEmpresas({
                       key={c.chave}
                       scope="col"
                       className={cn(
-                        "eyebrow pb-2 font-semibold",
+                        "eyebrow pb-2 pr-3 font-semibold last:pr-0",
                         c.alinhar === "right" && "text-right",
                         c.chave === "empresa" && "w-[22%]",
                         c.chave === "meta" && "w-[18%]",
