@@ -228,6 +228,7 @@ export default async function HojePage({
       negociacao_id,
       negociacoes!inner (
         id,
+        titulo,
         status,
         arquivado_em,
         responsavel_id,
@@ -269,6 +270,7 @@ export default async function HojePage({
     negociacoes:
       | {
           id: string;
+          titulo: string | null;
           status: string;
           arquivado_em: string | null;
           responsavel_id: string;
@@ -276,6 +278,7 @@ export default async function HojePage({
         }
       | {
           id: string;
+          titulo: string | null;
           status: string;
           arquivado_em: string | null;
           responsavel_id: string;
@@ -284,13 +287,24 @@ export default async function HojePage({
       | null;
   };
 
-  function empresaDe(join: AcaoJoin["negociacoes"]): string {
+  function empresaDe(
+    join:
+      | { empresas: { nome: string } | { nome: string }[] | null }
+      | { empresas: { nome: string } | { nome: string }[] | null }[]
+      | null,
+  ): string {
     const neg = Array.isArray(join) ? join[0] : join;
     if (!neg) return "—";
     const emp = neg.empresas;
     if (!emp) return "—";
     if (Array.isArray(emp)) return emp[0]?.nome ?? "—";
     return emp.nome ?? "—";
+  }
+
+  function tituloDe(join: AcaoJoin["negociacoes"]): string {
+    const neg = Array.isArray(join) ? join[0] : join;
+    const titulo = neg?.titulo?.trim();
+    return titulo || "—";
   }
 
   const acoes: AcaoHojeItem[] = ((acoesRaw ?? []) as unknown as AcaoJoin[])
@@ -309,7 +323,7 @@ export default async function HojePage({
       tipo: a.tipo,
       data: a.data,
       negociacaoId: a.negociacao_id,
-      empresaNome: empresaDe(a.negociacoes),
+      negociacaoTitulo: tituloDe(a.negociacoes),
       atrasada: a.data < hoje,
     }));
 

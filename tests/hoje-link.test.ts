@@ -26,7 +26,7 @@ const acao = {
   tipo: "ligar" as const,
   data: "2026-09-30",
   negociacaoId: "neg-42",
-  empresaNome: "Remo Engenharia",
+  negociacaoTitulo: "[Iluminação industrial] Metro SP - Linha 15",
   atrasada: false,
 };
 
@@ -56,5 +56,7 @@ describe("tarefas de Meu dia", () => {
     );
     expect(html).toContain("Adiar 1 dia");
     expect(html).toContain("Concluir");
+    expect(html).toContain("[Iluminação industrial] Metro SP - Linha 15");
+    expect(html).not.toContain("truncate text-xs text-muted-foreground");
   });
 });
