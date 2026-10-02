@@ -219,7 +219,7 @@ function iconeTimeline(item: TimelineItem) {
 export function NegociacaoFicha({
   negociacao: inicial,
   etapas,
-  proximaAcao,
+  acoesAbertas,
   acoesConcluidas,
   interacoes,
   orcamentos,
@@ -240,7 +240,7 @@ export function NegociacaoFicha({
 }: {
   negociacao: NegociacaoFichaData;
   etapas: EtapaBarra[];
-  proximaAcao: AcaoFicha | null;
+  acoesAbertas: AcaoFicha[];
   acoesConcluidas: AcaoFicha[];
   interacoes: InteracaoFicha[];
   orcamentos: OrcamentoFicha[];
@@ -299,6 +299,7 @@ export function NegociacaoFicha({
   const [orcArquivo, setOrcArquivo] = useState<File | null>(null);
   const [orcAtualizarValor, setOrcAtualizarValor] = useState(true);
 
+  const [acaoEditId, setAcaoEditId] = useState<string | null>(null);
   const [acaoEdit, setAcaoEdit] = useState({
     descricao: "",
     data: hojeISO(),
@@ -613,7 +614,7 @@ export function NegociacaoFicha({
           {/* Próxima ação */}
           <Secao
             titulo="Próxima ação"
-            destaque={Boolean(proximaAcao && proximaAcao.data < hojeISO())}
+            destaque={acoesAbertas.some((acao) => acao.data < hojeISO())}
             acoes={
               acompanha ? (
                 <Button
@@ -629,67 +630,77 @@ export function NegociacaoFicha({
               ) : undefined
             }
           >
-            {proximaAcao ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{proximaAcao.descricao}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatarData(proximaAcao.data)}
-                  {proximaAcao.data < hojeISO() ? (
-                    <span className="ml-1.5 text-destructive">atrasada</span>
-                  ) : null}
-                </p>
-                {acompanha ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={pending}
-                      onClick={() =>
-                        run(async () => {
-                          const res = await concluirAcao(proximaAcao.id);
-                          if (!res.ok) {
-                            setErro(res.error);
-                            return;
+            {acoesAbertas.length > 0 ? (
+              <ul className="divide-y divide-border">
+                {acoesAbertas.map((acao) => (
+                  <li
+                    key={acao.id}
+                    className="space-y-2 py-2.5 first:pt-0 last:pb-0"
+                  >
+                    <p className="break-words text-sm font-medium">
+                      {acao.descricao}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatarData(acao.data)}
+                      {acao.data < hojeISO() ? (
+                        <span className="ml-1.5 text-destructive">atrasada</span>
+                      ) : null}
+                    </p>
+                    {acompanha ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={pending}
+                          onClick={() =>
+                            run(async () => {
+                              const res = await concluirAcao(acao.id);
+                              if (!res.ok) {
+                                setErro(res.error);
+                                return;
+                              }
+                              if (res.precisaProximaAcao) setMiniOpen(true);
+                            })
                           }
-                          if (res.precisaProximaAcao) setMiniOpen(true);
-                        })
-                      }
-                    >
-                      <Check className="size-3.5" />
-                      Concluir
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={pending}
-                      onClick={() =>
-                        run(async () => {
-                          const res = await adiarAcao(proximaAcao.id, 1);
-                          if (!res.ok) setErro(res.error);
-                        })
-                      }
-                    >
-                      Adiar
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={pending}
-                      onClick={() => {
-                        setAcaoEdit({
-                          descricao: proximaAcao.descricao,
-                          data: proximaAcao.data,
-                        });
-                        setEditarAcaoOpen(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
+                        >
+                          <Check className="size-3.5" />
+                          Concluir
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() =>
+                            run(async () => {
+                              const res = await adiarAcao(acao.id, 1);
+                              if (!res.ok) setErro(res.error);
+                            })
+                          }
+                        >
+                          Adiar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={pending}
+                          onClick={() => {
+                            setAcaoEditId(acao.id);
+                            setAcaoEdit({
+                              descricao: acao.descricao,
+                              data: acao.data,
+                            });
+                            setEditarAcaoOpen(true);
+                          }}
+                        >
+                          Editar
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             ) : (
               <EstadoVazio
                 texto={
@@ -1537,12 +1548,12 @@ export function NegociacaoFicha({
           <DialogFooter>
             <Button
               type="button"
-              disabled={pending || !proximaAcao || !acaoEdit.descricao.trim()}
+              disabled={pending || !acaoEditId || !acaoEdit.descricao.trim()}
               onClick={() =>
                 run(async () => {
-                  if (!proximaAcao) return;
+                  if (!acaoEditId) return;
                   const res = await atualizarAcao({
-                    id: proximaAcao.id,
+                    id: acaoEditId,
                     descricao: acaoEdit.descricao,
                     data: acaoEdit.data,
                   });
