@@ -29,7 +29,7 @@ export type AcaoHojeItem = {
   tipo: TipoAcao;
   data: string;
   negociacaoId: string;
-  empresaNome: string;
+  negociacaoTitulo: string;
   atrasada: boolean;
 };
 
@@ -323,8 +323,8 @@ function SecaoAcoes({
                     >
                       {acao.descricao}
                     </Link>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {acao.empresaNome}
+                    <p className="break-words text-xs text-muted-foreground">
+                      {acao.negociacaoTitulo}
                       <span className="mx-1 opacity-50">·</span>
                       {TIPO_LABEL[acao.tipo]}
                       <span className="mx-1 opacity-50">·</span>

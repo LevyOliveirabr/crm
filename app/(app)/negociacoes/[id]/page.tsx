@@ -176,8 +176,7 @@ export default async function NegociacaoPage({
     criadoEm: a.criado_em,
   }));
 
-  const proximaAcao =
-    acoesList.find((a) => a.concluidaEm == null) ?? null;
+  const acoesAbertas = acoesList.filter((a) => a.concluidaEm == null);
   const acoesConcluidas = acoesList.filter((a) => a.concluidaEm != null);
 
   const interacoes: InteracaoFicha[] = (interacoesRaw ?? []).map((i) => {
@@ -308,7 +307,7 @@ export default async function NegociacaoPage({
         nome: e.nome,
         ordem: e.ordem,
       }))}
-      proximaAcao={proximaAcao}
+      acoesAbertas={acoesAbertas}
       acoesConcluidas={acoesConcluidas}
       interacoes={interacoes}
       orcamentos={orcamentos}
