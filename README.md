@@ -25,6 +25,18 @@ npm run dev
 
 Abra [http://localhost:3000](http://localhost:3000).
 
+## Login com Google (configuração única)
+
+O botão "Entrar com Google" usa o provider Google do Supabase Auth. Não há código extra a configurar; só os painéis:
+
+1. **Google Cloud Console** → APIs e Serviços → Credenciais → Criar ID do cliente OAuth (tipo "Aplicativo da Web").
+   - Origens JavaScript autorizadas: `https://crm-fled.vercel.app` e `http://localhost:3000`.
+   - URI de redirecionamento autorizado: `https://<ref-do-projeto>.supabase.co/auth/v1/callback`.
+   - Configure a tela de consentimento (nome do app, e-mail de suporte).
+2. **Supabase** → Authentication → Sign In / Providers → Google: ativar e colar Client ID e Client Secret.
+3. **Supabase** → Authentication → Sign In / Providers → **desligar "Allow new users to sign up"**. Isso garante que só e-mails convidados pelo diretor conseguem entrar com Google (o convite via Admin API continua funcionando).
+4. **Supabase** → Authentication → URL Configuration → Redirect URLs: incluir `https://crm-fled.vercel.app/auth/callback` e `http://localhost:3000/auth/callback`.
+
 ## Stack
 
 Next.js (App Router) · TypeScript · Tailwind/shadcn · Supabase (Auth + Postgres + RLS) · MCP Streamable HTTP · Deploy Vercel (`gru1`).

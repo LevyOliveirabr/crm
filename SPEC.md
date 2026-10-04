@@ -720,7 +720,9 @@ Rotas do App Router. Layout: sidebar no desktop (≥ 1024px), barra inferior no 
 ### 5.1 `/login`
 Supabase Auth com e-mail + senha (magic link opcional). Sem cadastro público; o diretor cria usuários em Configurações (função server-side com service role, envia convite por e-mail).
 
-**Aceite:** usuário inativo não entra. Após login, redireciona para `/hoje`.
+Login com Google (OAuth do Supabase, botão "Entrar com Google") disponível ao lado de e-mail + senha. Só funciona para e-mails previamente convidados pelo diretor: a opção "Allow new users to sign up" fica desligada no Supabase, então um Google não convidado é recusado e volta para `/login?erro=google`. Quem já tem senha pode usar os dois; o Supabase vincula a identidade Google ao mesmo usuário quando o e-mail coincide.
+
+**Aceite:** usuário inativo não entra (por senha ou por Google). Após login, redireciona para `/hoje`. Google com e-mail não convidado não cria usuário.
 
 ### 5.2 `/hoje` (tela inicial)
 Blocos, nesta ordem:

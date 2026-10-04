@@ -77,7 +77,8 @@ export async function atualizarSessao(request: NextRequest) {
 
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/hoje";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
