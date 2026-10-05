@@ -286,7 +286,9 @@ export function NegociacaoFicha({
   const [contatoNovoOpen, setContatoNovoOpen] = useState(false);
   const [miniOpen, setMiniOpen] = useState(false);
 
-  const [vendaValor, setVendaValor] = useState(String(inicial.valorEstimado));
+  const [vendaValor, setVendaValor] = useState(() =>
+    formatarMoeda(inicial.valorEstimado).replace(/^R\$\s?/, ""),
+  );
   const [vendaMes, setVendaMes] = useState(() =>
     inicioMesAtualISO().slice(0, 7),
   );
@@ -477,7 +479,9 @@ export function NegociacaoFicha({
                   className="rounded-full px-4 font-semibold"
                   disabled={pending}
                   onClick={() => {
-                    setVendaValor(String(n.valorEstimado));
+                    setVendaValor(
+                      formatarMoeda(n.valorEstimado).replace(/^R\$\s?/, ""),
+                    );
                     setVendaMes(inicioMesAtualISO().slice(0, 7));
                     setVendaOpen(true);
                   }}

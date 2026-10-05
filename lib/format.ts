@@ -170,6 +170,8 @@ export function normalizarNome(valor: string): string {
 
 /**
  * Interpreta texto de moeda BR (`1.234,56`, `R$ 50`, `50`) como número.
+ * Sem vírgula e com um único ponto seguido de 1–2 dígitos (`16259.44`,
+ * formato de `String(numero)`), o ponto é decimal — `16.000` segue sendo milhar.
  * Retorna `null` se não for possível interpretar.
  */
 export function parseMoedaBR(valor: string | number | null | undefined): number | null {
@@ -177,9 +179,14 @@ export function parseMoedaBR(valor: string | number | null | undefined): number 
     return Number.isFinite(valor) ? valor : null;
   }
   if (valor == null) return null;
-  const limpo = String(valor)
+  const semSimbolo = String(valor)
     .trim()
-    .replace(/[R$\s]/gi, "")
+    .replace(/[R$\s]/gi, "");
+  if (/^-?\d+\.\d{1,2}$/.test(semSimbolo)) {
+    const n = Number(semSimbolo);
+    return Number.isFinite(n) ? n : null;
+  }
+  const limpo = semSimbolo
     .replace(/\./g, "")
     .replace(",", ".");
   if (!limpo) return 0;

@@ -30,6 +30,20 @@ describe("moeda", () => {
     expect(parseMoedaBR("")).toBe(0);
     expect(parseMoedaBR("abc")).toBeNull();
   });
+
+  it("não confunde ponto decimal de String(numero) com milhar", () => {
+    expect(parseMoedaBR("16259.44")).toBe(16259.44);
+    expect(parseMoedaBR("1.5")).toBe(1.5);
+    expect(parseMoedaBR("16.000")).toBe(16000);
+    expect(parseMoedaBR("16.259,44")).toBe(16259.44);
+    expect(parseMoedaBR("1.234.567,89")).toBe(1234567.89);
+    expect(parseMoedaBR("16000,00")).toBe(16000);
+  });
+
+  it("pré-preenchimento formatado volta ao mesmo número", () => {
+    const texto = formatarMoeda(16259.44).replace(/^R\$\s?/, "");
+    expect(parseMoedaBR(texto)).toBe(16259.44);
+  });
 });
 
 describe("datas", () => {
