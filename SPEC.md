@@ -681,6 +681,13 @@ O CRM atende várias empresas do grupo que vendem para os mesmos clientes.
 - Dashboard: filtros de UF, origem, etapa e segmento aceitam várias opções. Relatórios: Negócios/ticket, Vendido e Aberto abrem a lista que forma o número.
 - Dashboard no escopo "Todas" (usuário com mais de uma empresa vendedora): painel "Por empresa vendedora" com uma linha por empresa — pipeline potencial (qtd) e participação %, previsão, forecast ponderado do mês, vendido vs meta de faturamento do mês, win rate do período e negócios em risco — mais a linha Total, que bate com os KPIs consolidados. Respeita os filtros atuais. Clicar na empresa abre `/dashboard?emitente=<id>` (override da URL, sem gravar o cookie `crm_emitente`); o valor do pipeline abre `/dashboard/relatorio?fonte=emitente&chave=<id>`. Com uma só empresa ou escopo fixo o painel não aparece. Sem mudança de banco: usa `emitente_id`/`emitente_nome` de `v_negociacoes` e `metas.emitente_id`.
 
+### 3.10 Cadastro completo pelo MCP (migration 0013)
+
+- `empresas`: `razao_social`, `nome_fantasia`, `inscricao_estadual`, `telefone`, `email`, `site`, `atividade_principal`. `cnpj_digitos` é gerado (só dígitos) e único entre empresas ativas. `cidade` continua espelhando `municipio`.
+- `contatos`: `telefone` e `principal` (no máximo um principal ativo por empresa).
+- `interacoes.negociacao_id` passa a aceitar nulo quando `empresa_id` está preenchido: anotação do cadastro da empresa, visível na timeline da ficha. Não entra em `dias_sem_interacao`.
+- Tools: `criar_empresa` (ficha completa; se nome ou CNPJ já existir, devolve o id e avisa, sem duplicar), `atualizar_empresa` (só os campos enviados), `obter_empresa`, `adicionar_contato`, `atualizar_contato`. `buscar_empresa` aceita nome ou CNPJ. CEP com ou sem máscara. Toda gravação segue R13.
+
 ## 4. Regras de negócio
 
 | # | Regra | Onde implementar |
@@ -899,8 +906,12 @@ Exportar 2.000 linhas em menos de 5 s. Abrir no Excel sem aviso de reparo. Valor
 
 | Tool | Args (zod) | Retorno |
 |---|---|---|
-| `buscar_empresa` | `{ texto: string }` | até 10 empresas: id, nome, cidade, negociações abertas |
-| `criar_empresa` | `{ nome, cidade?, uf?, segmento?, contato?: { nome, whatsapp?, cargo? } }` | empresa (criada ou existente) + contato |
+| `buscar_empresa` | `{ texto: string }` | até 10 empresas por nome ou CNPJ: id, nome, cidade, cnpj, negociações abertas |
+| `criar_empresa` | `{ nome, razao_social?, nome_fantasia?, cnpj?, inscricao_estadual?, logradouro?, numero?, complemento?, bairro?, cep?, cidade?, uf?, telefone?, email?, site?, atividade_principal?, observacoes?, segmento?, contato?: { nome, cargo?, telefone?, whatsapp?, email?, principal? } }` | empresa criada, ou id da existente com aviso (sem duplicar nem alterar) |
+| `atualizar_empresa` | `{ empresa_id, ...campos opcionais da ficha }` | ficha atualizada; campo omitido não muda |
+| `obter_empresa` | `{ id }` | ficha + contatos + negociações + timeline do cadastro |
+| `adicionar_contato` | `{ empresa_id, nome, cargo?, telefone?, whatsapp?, email?, principal?: sim/não }` | contato criado, ou o existente com o mesmo nome (aviso, sem duplicar) |
+| `atualizar_contato` | `{ contato_id, ...campos opcionais }` | contato atualizado; campo omitido não muda |
 | `listar_negociacoes` | `{ status?, funil?, etapa?, responsavel_email?, parada_ha_dias?, limite? }` | linhas de `v_negociacoes` |
 | `obter_negociacao` | `{ id }` | ficha completa + timeline + ações + orçamentos |
 | `criar_negociacao` | `{ empresa_id \| empresa_nome, valor_estimado, funil?, linha?, origem?, temperatura?, previsao_mes?, proxima_acao?: { descricao, data, tipo? } }` | negociação criada |

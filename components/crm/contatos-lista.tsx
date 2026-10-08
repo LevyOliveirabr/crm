@@ -42,6 +42,8 @@ export type ContatoListaRow = {
   whatsapp: string | null;
   email: string | null;
   cargo: string | null;
+  telefone: string | null;
+  principal: boolean;
   decisor: boolean;
   instagram: string | null;
   linkedin: string | null;
@@ -61,6 +63,8 @@ const formVazio = {
   whatsapp: "",
   email: "",
   cargo: "",
+  telefone: "",
+  principal: false,
   decisor: false,
   instagram: "",
   linkedin: "",
@@ -106,6 +110,8 @@ export function ContatosLista({ contatos, empresas }: Props) {
       whatsapp: c.whatsapp ?? "",
       email: c.email ?? "",
       cargo: c.cargo ?? "",
+      telefone: c.telefone ?? "",
+      principal: c.principal,
       decisor: c.decisor,
       instagram: c.instagram ?? "",
       linkedin: c.linkedin ?? "",
@@ -122,6 +128,8 @@ export function ContatosLista({ contatos, empresas }: Props) {
         whatsapp: form.whatsapp || null,
         email: form.email || null,
         cargo: form.cargo || null,
+        telefone: form.telefone || null,
+        principal: form.principal,
         decisor: form.decisor,
         instagram: form.instagram || null,
         linkedin: form.linkedin || null,
@@ -362,6 +370,25 @@ export function ContatosLista({ contatos, empresas }: Props) {
                 }
               />
             </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Telefone</label>
+              <Input
+                value={form.telefone}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, telefone: e.target.value }))
+                }
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.principal}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, principal: e.target.checked }))
+                }
+              />
+              Contato principal
+            </label>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

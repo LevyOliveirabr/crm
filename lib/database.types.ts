@@ -175,6 +175,14 @@ export type Database = {
           bairro: string | null;
           cep: string | null;
           municipio: string | null;
+          razao_social: string | null;
+          nome_fantasia: string | null;
+          inscricao_estadual: string | null;
+          telefone: string | null;
+          email: string | null;
+          site: string | null;
+          atividade_principal: string | null;
+          cnpj_digitos: string | null;
         };
         Insert: {
           id?: string;
@@ -195,6 +203,13 @@ export type Database = {
           bairro?: string | null;
           cep?: string | null;
           municipio?: string | null;
+          razao_social?: string | null;
+          nome_fantasia?: string | null;
+          inscricao_estadual?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          site?: string | null;
+          atividade_principal?: string | null;
         };
         Update: {
           id?: string;
@@ -215,6 +230,13 @@ export type Database = {
           bairro?: string | null;
           cep?: string | null;
           municipio?: string | null;
+          razao_social?: string | null;
+          nome_fantasia?: string | null;
+          inscricao_estadual?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          site?: string | null;
+          atividade_principal?: string | null;
         };
         Relationships: [
           {
@@ -239,6 +261,8 @@ export type Database = {
           criado_em: string;
           instagram: string | null;
           linkedin: string | null;
+          telefone: string | null;
+          principal: boolean;
         };
         Insert: {
           id?: string;
@@ -252,6 +276,8 @@ export type Database = {
           criado_em?: string;
           instagram?: string | null;
           linkedin?: string | null;
+          telefone?: string | null;
+          principal?: boolean;
         };
         Update: {
           id?: string;
@@ -265,6 +291,8 @@ export type Database = {
           criado_em?: string;
           instagram?: string | null;
           linkedin?: string | null;
+          telefone?: string | null;
+          principal?: boolean;
         };
         Relationships: [
           {
@@ -437,7 +465,8 @@ export type Database = {
       interacoes: {
         Row: {
           id: string;
-          negociacao_id: string;
+          negociacao_id: string | null;
+          empresa_id: string | null;
           tipo: Database["public"]["Enums"]["tipo_interacao"];
           texto: string | null;
           usuario_id: string | null;
@@ -446,7 +475,8 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          negociacao_id: string;
+          negociacao_id?: string | null;
+          empresa_id?: string | null;
           tipo: Database["public"]["Enums"]["tipo_interacao"];
           texto?: string | null;
           usuario_id?: string | null;
@@ -455,7 +485,8 @@ export type Database = {
         };
         Update: {
           id?: string;
-          negociacao_id?: string;
+          negociacao_id?: string | null;
+          empresa_id?: string | null;
           tipo?: Database["public"]["Enums"]["tipo_interacao"];
           texto?: string | null;
           usuario_id?: string | null;
@@ -468,6 +499,13 @@ export type Database = {
             columns: ["negociacao_id"];
             isOneToOne: false;
             referencedRelation: "negociacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "interacoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
             referencedColumns: ["id"];
           },
           {
@@ -1321,6 +1359,10 @@ export type Database = {
       f_unaccent: {
         Args: { "": string };
         Returns: string;
+      };
+      empresa_ativa_por_nome: {
+        Args: { p_nome: string };
+        Returns: { id: string; nome: string }[];
       };
     };
     Enums: {

@@ -39,7 +39,7 @@ export default async function EmpresaDetalhePage({
     supabase
       .from("empresas")
       .select(
-        "id, nome, cidade, uf, segmento, tipo_segmento, cnpj, responsavel_id, observacoes, arquivado_em, logradouro, numero, complemento, bairro, cep, municipio, usuarios:responsavel_id(nome)",
+        "id, nome, cidade, uf, segmento, tipo_segmento, cnpj, responsavel_id, observacoes, arquivado_em, logradouro, numero, complemento, bairro, cep, municipio, razao_social, nome_fantasia, inscricao_estadual, telefone, email, site, atividade_principal, usuarios:responsavel_id(nome)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -98,6 +98,13 @@ export default async function EmpresaDetalhePage({
       viewRow?.cidade ??
       empresaRow?.cidade ??
       null) as string | null,
+    razaoSocial: empresaRow?.razao_social ?? null,
+    nomeFantasia: empresaRow?.nome_fantasia ?? null,
+    inscricaoEstadual: empresaRow?.inscricao_estadual ?? null,
+    telefone: empresaRow?.telefone ?? null,
+    email: empresaRow?.email ?? null,
+    site: empresaRow?.site ?? null,
+    atividadePrincipal: empresaRow?.atividade_principal ?? null,
     aberto: Number(viewRow?.aberto ?? 0),
     vendido: Number(viewRow?.vendido ?? 0),
     perdido: Number(viewRow?.perdido ?? 0),
@@ -128,9 +135,10 @@ export default async function EmpresaDetalhePage({
     ).order("status"),
     supabase
       .from("contatos")
-      .select("id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
+      .select("id, nome, whatsapp, email, cargo, telefone, principal, decisor, instagram, linkedin")
       .eq("empresa_id", id)
       .is("arquivado_em", null)
+      .order("principal", { ascending: false })
       .order("nome"),
   ]);
 
@@ -190,6 +198,8 @@ export default async function EmpresaDetalhePage({
     whatsapp: c.whatsapp,
     email: c.email,
     cargo: c.cargo,
+    telefone: c.telefone,
+    principal: c.principal,
     decisor: c.decisor,
     instagram: c.instagram,
     linkedin: c.linkedin,
@@ -200,26 +210,40 @@ export default async function EmpresaDetalhePage({
   const tituloPorNeg = new Map(negociacoes.map((n) => [n.id, n.titulo]));
 
   let timeline: TimelineEmpresaItem[] = [];
-  if (negIds.length > 0) {
-    const [{ data: interacoes }, { data: acoes }, { data: orcamentos }] =
-      await Promise.all([
-        supabase
-          .from("interacoes")
-          .select("id, negociacao_id, tipo, texto, criado_em")
-          .in("negociacao_id", negIds)
-          .order("criado_em", { ascending: false }),
-        supabase
-          .from("acoes")
-          .select("id, negociacao_id, descricao, data, concluida_em, criado_em")
-          .in("negociacao_id", negIds)
-          .not("concluida_em", "is", null)
-          .order("concluida_em", { ascending: false }),
-        supabase
-          .from("orcamentos")
-          .select("id, negociacao_id, valor, numero, situacao, criado_em")
-          .in("negociacao_id", negIds)
-          .order("criado_em", { ascending: false }),
-      ]);
+  const [{ data: interacoesNeg }, { data: interacoesEmpresa }, { data: acoes }, { data: orcamentos }] =
+    await Promise.all([
+      negIds.length > 0
+        ? supabase
+            .from("interacoes")
+            .select("id, negociacao_id, tipo, texto, criado_em")
+            .in("negociacao_id", negIds)
+            .order("criado_em", { ascending: false })
+        : Promise.resolve({ data: [] as { id: string; negociacao_id: string | null; tipo: string; texto: string | null; criado_em: string }[] }),
+      supabase
+        .from("interacoes")
+        .select("id, negociacao_id, tipo, texto, criado_em")
+        .eq("empresa_id", id)
+        .is("negociacao_id", null)
+        .order("criado_em", { ascending: false }),
+      negIds.length > 0
+        ? supabase
+            .from("acoes")
+            .select("id, negociacao_id, descricao, data, concluida_em, criado_em")
+            .in("negociacao_id", negIds)
+            .not("concluida_em", "is", null)
+            .order("concluida_em", { ascending: false })
+        : Promise.resolve({ data: [] as { id: string; negociacao_id: string; descricao: string; data: string; concluida_em: string | null; criado_em: string }[] }),
+      negIds.length > 0
+        ? supabase
+            .from("orcamentos")
+            .select("id, negociacao_id, valor, numero, situacao, criado_em")
+            .in("negociacao_id", negIds)
+            .order("criado_em", { ascending: false })
+        : Promise.resolve({ data: [] as { id: string; negociacao_id: string; valor: number | null; numero: string | null; situacao: string; criado_em: string }[] }),
+    ]);
+
+  {
+    const interacoes = [...(interacoesNeg ?? []), ...(interacoesEmpresa ?? [])];
 
     const items: TimelineEmpresaItem[] = [];
     for (const i of interacoes ?? []) {
@@ -230,7 +254,9 @@ export default async function EmpresaDetalhePage({
         tipo: i.tipo,
         texto: i.texto,
         negociacaoId: i.negociacao_id,
-        negociacaoTitulo: tituloPorNeg.get(i.negociacao_id) ?? "Negociação",
+        negociacaoTitulo: i.negociacao_id
+          ? (tituloPorNeg.get(i.negociacao_id) ?? "Negociação")
+          : "Cadastro",
       });
     }
     for (const a of acoes ?? []) {

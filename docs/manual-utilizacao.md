@@ -203,8 +203,11 @@ Revogar: botão Revogar na mesma tela → próximas chamadas retornam **401**.
 
 | Tool | Para que serve |
 |---|---|
-| `buscar_empresa` | Achar empresa por texto |
-| `criar_empresa` | Criar empresa (+ contato opcional) |
+| `buscar_empresa` | Achar empresa por nome ou CNPJ |
+| `criar_empresa` | Criar ficha completa (sem duplicar nome ou CNPJ) |
+| `atualizar_empresa` | Alterar só os campos enviados |
+| `obter_empresa` | Ficha, contatos e negociações |
+| `adicionar_contato` / `atualizar_contato` | Pessoas da empresa (principal sim/não) |
 | `listar_negociacoes` | Filtrar abertas, paradas, por etapa… |
 | `obter_negociacao` | Ficha + timeline |
 | `criar_negociacao` | Abrir negocição |

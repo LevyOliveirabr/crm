@@ -67,6 +67,13 @@ export type EmpresaFichaData = {
   bairro: string | null;
   cep: string | null;
   municipio: string | null;
+  razaoSocial: string | null;
+  nomeFantasia: string | null;
+  inscricaoEstadual: string | null;
+  telefone: string | null;
+  email: string | null;
+  site: string | null;
+  atividadePrincipal: string | null;
   aberto: number;
   vendido: number;
   perdido: number;
@@ -94,6 +101,8 @@ export type ContatoEmpresaItem = {
   whatsapp: string | null;
   email: string | null;
   cargo: string | null;
+  telefone: string | null;
+  principal: boolean;
   decisor: boolean;
   instagram: string | null;
   linkedin: string | null;
@@ -107,7 +116,7 @@ export type TimelineEmpresaItem =
       tipo: string;
       texto: string | null;
       negociacaoTitulo: string;
-      negociacaoId: string;
+      negociacaoId: string | null;
     }
   | {
       kind: "acao";
@@ -182,6 +191,8 @@ export function EmpresaFicha({
     whatsapp: "",
     email: "",
     cargo: "",
+    telefone: "",
+    principal: false,
     decisor: false,
     instagram: "",
     linkedin: "",
@@ -242,6 +253,13 @@ export function EmpresaFicha({
         bairro: next.bairro,
         cep: next.cep,
         municipio: next.municipio,
+        razao_social: next.razaoSocial,
+        nome_fantasia: next.nomeFantasia,
+        inscricao_estadual: next.inscricaoEstadual,
+        telefone: next.telefone,
+        email: next.email,
+        site: next.site,
+        atividade_principal: next.atividadePrincipal,
       });
       if (!res.ok) {
         setE(e);
@@ -257,6 +275,8 @@ export function EmpresaFicha({
       whatsapp: "",
       email: "",
       cargo: "",
+      telefone: "",
+      principal: false,
       decisor: false,
       instagram: "",
       linkedin: "",
@@ -271,6 +291,8 @@ export function EmpresaFicha({
       whatsapp: c.whatsapp ?? "",
       email: c.email ?? "",
       cargo: c.cargo ?? "",
+      telefone: c.telefone ?? "",
+      principal: c.principal,
       decisor: c.decisor,
       instagram: c.instagram ?? "",
       linkedin: c.linkedin ?? "",
@@ -290,6 +312,8 @@ export function EmpresaFicha({
         whatsapp: contatoForm.whatsapp || null,
         email: contatoForm.email || null,
         cargo: contatoForm.cargo || null,
+        telefone: contatoForm.telefone || null,
+        principal: contatoForm.principal,
         decisor: contatoForm.decisor,
         instagram: contatoForm.instagram || null,
         linkedin: contatoForm.linkedin || null,
@@ -312,6 +336,8 @@ export function EmpresaFicha({
                   whatsapp: res.contato.whatsapp,
                   email: res.contato.email,
                   cargo: res.contato.cargo,
+                  telefone: res.contato.telefone,
+                  principal: res.contato.principal,
                   decisor: res.contato.decisor,
                   instagram: res.contato.instagram,
                   linkedin: res.contato.linkedin,
@@ -328,6 +354,8 @@ export function EmpresaFicha({
             whatsapp: res.contato.whatsapp,
             email: res.contato.email,
             cargo: res.contato.cargo,
+            telefone: res.contato.telefone,
+            principal: res.contato.principal,
             decisor: res.contato.decisor,
             instagram: res.contato.instagram,
             linkedin: res.contato.linkedin,
@@ -632,10 +660,118 @@ export function EmpresaFicha({
                       complemento: e.complemento ?? d.complemento,
                       bairro: e.bairro ?? d.bairro,
                       cep: e.cep ?? d.cep,
+                      razaoSocial: e.razaoSocial ?? d.razaoSocial,
+                      nomeFantasia: e.nomeFantasia ?? d.nomeFantasia,
+                      telefone: e.telefone ?? d.telefone,
+                      email: e.email ?? d.email,
+                      atividadePrincipal:
+                        e.atividadePrincipal ?? d.atividadePrincipal,
                     });
                   }}
                 />
               </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Razão social
+              </label>
+              <Input
+                value={e.razaoSocial ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, razaoSocial: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ razaoSocial: e.razaoSocial })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Nome fantasia
+              </label>
+              <Input
+                value={e.nomeFantasia ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, nomeFantasia: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ nomeFantasia: e.nomeFantasia })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Inscrição estadual
+              </label>
+              <Input
+                value={e.inscricaoEstadual ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({
+                    ...x,
+                    inscricaoEstadual: ev.target.value || null,
+                  }))
+                }
+                onBlur={() =>
+                  salvarCadastro({ inscricaoEstadual: e.inscricaoEstadual })
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Telefone
+              </label>
+              <Input
+                value={e.telefone ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, telefone: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ telefone: e.telefone })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                E-mail
+              </label>
+              <Input
+                type="email"
+                value={e.email ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, email: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ email: e.email })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Site
+              </label>
+              <Input
+                value={e.site ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({ ...x, site: ev.target.value || null }))
+                }
+                onBlur={() => salvarCadastro({ site: e.site })}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs text-muted-foreground">
+                Atividade principal
+              </label>
+              <Input
+                value={e.atividadePrincipal ?? ""}
+                disabled={inputDisabled}
+                onChange={(ev) =>
+                  setE((x) => ({
+                    ...x,
+                    atividadePrincipal: ev.target.value || null,
+                  }))
+                }
+                onBlur={() =>
+                  salvarCadastro({ atividadePrincipal: e.atividadePrincipal })
+                }
+              />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs text-muted-foreground">
@@ -752,6 +888,11 @@ export function EmpresaFicha({
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
                       {c.nome}
+                      {c.principal ? (
+                        <Badge variant="secondary" className="ml-1.5">
+                          Principal
+                        </Badge>
+                      ) : null}
                       {c.decisor ? (
                         <Check
                           className="ml-1 inline size-3.5 text-success"
@@ -761,6 +902,7 @@ export function EmpresaFicha({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {c.cargo ?? "Sem cargo"}
+                      {c.telefone ? ` · ${c.telefone}` : ""}
                       {c.whatsapp ? (
                         <>
                           {" · "}
@@ -833,12 +975,16 @@ export function EmpresaFicha({
                     <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">
-                        <Link
-                          href={`/negociacoes/${item.negociacaoId}`}
-                          className="hover:underline"
-                        >
-                          {item.negociacaoTitulo}
-                        </Link>
+                        {item.negociacaoId ? (
+                          <Link
+                            href={`/negociacoes/${item.negociacaoId}`}
+                            className="hover:underline"
+                          >
+                            {item.negociacaoTitulo}
+                          </Link>
+                        ) : (
+                          <span>{item.negociacaoTitulo}</span>
+                        )}
                         {" · "}
                         {formatarDataHora(item.em)}
                       </p>
@@ -943,6 +1089,15 @@ export function EmpresaFicha({
               />
             </div>
             <div>
+              <label className="mb-1 block text-sm font-medium">Telefone</label>
+              <Input
+                value={contatoForm.telefone}
+                onChange={(ev) =>
+                  setContatoForm((f) => ({ ...f, telefone: ev.target.value }))
+                }
+              />
+            </div>
+            <div>
               <label className="mb-1 block text-sm font-medium">Cargo</label>
               <Input
                 value={contatoForm.cargo}
@@ -971,6 +1126,19 @@ export function EmpresaFicha({
                 }
               />
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={contatoForm.principal}
+                onChange={(ev) =>
+                  setContatoForm((f) => ({
+                    ...f,
+                    principal: ev.target.checked,
+                  }))
+                }
+              />
+              Contato principal
+            </label>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

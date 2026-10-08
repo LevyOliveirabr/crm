@@ -8,6 +8,15 @@ import {
   inicioProximoMesISO,
   normalizarNome,
 } from "@/lib/format";
+import { prefixoAgente } from "@/lib/mcp/agente";
+import {
+  executarAdicionarContato,
+  executarAtualizarContato,
+  executarAtualizarEmpresa,
+  executarBuscarEmpresa,
+  executarCriarEmpresa,
+  executarObterEmpresa,
+} from "@/lib/mcp/empresas";
 import { encontrarEmpresa } from "@/lib/auth/escopo-empresa-core";
 import type { McpAuthContext } from "@/lib/mcp-auth";
 import { clientForApiKey, McpAuthError } from "@/lib/mcp-auth";
@@ -15,6 +24,9 @@ import { registrarMcpLog } from "@/lib/mcp-log";
 import { criarOrcamentoGerado } from "@/lib/orcamentos/gerado";
 import { checarRateLimit } from "@/lib/mcp-rate-limit";
 import {
+  adicionarContatoArgsSchema,
+  atualizarContatoArgsSchema,
+  atualizarEmpresaArgsSchema,
   buscarEmpresaArgsSchema,
   buscarProdutoArgsSchema,
   listarEmpresasVendedorasArgsSchema,
@@ -22,6 +34,7 @@ import {
   criarAcaoArgsSchema,
   criarEmpresaArgsSchema,
   criarNegociacaoArgsSchema,
+  obterEmpresaArgsSchema,
   fecharNegociacaoArgsSchema,
   listarNegociacoesArgsSchema,
   montarOrcamentoArgsSchema,
@@ -48,13 +61,6 @@ function texto(content: string, isError = false): CallToolResult {
 
 function jsonText(data: unknown): CallToolResult {
   return texto(JSON.stringify(data, null, 2));
-}
-
-function prefixoAgente(textoBruto?: string | null): string {
-  const base = (textoBruto ?? "").trim();
-  if (!base) return "[agente]";
-  if (base.startsWith("[agente]")) return base;
-  return `[agente] ${base}`;
 }
 
 async function autenticarDoCtx(ctx: ToolCtx): Promise<McpAuthContext> {
@@ -202,38 +208,12 @@ export function registrarToolsEResources(server: McpServer) {
     "buscar_empresa",
     {
       title: "Buscar empresa",
-      description: "Busca até 10 empresas por texto, com negociações abertas.",
+      description:
+        "Busca até 10 empresas pelo nome ou pelo CNPJ (com ou sem máscara), com negociações abertas.",
       inputSchema: buscarEmpresaArgsSchema,
     },
     async (args, ctx) =>
-      comLog("buscar_empresa", args, ctx, async (auth) => {
-        const { data: empresas, error } = await auth.supabase
-          .from("empresas")
-          .select("id, nome, cidade")
-          .is("arquivado_em", null)
-          .ilike("nome", `%${args.texto}%`)
-          .order("nome")
-          .limit(10);
-
-        if (error) return texto(error.message, true);
-
-        const resultado = [];
-        for (const emp of empresas ?? []) {
-          const { count } = await auth.supabase
-            .from("negociacoes")
-            .select("id", { count: "exact", head: true })
-            .eq("empresa_id", emp.id)
-            .eq("status", "aberta")
-            .is("arquivado_em", null);
-          resultado.push({
-            id: emp.id,
-            nome: emp.nome,
-            cidade: emp.cidade,
-            negociacoes_abertas: count ?? 0,
-          });
-        }
-        return jsonText(resultado);
-      }),
+      comLog("buscar_empresa", args, ctx, (auth) => executarBuscarEmpresa(auth, args)),
   );
 
   server.registerTool(
@@ -241,62 +221,65 @@ export function registrarToolsEResources(server: McpServer) {
     {
       title: "Criar empresa",
       description:
-        "Cria empresa (ou reutiliza existente pelo nome) e contato opcional.",
+        "Cria a ficha da empresa (razão social, CNPJ, endereço, contato da empresa). Se o nome ou o CNPJ já existir, devolve o id e avisa, sem duplicar e sem alterar. Contato de pessoa em empresa nova pode ir em `contato`; em empresa existente use adicionar_contato.",
       inputSchema: criarEmpresaArgsSchema,
     },
     async (args, ctx) =>
-      comLog("criar_empresa", args, ctx, async (auth) => {
-        const alvo = normalizarNome(args.nome);
-        const { data: candidatas } = await auth.supabase
-          .from("empresas")
-          .select("id, nome, cidade, uf, segmento")
-          .is("arquivado_em", null)
-          .limit(500);
+      comLog("criar_empresa", args, ctx, (auth) => executarCriarEmpresa(auth, args)),
+  );
 
-        let empresa =
-          (candidatas ?? []).find((e) => normalizarNome(e.nome) === alvo) ??
-          null;
-        let criada = false;
+  server.registerTool(
+    "atualizar_empresa",
+    {
+      title: "Atualizar empresa",
+      description:
+        "Altera só os campos enviados da ficha e devolve a empresa atualizada, com contatos e negociações. O que não vier permanece como está.",
+      inputSchema: atualizarEmpresaArgsSchema,
+    },
+    async (args, ctx) =>
+      comLog("atualizar_empresa", args, ctx, (auth) =>
+        executarAtualizarEmpresa(auth, args),
+      ),
+  );
 
-        if (!empresa) {
-          const { data, error } = await auth.supabase
-            .from("empresas")
-            .insert({
-              nome: args.nome.trim(),
-              cidade: args.cidade?.trim() || null,
-              uf: args.uf?.trim()?.toUpperCase() || null,
-              segmento: args.segmento?.trim() || null,
-              responsavel_id: auth.usuario.id,
-            })
-            .select("id, nome, cidade, uf, segmento")
-            .single();
-          if (error || !data) return texto(error?.message ?? "Falha.", true);
-          empresa = data;
-          criada = true;
-        }
+  server.registerTool(
+    "obter_empresa",
+    {
+      title: "Obter empresa",
+      description:
+        "Ficha completa da empresa, com contatos, negociações ligadas e anotações do agente na timeline.",
+      inputSchema: obterEmpresaArgsSchema,
+    },
+    async (args, ctx) =>
+      comLog("obter_empresa", args, ctx, (auth) => executarObterEmpresa(auth, args)),
+  );
 
-        let contato = null;
-        if (args.contato?.nome) {
-          const { data: c, error: errC } = await auth.supabase
-            .from("contatos")
-            .insert({
-              empresa_id: empresa.id,
-              nome: args.contato.nome.trim(),
-              whatsapp: args.contato.whatsapp?.trim() || null,
-              cargo: args.contato.cargo?.trim() || null,
-            })
-            .select("id, nome, whatsapp, cargo")
-            .single();
-          if (errC) return texto(errC.message, true);
-          contato = c;
-        }
+  server.registerTool(
+    "adicionar_contato",
+    {
+      title: "Adicionar contato",
+      description:
+        "Adiciona uma pessoa à empresa (nome, cargo, telefone, WhatsApp, e-mail, principal sim/não). Se já houver contato com o mesmo nome, devolve o id e avisa, sem duplicar.",
+      inputSchema: adicionarContatoArgsSchema,
+    },
+    async (args, ctx) =>
+      comLog("adicionar_contato", args, ctx, (auth) =>
+        executarAdicionarContato(auth, args),
+      ),
+  );
 
-        return texto(
-          `${criada ? "Criada" : "Reutilizada"} empresa ${empresa.nome}` +
-            (contato ? ` com contato ${contato.nome}` : "") +
-            `. id=${empresa.id}`,
-        );
-      }),
+  server.registerTool(
+    "atualizar_contato",
+    {
+      title: "Atualizar contato",
+      description:
+        "Altera só os campos enviados de um contato (nome, cargo, telefone, WhatsApp, e-mail, principal sim/não) e devolve a ficha do contato.",
+      inputSchema: atualizarContatoArgsSchema,
+    },
+    async (args, ctx) =>
+      comLog("atualizar_contato", args, ctx, (auth) =>
+        executarAtualizarContato(auth, args),
+      ),
   );
 
   server.registerTool(
