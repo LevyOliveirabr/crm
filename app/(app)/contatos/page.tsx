@@ -14,7 +14,7 @@ export default async function ContatosPage() {
     supabase
       .from("contatos")
       .select(
-        "id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin, empresas:empresa_id(id, nome, responsavel_id, arquivado_em)",
+        "id, empresa_id, nome, whatsapp, email, cargo, telefone, principal, decisor, instagram, linkedin, empresas:empresa_id(id, nome, responsavel_id, arquivado_em)",
       )
       .is("arquivado_em", null)
       .order("nome"),
@@ -46,6 +46,8 @@ export default async function ContatosPage() {
         whatsapp: c.whatsapp,
         email: c.email,
         cargo: c.cargo,
+        telefone: c.telefone,
+        principal: c.principal,
         decisor: c.decisor,
         instagram: c.instagram,
         linkedin: c.linkedin,

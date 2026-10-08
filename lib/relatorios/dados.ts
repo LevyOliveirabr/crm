@@ -652,11 +652,11 @@ async function carregarRanking(
       return q;
     })();
     const ids = new Set((negsFiltro ?? []).map((n) => n.id));
-    interacoesFiltradas = (interacoes ?? []).filter((i) =>
-      ids.has(i.negociacao_id),
+    interacoesFiltradas = (interacoes ?? []).filter(
+      (i) => i.negociacao_id != null && ids.has(i.negociacao_id),
     );
-    interacoesAntFiltradas = (interacoesAnt ?? []).filter((i) =>
-      ids.has(i.negociacao_id),
+    interacoesAntFiltradas = (interacoesAnt ?? []).filter(
+      (i) => i.negociacao_id != null && ids.has(i.negociacao_id),
     );
   }
 

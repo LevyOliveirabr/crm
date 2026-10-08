@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getUsuarioAtual } from "@/lib/auth/get-usuario-atual";
+import { apenasDigitosCnpj } from "@/lib/cnpj";
 import { normalizarNome } from "@/lib/format";
 import { empresaSchema } from "@/lib/schemas/empresa";
 import { createClient } from "@/lib/supabase/server";
@@ -157,6 +158,11 @@ export async function criarEmpresa(
   const municipio = parsed.data.municipio ?? parsed.data.cidade ?? null;
   const cidade = parsed.data.cidade ?? parsed.data.municipio ?? null;
 
+  if (parsed.data.cnpj) {
+    const dupCnpj = await cnpjDeOutraEmpresa(supabase, parsed.data.cnpj, null);
+    if (dupCnpj) return { ok: false, error: dupCnpj };
+  }
+
   const { data: criada, error: erroInsert } = await supabase
     .from("empresas")
     .insert({
@@ -174,12 +180,22 @@ export async function criarEmpresa(
       bairro: parsed.data.bairro ?? null,
       cep: parsed.data.cep ?? null,
       municipio,
+      razao_social: parsed.data.razao_social ?? null,
+      nome_fantasia: parsed.data.nome_fantasia ?? null,
+      inscricao_estadual: parsed.data.inscricao_estadual ?? null,
+      telefone: parsed.data.telefone ?? null,
+      email: parsed.data.email ?? null,
+      site: parsed.data.site ?? null,
+      atividade_principal: parsed.data.atividade_principal ?? null,
     })
     .select("id, nome, cidade, segmento")
     .single();
 
   if (erroInsert) {
     if (erroInsert.code === "23505") {
+      if (erroInsert.message.toLowerCase().includes("cnpj")) {
+        return { ok: false, error: "CNPJ já cadastrado em outra empresa." };
+      }
       const { data: dup } = await supabase
         .from("empresas")
         .select("id, nome, cidade, segmento")
@@ -240,6 +256,11 @@ export async function atualizarEmpresa(
   const municipio = parsed.data.municipio ?? parsed.data.cidade ?? null;
   const cidade = parsed.data.cidade ?? parsed.data.municipio ?? null;
 
+  if (parsed.data.cnpj) {
+    const dupCnpj = await cnpjDeOutraEmpresa(supabase, parsed.data.cnpj, atual.id);
+    if (dupCnpj) return { ok: false, error: dupCnpj };
+  }
+
   const { data: atualizada, error: erroUpdate } = await supabase
     .from("empresas")
     .update({
@@ -258,6 +279,23 @@ export async function atualizarEmpresa(
       bairro: parsed.data.bairro ?? null,
       cep: parsed.data.cep ?? null,
       municipio,
+      ...(parsed.data.razao_social !== undefined
+        ? { razao_social: parsed.data.razao_social }
+        : {}),
+      ...(parsed.data.nome_fantasia !== undefined
+        ? { nome_fantasia: parsed.data.nome_fantasia }
+        : {}),
+      ...(parsed.data.inscricao_estadual !== undefined
+        ? { inscricao_estadual: parsed.data.inscricao_estadual }
+        : {}),
+      ...(parsed.data.telefone !== undefined
+        ? { telefone: parsed.data.telefone }
+        : {}),
+      ...(parsed.data.email !== undefined ? { email: parsed.data.email } : {}),
+      ...(parsed.data.site !== undefined ? { site: parsed.data.site } : {}),
+      ...(parsed.data.atividade_principal !== undefined
+        ? { atividade_principal: parsed.data.atividade_principal }
+        : {}),
       ...(podeAlterarResp && parsed.data.responsavel_id !== undefined
         ? { responsavel_id: parsed.data.responsavel_id }
         : {}),
@@ -276,6 +314,24 @@ export async function atualizarEmpresa(
   revalidatePath("/contatos");
 
   return { ok: true, empresa: atualizada };
+}
+
+async function cnpjDeOutraEmpresa(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cnpj: string,
+  ignorarId: string | null,
+): Promise<string | null> {
+  const digitos = apenasDigitosCnpj(cnpj);
+  if (!digitos) return null;
+  const { data, error } = await supabase
+    .from("empresas")
+    .select("id, nome")
+    .eq("cnpj_digitos", digitos)
+    .is("arquivado_em", null)
+    .maybeSingle();
+  if (error) return error.message;
+  if (!data || data.id === ignorarId) return null;
+  return `CNPJ já cadastrado na empresa "${data.nome}".`;
 }
 
 /** Arquivar empresa (R14). */

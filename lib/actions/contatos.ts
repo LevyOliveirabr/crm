@@ -14,10 +14,30 @@ export type ContatoResumo = {
   whatsapp: string | null;
   email: string | null;
   cargo: string | null;
+  telefone: string | null;
+  principal: boolean;
   decisor: boolean;
   instagram: string | null;
   linkedin: string | null;
 };
+
+const SELECT_CONTATO =
+  "id, empresa_id, nome, whatsapp, email, cargo, telefone, principal, decisor, instagram, linkedin";
+
+async function deixarUnicoPrincipal(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  empresaId: string,
+  excetoId?: string,
+) {
+  let q = supabase
+    .from("contatos")
+    .update({ principal: false })
+    .eq("empresa_id", empresaId)
+    .eq("principal", true)
+    .is("arquivado_em", null);
+  if (excetoId) q = q.neq("id", excetoId);
+  return q;
+}
 
 export type ContatoListaItem = ContatoResumo & {
   empresaNome: string;
@@ -68,7 +88,7 @@ export async function listarContatosEmpresa(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("contatos")
-    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
+    .select(SELECT_CONTATO)
     .eq("empresa_id", idParsed.data)
     .is("arquivado_em", null)
     .order("nome");
@@ -99,6 +119,14 @@ export async function criarContato(
     ? parsed.data.whatsapp.replace(/\D/g, "")
     : null;
 
+  if (parsed.data.principal) {
+    const { error: erroPrincipal } = await deixarUnicoPrincipal(
+      supabase,
+      parsed.data.empresa_id,
+    );
+    if (erroPrincipal) return { ok: false, error: erroPrincipal.message };
+  }
+
   const { data, error } = await supabase
     .from("contatos")
     .insert({
@@ -110,8 +138,10 @@ export async function criarContato(
       decisor: parsed.data.decisor ?? false,
       instagram: parsed.data.instagram ?? null,
       linkedin: parsed.data.linkedin ?? null,
+      telefone: parsed.data.telefone ?? null,
+      principal: parsed.data.principal ?? false,
     })
-    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
+    .select(SELECT_CONTATO)
     .single();
 
   if (error) return { ok: false, error: error.message };
@@ -164,6 +194,15 @@ export async function atualizarContato(
     ? parsed.data.whatsapp.replace(/\D/g, "")
     : null;
 
+  if (parsed.data.principal) {
+    const { error: erroPrincipal } = await deixarUnicoPrincipal(
+      supabase,
+      parsed.data.empresa_id,
+      atual.id,
+    );
+    if (erroPrincipal) return { ok: false, error: erroPrincipal.message };
+  }
+
   const { data, error } = await supabase
     .from("contatos")
     .update({
@@ -175,9 +214,15 @@ export async function atualizarContato(
       decisor: parsed.data.decisor ?? false,
       instagram: parsed.data.instagram ?? null,
       linkedin: parsed.data.linkedin ?? null,
+      ...(parsed.data.telefone !== undefined
+        ? { telefone: parsed.data.telefone }
+        : {}),
+      ...(parsed.data.principal !== undefined
+        ? { principal: parsed.data.principal }
+        : {}),
     })
     .eq("id", atual.id)
-    .select("id, empresa_id, nome, whatsapp, email, cargo, decisor, instagram, linkedin")
+    .select(SELECT_CONTATO)
     .maybeSingle();
 
   if (error) return { ok: false, error: error.message };

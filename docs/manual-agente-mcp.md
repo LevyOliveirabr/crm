@@ -276,6 +276,9 @@ servidor MCP "crm-fled". Fala português do Brasil, direto e objetivo.
   registrar_interacao(tipo ligacao) → criar_acao se faltar próxima ação.
 - "Nova oportunidade na X de 200 mil": buscar_empresa → criar_negociacao
   (valor_estimado 200000, proxima_acao obrigatória).
+- "Cadastra a empresa com CNPJ": buscar_empresa pelo CNPJ → se não achar,
+  criar_empresa com a ficha. Se já existir, atualizar_empresa só com o que
+  mudou. Pessoa da empresa: adicionar_contato ou atualizar_contato.
 - "Como está o mês": relatorio_presidencia e previsao, depois um resumo de
   até 8 linhas com números em R$.
 - "O que está parado": listar_negociacoes(status aberta, parada_ha_dias 15).
@@ -290,8 +293,12 @@ Todos os argumentos de data usam `AAAA-MM-DD`. Ids são UUID.
 | Tool | Para que serve | Argumentos |
 |---|---|---|
 | `listar_empresas_vendedoras` | Empresas do grupo em que o dono da key participa, com o perfil em cada uma. Use o nome ou o id em `empresa_vendedora` | — |
-| `buscar_empresa` | Achar empresas (clientes) por parte do nome (até 10, com nº de negociações abertas) | `texto` |
-| `criar_empresa` | Criar empresa (reutiliza se o nome já existir) e contato opcional | `nome`, `cidade?`, `uf?`, `segmento?`, `contato?{nome, whatsapp?, cargo?}` |
+| `buscar_empresa` | Achar empresas (clientes) por parte do nome ou pelo CNPJ, com ou sem máscara (até 10, com nº de negociações abertas) | `texto` |
+| `criar_empresa` | Criar a ficha completa. Se o nome ou o CNPJ já existir, devolve o id e avisa, sem duplicar e sem alterar. Contato opcional só na empresa nova | `nome`, `razao_social?`, `nome_fantasia?`, `cnpj?`, `inscricao_estadual?`, `logradouro?`, `numero?`, `complemento?`, `bairro?`, `cep?`, `cidade?`, `uf?`, `telefone?`, `email?`, `site?`, `atividade_principal?`, `observacoes?`, `segmento?`, `contato?{nome, cargo?, telefone?, whatsapp?, email?, principal?}` |
+| `atualizar_empresa` | Alterar só os campos enviados e devolver a ficha com contatos e negociações | `empresa_id` e qualquer campo de `criar_empresa` (os omitidos ficam como estão) |
+| `obter_empresa` | Ficha completa, contatos, negociações e anotações do agente | `id` |
+| `adicionar_contato` | Incluir pessoa na empresa. Se o nome já existir nela, devolve o id e avisa, sem duplicar | `empresa_id`, `nome`, `cargo?`, `telefone?`, `whatsapp?`, `email?`, `principal?` (`sim` ou `não`) |
+| `atualizar_contato` | Alterar só os campos enviados de um contato | `contato_id`, `nome?`, `cargo?`, `telefone?`, `whatsapp?`, `email?`, `principal?` |
 | `listar_negociacoes` | Listar negociações com filtros | `empresa_vendedora?`, `status?` (aberta/vendida/perdida), `funil?`, `etapa?`, `responsavel_email?`, `parada_ha_dias?`, `limite?` (padrão 30, máx. 100) |
 | `obter_negociacao` | Ficha completa: timeline, ações, orçamentos | `id` |
 | `criar_negociacao` | Abrir negociação na primeira etapa do funil | `empresa_vendedora?` (obrigatória se o usuário participa de mais de uma), `empresa_id` ou `empresa_nome`, `valor_estimado`, `funil?`, `linha?`, `origem?`, `temperatura?` (1 fria, 2 morna, 3 quente), `previsao_mes?`, `proxima_acao?{descricao, data, tipo?}` |

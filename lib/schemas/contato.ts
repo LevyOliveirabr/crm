@@ -25,6 +25,8 @@ export const contatoSchema = z.object({
   decisor: z.boolean().default(false),
   instagram: textoOpcional.optional(),
   linkedin: textoOpcional.optional(),
+  telefone: textoOpcional.optional(),
+  principal: z.boolean().optional(),
 });
 
 export type ContatoInput = z.infer<typeof contatoSchema>;

@@ -65,6 +65,21 @@ export const empresaSchema = z.object({
     z.uuid().nullable(),
   ).optional(),
   observacoes: textoOpcional,
+  razao_social: textoOpcional.optional(),
+  nome_fantasia: textoOpcional.optional(),
+  inscricao_estadual: textoOpcional.optional(),
+  telefone: textoOpcional.optional(),
+  email: z
+    .preprocess(
+      (v) => {
+        if (v === undefined) return undefined;
+        if (v === null || v === "") return null;
+        return String(v).trim().toLowerCase();
+      },
+      z.union([z.email("E-mail inválido"), z.null()]).optional(),
+    ),
+  site: textoOpcional.optional(),
+  atividade_principal: textoOpcional.optional(),
   ...enderecoCamposSchema,
 });
 
